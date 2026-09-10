@@ -5,13 +5,11 @@ import {
   ChevronRight,
   CircleAlert,
   FileText,
-  PackageCheck,
   Repeat2,
-  ShieldCheck,
   ShoppingCart,
   Truck,
-  UserRound,
 } from "lucide-react";
+import { EmployeePicker } from "@/components/employee-picker";
 import { ProductGallery } from "@/components/product-gallery";
 import { QuantityStepper } from "@/components/quantity-stepper";
 import { SiteHeader } from "@/components/site-header";
@@ -21,17 +19,10 @@ import { getProduct } from "@/lib/magento/product";
 import { getRepeatOrderLists } from "@/lib/magento/repeat-orders";
 import { requireCustomerToken } from "@/lib/session";
 import { addProductToCartAction, saveProductToRepeatListAction } from "./actions";
+import { addGroupedChildToCartAction } from "./grouped-actions";
 
 function money(value: number, currency: string) {
   return new Intl.NumberFormat("en-GB", { style: "currency", currency }).format(value);
-}
-
-function constraintText(constraints: { minimum_quantity: number; maximum_quantity: number | null; quantity_increment: number; increments_enforced: boolean } | null) {
-  if (!constraints) return null;
-  const parts = [`Minimum ${constraints.minimum_quantity}`];
-  if (constraints.maximum_quantity !== null) parts.push(`maximum ${constraints.maximum_quantity}`);
-  if (constraints.increments_enforced) parts.push(`increments of ${constraints.quantity_increment}`);
-  return parts.join(", ");
 }
 
 export const metadata = { title: "Product" };
@@ -104,7 +95,6 @@ export default async function ProductPage({
               <strong className="pdp-price-value">{money(price.final_price.value, price.final_price.currency)}</strong>
               {price.regular_price.value > price.final_price.value ? <del>{money(price.regular_price.value, price.regular_price.currency)}</del> : null}
             </div>
-            {selectedCompany?.name ? <span className="pdp-company-price">Pricing for {selectedCompany.name}</span> : null}
           </div> : null}
 
           <div className="pdp-status-grid">
@@ -114,13 +104,8 @@ export default async function ProductPage({
             </div> : null}
 
             {allowance?.has_active_restriction ? <div className={`pdp-status-card ${allowanceBlocked ? "blocked" : ""}`}>
-              {allowanceBlocked ? <CircleAlert size={19} aria-hidden="true"/> : <ShieldCheck size={19} aria-hidden="true"/>}
+              <CircleAlert size={19} aria-hidden="true"/>
               <div><strong>Purchase allowance</strong><span>{allowance.remaining_quantity} remaining of {allowance.allowed_quantity}</span></div>
-            </div> : null}
-
-            {product.css_purchase_constraints ? <div className="pdp-status-card">
-              <PackageCheck size={19} aria-hidden="true"/>
-              <div><strong>Quantity rules</strong><span>{constraintText(product.css_purchase_constraints)}</span></div>
             </div> : null}
           </div>
 
@@ -141,7 +126,7 @@ export default async function ProductPage({
             <h2>{grouped ? "Build your order" : configurable ? "Choose your options" : "Choose a quantity"}</h2>
           </div>
           <p>{grouped
-            ? "Choose the products, options and quantities you need from this set."
+            ? "Choose the product and quantity you need, then add that line to your basket."
             : configurable
               ? "Select the product options and quantity you need."
               : "Choose how many you need, then add the item to your basket."}</p>
@@ -149,7 +134,7 @@ export default async function ProductPage({
 
         {!supported ? <p className="error" role="alert">This product can’t currently be ordered online.</p> : null}
 
-        <form action={addProductToCartAction} className="pdp-order-form">
+        <form action={grouped ? addGroupedChildToCartAction : addProductToCartAction} className={`pdp-order-form ${grouped ? "grouped-order-form" : "single-order-form"}`}>
           <input type="hidden" name="product_sku" value={product.sku}/>
 
           <div className="pdp-order-main stack">
@@ -169,11 +154,14 @@ export default async function ProductPage({
               </div>
             </section> : null}
 
-            {product.__typename === "SimpleProduct" || configurable ? <section className="pdp-option-section">
+            {employeeOrdering.usesEmployee && employeeOrdering.multiEmployeeBasket ? <section className="pdp-option-section pdp-employee-section">
               <div className="pdp-option-heading">
-                <strong>Quantity</strong>
-                {product.css_purchase_constraints ? <span>{constraintText(product.css_purchase_constraints)}</span> : <span>Choose the quantity you need.</span>}
+                <strong>Who is this for?</strong>
               </div>
+              <EmployeePicker employees={employeeOrdering.employees}/>
+            </section> : null}
+
+            {product.__typename === "SimpleProduct" || configurable ? <section className="pdp-option-section pdp-single-quantity-section">
               <QuantityStepper
                 name="quantity"
                 defaultValue={Math.max(1, product.css_purchase_constraints?.minimum_quantity || 1)}
@@ -186,7 +174,6 @@ export default async function ProductPage({
             {grouped ? <section className="pdp-option-section grouped-section">
               <div className="pdp-option-heading">
                 <strong>Products in this set</strong>
-                <span>Leave a quantity at 0 to skip that product.</span>
               </div>
               <div className="grouped-lines" aria-label="Grouped product options">
                 {(product.items || []).slice().sort((a, b) => (a.position || 0) - (b.position || 0)).map((item, index) => {
@@ -194,14 +181,14 @@ export default async function ProductPage({
                   const childPrice = child.price_range?.minimum_price.final_price;
                   const childAllowanceBlocked = Boolean(child.css_purchase_allowance?.has_active_restriction && child.css_purchase_allowance.remaining_quantity <= 0);
                   const childAvailable = child.css_stock_info.available && !childAllowanceBlocked;
-                  return <article className="grouped-line pdp-grouped-line" key={child.uid}>
+                  return <article className={`grouped-line pdp-grouped-line ${childAvailable ? "" : "unavailable"}`} key={child.uid}>
                     <input type="hidden" name={`child_${index}_sku`} value={child.sku}/>
                     <div className="grouped-product-name">
                       <div className="pdp-grouped-title-row">
                         <strong>{child.name}</strong>
-                        <span className={`product-stock ${childAvailable ? "available" : "unavailable"}`}>{childAvailable ? "Available" : "Unavailable"}</span>
+                        {!ctx.css_storefront_policy.hide_price && childPrice ? <span className="pdp-grouped-price">{money(childPrice.value, childPrice.currency)}</span> : null}
                       </div>
-                      <div className="muted small">SKU {child.sku}{childPrice && !ctx.css_storefront_policy.hide_price ? ` · ${money(childPrice.value, childPrice.currency)}` : ""}</div>
+                      {!childAvailable ? <span className="product-stock unavailable">Unavailable</span> : null}
                     </div>
 
                     {(child.configurable_options || []).length ? <div className="pdp-grouped-options">
@@ -216,49 +203,37 @@ export default async function ProductPage({
 
                     <QuantityStepper
                       name={`child_${index}_quantity`}
-                      label={`${child.name} quantity`}
-                      defaultValue={item.qty && item.qty > 0 ? item.qty : 0}
+                      label="Quantity"
+                      ariaLabel={`${child.name} quantity`}
+                      defaultValue={0}
                       min={0}
                       max={child.css_purchase_constraints?.maximum_quantity ?? undefined}
-                      step={child.css_purchase_constraints?.increments_enforced ? child.css_purchase_constraints.quantity_increment : "any"}
+                      step={child.css_purchase_constraints?.increments_enforced ? child.css_purchase_constraints.quantity_increment : 1}
                       disabled={!childAvailable}
                       compact
+                      submitControl={{
+                        name: "grouped_child_sku",
+                        value: child.sku,
+                        label: "Add",
+                        disabled: !canAdd || !childAvailable,
+                      }}
                     />
-
-                    <div className="pdp-grouped-note">
-                      <span>{childAvailable
-                        ? (child.css_stock_info.delivery_message || "Available to order")
-                        : (child.css_purchase_allowance?.has_active_restriction && child.css_purchase_allowance.remaining_quantity <= 0 ? "Purchase allowance used" : (child.css_stock_info.delivery_message || "Unavailable"))}</span>
-                      {child.css_purchase_constraints ? <span>{constraintText(child.css_purchase_constraints)}</span> : null}
-                    </div>
                   </article>;
                 })}
                 {!product.items?.length ? <p className="error" role="alert">There are no orderable options available for this product.</p> : null}
               </div>
             </section> : null}
 
-            {employeeOrdering.usesEmployee && employeeOrdering.multiEmployeeBasket ? <section className="pdp-option-section">
-              <div className="pdp-option-heading">
-                <strong>Who is this for?</strong>
-                <span>Assign this item to an Employee before adding it to the basket.</span>
-              </div>
-              <label className="field employee-field">
-                <span>Employee</span>
-                <select name="employee_id" required defaultValue="">
-                  <option value="" disabled>Choose Employee</option>
-                  {employeeOrdering.employees.map((employee) => <option value={employee.employee_id} key={employee.employee_id}>
-                    {employee.full_name}{employee.employee_code ? ` · ${employee.employee_code}` : ""}{employee.department ? ` · ${employee.department}` : ""}
-                  </option>)}
-                </select>
-              </label>
-            </section> : null}
+            {employeeOrdering.usesEmployee && !employeeOrdering.multiEmployeeBasket ? <p className="pdp-checkout-note">
+              Employee selection happens at the start of checkout.
+            </p> : null}
 
             {product.__typename === "CssGroupedConfigurableProduct" ? <section className="repeat-save-card pdp-repeat-card stack">
               <div className="pdp-repeat-heading">
                 <Repeat2 size={19} aria-hidden="true"/>
                 <div>
                   <strong>Save for next time</strong>
-                  <p className="muted small">Save this configured selection to one of your repeat-order lists.</p>
+                  <p className="muted small">Save the quantities and options currently shown to one of your repeat-order lists.</p>
                 </div>
               </div>
               {repeatLists.length ? <div className="pdp-repeat-actions">
@@ -277,42 +252,18 @@ export default async function ProductPage({
                 >Save selection</button>
               </div> : <p className="muted small">No repeat lists yet. <Link href="/account/repeat-orders">Create one in your account</Link>.</p>}
             </section> : null}
-          </div>
 
-          <aside className="pdp-order-sidebar">
-            <div className="pdp-order-summary-card">
-              <h3>Order summary</h3>
-              <div className="pdp-order-summary-row">
-                <PackageCheck size={18} aria-hidden="true"/>
-                <div><strong>{stockLabel}</strong><span>{product.css_stock_info.delivery_message || "Availability confirmed when added"}</span></div>
-              </div>
-              {selectedCompany?.name ? <div className="pdp-order-summary-row">
-                <ShieldCheck size={18} aria-hidden="true"/>
-                <div><strong>{selectedCompany.name}</strong><span>Your company pricing and purchasing rules apply.</span></div>
-              </div> : null}
-              {employeeOrdering.usesEmployee ? <div className="pdp-order-summary-row">
-                <UserRound size={18} aria-hidden="true"/>
-                <div>
-                  <strong>Employee assignment</strong>
-                  <span>{employeeOrdering.multiEmployeeBasket ? "Choose an Employee for this item." : "Choose the Employee at the start of checkout."}</span>
-                </div>
-              </div> : null}
-
-              {employeeOrdering.usesEmployee && !employeeOrdering.multiEmployeeBasket ? <div className="order-context-note">
-                You’ll choose who this order is for at the start of checkout.
-              </div> : null}
-
-              <button className="button order-primary-action" type="submit" disabled={!canAdd || (grouped && !product.items?.length)}>
+            {!grouped ? <div className="pdp-primary-row">
+              <button className="button order-primary-action" type="submit" disabled={!canAdd}>
                 <ShoppingCart size={19} aria-hidden="true"/>
-                <span>{canAdd && (!grouped || product.items?.length) ? addLabel : "Ordering unavailable"}</span>
+                <span>{canAdd ? addLabel : "Ordering unavailable"}</span>
               </button>
-
               {!canAdd ? <p className="pdp-order-unavailable">
                 <CircleAlert size={16} aria-hidden="true"/>
                 <span>This product can’t currently be added to the basket.</span>
               </p> : null}
-            </div>
-          </aside>
+            </div> : null}
+          </div>
         </form>
       </section>
     </main>
