@@ -57,6 +57,12 @@ export default async function AccountPage({
         </article>
 
         <article className="card">
+          <h2>Repeat orders</h2>
+          <p className="muted">Manage saved repeat lists and rebuild previous grouped-configurable selections through Fluid’s current compatibility checks.</p>
+          <Link className="button" href="/account/repeat-orders">Manage repeat orders</Link>
+        </article>
+
+        <article className="card">
           <h2>Credit orders</h2>
           <p className="muted">View your Fluid credit orders and any company or approval queues your current role is authorised to access.</p>
           <Link className="button" href="/account/credit-orders">View credit orders</Link>

@@ -11,6 +11,7 @@ import {
 } from "@/lib/magento/cart";
 import { getEmployeeOrdering } from "@/lib/magento/employee";
 import { getProduct, type ProductConfiguration } from "@/lib/magento/product";
+import { getRepeatOrderLists, saveGroupedRepeatOrderListItem } from "@/lib/magento/repeat-orders";
 import { requireCustomerToken } from "@/lib/session";
 
 function positiveQuantity(value: FormDataEntryValue | null) {
@@ -45,7 +46,7 @@ function validateConfigurableSelection(
 
 function message(error: unknown) {
   unstable_rethrow(error);
-  return error instanceof Error ? error.message : "The product could not be added to the basket.";
+  return error instanceof Error ? error.message : "The product action could not be completed.";
 }
 
 function cartItemSku(item: {
@@ -62,6 +63,34 @@ function assertGroupedChildAvailable(child: NonNullable<ProductConfiguration["it
   if (child.css_purchase_allowance?.has_active_restriction && child.css_purchase_allowance.remaining_quantity <= 0) {
     throw new Error(`${child.name} has no remaining purchase allowance.`);
   }
+}
+
+function groupedConfigurableSelections(product: ProductConfiguration, formData: FormData) {
+  const items: Array<{ configurableSku: string; variantSku: string; quantity: number }> = [];
+  const childCount = product.items?.length || 0;
+
+  for (let index = 0; index < childCount; index += 1) {
+    const childSku = String(formData.get(`child_${index}_sku`) || "").trim();
+    const child = (product.items || []).find((item) => item.product.sku === childSku)?.product;
+    if (!child) throw new Error("A grouped product selection is no longer available.");
+
+    const rawQuantity = Number(formData.get(`child_${index}_quantity`));
+    if (!Number.isFinite(rawQuantity) || rawQuantity < 0) throw new Error(`Enter a valid quantity for ${child.name}.`);
+    if (rawQuantity === 0) continue;
+
+    assertGroupedChildAvailable(child);
+    if (child.__typename !== "ConfigurableProduct") {
+      throw new Error(`${child.name} is not a configurable child of this Fluid grouped product.`);
+    }
+
+    const selected = selectedUids(formData, `child_${index}_option`);
+    const variant = validateConfigurableSelection(child, selected);
+    if (!variant) throw new Error(`${child.name} does not expose configurable options.`);
+    items.push({ configurableSku: child.sku, variantSku: variant.product.sku, quantity: rawQuantity });
+  }
+
+  if (!items.length) throw new Error("Choose at least one grouped product quantity.");
+  return items;
 }
 
 export async function addProductToCartAction(formData: FormData) {
@@ -89,30 +118,7 @@ export async function addProductToCartAction(formData: FormData) {
     }
 
     if (product.__typename === "CssGroupedConfigurableProduct") {
-      const items: Array<{ configurableSku: string; variantSku: string; quantity: number }> = [];
-      const childCount = product.items?.length || 0;
-
-      for (let index = 0; index < childCount; index += 1) {
-        const childSku = String(formData.get(`child_${index}_sku`) || "").trim();
-        const child = (product.items || []).find((item) => item.product.sku === childSku)?.product;
-        if (!child) throw new Error("A grouped product selection is no longer available.");
-
-        const rawQuantity = Number(formData.get(`child_${index}_quantity`));
-        if (!Number.isFinite(rawQuantity) || rawQuantity < 0) throw new Error(`Enter a valid quantity for ${child.name}.`);
-        if (rawQuantity === 0) continue;
-
-        assertGroupedChildAvailable(child);
-        if (child.__typename !== "ConfigurableProduct") {
-          throw new Error(`${child.name} is not a configurable child of this Fluid grouped product.`);
-        }
-
-        const selected = selectedUids(formData, `child_${index}_option`);
-        const variant = validateConfigurableSelection(child, selected);
-        if (!variant) throw new Error(`${child.name} does not expose configurable options.`);
-        items.push({ configurableSku: child.sku, variantSku: variant.product.sku, quantity: rawQuantity });
-      }
-
-      if (!items.length) throw new Error("Choose at least one grouped product quantity.");
+      const items = groupedConfigurableSelections(product, formData);
       const cart = await addGroupedConfigurableProduct(token, {
         cartId: before.id,
         parentSku: product.sku,
@@ -208,4 +214,55 @@ export async function addProductToCartAction(formData: FormData) {
 
   const path = `/product/${encodeURIComponent(sku)}`;
   redirect(failure ? `${path}?error=${encodeURIComponent(failure)}` : `${path}?added=1`);
+}
+
+export async function saveProductToRepeatListAction(formData: FormData) {
+  const token = await requireCustomerToken();
+  const sku = String(formData.get("product_sku") || "").trim();
+  if (!sku) redirect("/catalogue");
+
+  let failure: string | null = null;
+
+  try {
+    const listId = Number(formData.get("repeat_list_id"));
+    if (!Number.isInteger(listId) || listId <= 0) throw new Error("Choose a repeat-order list.");
+
+    const [product, employees, repeatLists] = await Promise.all([
+      getProduct(token, sku),
+      getEmployeeOrdering(token),
+      getRepeatOrderLists(token),
+    ]);
+    if (!product) throw new Error("Product could not be found.");
+    if (product.__typename !== "CssGroupedConfigurableProduct") {
+      throw new Error("Only Fluid grouped-configurable selections can be saved to repeat-order lists.");
+    }
+    if (!repeatLists.css_repeat_order_lists.some((list) => list.list_id === listId)) {
+      throw new Error("That repeat-order list is no longer available.");
+    }
+
+    let employeeName: string | undefined;
+    if (employees.usesEmployee) {
+      const employeeId = Number(formData.get("employee_id"));
+      const employee = employees.employees.find((candidate) => candidate.employee_id === employeeId);
+      if (!Number.isInteger(employeeId) || !employee) throw new Error("Choose an active Employee for this repeat selection.");
+      employeeName = employee.full_name;
+    }
+
+    const items = groupedConfigurableSelections(product, formData);
+    for (const item of items) {
+      await saveGroupedRepeatOrderListItem(token, {
+        list_id: listId,
+        parent_sku: product.sku,
+        configurable_sku: item.configurableSku,
+        variant_sku: item.variantSku,
+        quantity: item.quantity,
+        ...(employeeName ? { employee_name: employeeName } : {}),
+      });
+    }
+  } catch (error) {
+    failure = message(error);
+  }
+
+  const path = `/product/${encodeURIComponent(sku)}`;
+  redirect(failure ? `${path}?error=${encodeURIComponent(failure)}` : `${path}?saved=1`);
 }
