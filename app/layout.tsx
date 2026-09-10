@@ -4,6 +4,7 @@ import "./globals.css";
 import "./accessibility.css";
 import "./portal-ux.css";
 import "./production-fixes.css";
+import "./icon-system.css";
 import { SiteFooter } from "@/components/site-footer";
 import { getStoreName } from "@/lib/config";
 
