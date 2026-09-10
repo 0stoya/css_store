@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import "./globals.css";
+import "./accessibility.css";
 import { getStoreName } from "@/lib/config";
 
 export const metadata: Metadata = {
