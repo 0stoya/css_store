@@ -15,11 +15,6 @@ export type CheckoutCartItem = {
   configurable_options?: Array<{ option_label: string; value_label: string }> | null;
   css_kit: CartKitMetadata | null;
   css_employee: CartEmployeeAssignment | null;
-  css_purchase_eligibility: {
-    status: string;
-    message: string | null;
-    approval_status: string | null;
-  } | null;
 };
 
 export type CheckoutShippingAddress = {
@@ -50,6 +45,9 @@ export type CheckoutContext = {
     prices: {
       subtotal_excluding_tax: CartMoney | null;
       grand_total: CartMoney | null;
+    } | null;
+    css_purchase_eligibility: {
+      approval_status: string;
     } | null;
   };
   css_ordering_capabilities: {
@@ -92,7 +90,6 @@ const CHECKOUT_CONTEXT = /* GraphQL */ `
           }
           css_kit { employee_id employee_name employee_code parent_kit_product_id }
           css_employee { employee_id employee_name employee_code }
-          css_purchase_eligibility { status message approval_status }
         }
       }
       shipping_addresses {
@@ -119,6 +116,7 @@ const CHECKOUT_CONTEXT = /* GraphQL */ `
         subtotal_excluding_tax { value currency }
         grand_total { value currency }
       }
+      css_purchase_eligibility { approval_status }
     }
     css_ordering_capabilities {
       authenticated
