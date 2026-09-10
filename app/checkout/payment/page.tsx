@@ -1,8 +1,10 @@
 import Link from "next/link";
+import { CheckoutSteps } from "@/components/checkout-steps";
 import { SiteHeader } from "@/components/site-header";
 import type { CartMoney } from "@/lib/magento/cart";
 import { getCheckoutContext } from "@/lib/magento/checkout";
 import { getCustomerContext } from "@/lib/magento/context";
+import { getEmployeeOrdering } from "@/lib/magento/employee";
 import { requireCustomerToken } from "@/lib/session";
 import { completeCheckoutAction } from "./actions";
 
@@ -44,9 +46,10 @@ export default async function PaymentPage({
   searchParams: Promise<{ error?: string; notice?: string }>;
 }) {
   const token = await requireCustomerToken();
-  const [ctx, checkout, messages] = await Promise.all([
+  const [ctx, checkout, ordering, messages] = await Promise.all([
     getCustomerContext(token),
     getCheckoutContext(token),
+    getEmployeeOrdering(token),
     searchParams,
   ]);
 
@@ -68,15 +71,18 @@ export default async function PaymentPage({
     && cart.total_quantity > 0
     && Boolean(shippingAddress && shippingMethod)
     && methods.length > 0;
+  const includeEmployee = ordering.usesEmployee && !ordering.multiEmployeeBasket;
 
   return <>
     <SiteHeader customerName={customerName} companyName={selectedCompany?.name} basketQuantity={cart.total_quantity}/>
     <main className="shell stack">
-      <div className="basket-heading">
+      <CheckoutSteps current="payment" includeEmployee={includeEmployee}/>
+
+      <div className="basket-heading checkout-heading">
         <div>
-          <p className="eyebrow">Checkout · Payment & review</p>
-          <h1>Review and submit</h1>
-          <p className="muted">Choose an available payment method, check your order details and submit when you are ready.</p>
+          <p className="eyebrow">Checkout</p>
+          <h1>Payment & review</h1>
+          <p className="muted">Choose your payment method, check the order details and submit when you’re ready.</p>
         </div>
         <Link className="button secondary" href="/checkout/delivery">Back to delivery</Link>
       </div>
@@ -92,41 +98,42 @@ export default async function PaymentPage({
       {cart.total_quantity > 0 ? <div className="delivery-layout">
         <div className="stack">
           <section className="card delivery-card">
-            <h2>Payment method</h2>
-            <p className="muted">Choose from the payment options currently available for this order.</p>
+            <div className="checkout-card-intro">
+              <h2>Payment method</h2>
+              <p>Choose from the payment options available for this order.</p>
+            </div>
+
             {methods.length ? <form action={completeCheckoutAction} className="stack">
               <div className="shipping-method-list" role="radiogroup" aria-label="Payment method">
                 {methods.map((method) => {
                   const selected = cart.selected_payment_method?.code === method.code;
                   return <label className={`shipping-method ${selected ? "selected" : ""}`} key={method.code}>
-                    <div>
-                      <strong>{method.title}</strong>
-                    </div>
+                    <div><strong>{method.title}</strong></div>
                     <input type="radio" name="payment_method" value={method.code} defaultChecked={selected} required disabled={!ready}/>
                   </label>;
                 })}
               </div>
 
-              <div className="notice">
+              <div className="order-context-note">
                 <strong>Billing address</strong>
-                <p className="muted small">Your selected delivery address will also be used as the billing address for this order. Your saved addresses will not be changed.</p>
+                <p className="muted small">Your delivery address will also be used as the billing address for this order. Your saved addresses will not be changed.</p>
               </div>
 
-              {usesCreditOrder ? <div className="notice">
-                <strong>Company credit order</strong>
-                <p className="muted small">Your order may require approval before it is placed. The result will be shown as soon as you submit it.</p>
-              </div> : <div className="notice">
-                <strong>Order submission</strong>
-                <p className="muted small">Your order will be checked again when you submit it to make sure the basket and account are still valid.</p>
+              {usesCreditOrder ? <div className="order-context-note">
+                <strong>Company approval</strong>
+                <p className="muted small">This order may need approval before it is placed. You’ll see the result immediately after submission.</p>
+              </div> : <div className="order-context-note">
+                <strong>Final check</strong>
+                <p className="muted small">Availability, account permissions and the basket are checked again when you submit the order.</p>
               </div>}
 
-              <button className="button" type="submit" disabled={!ready}>Submit order</button>
+              <button className="button order-primary-action" type="submit" disabled={!ready}>Submit order</button>
             </form> : <p className="error" role="alert">No payment methods are currently available for this order.</p>}
           </section>
         </div>
 
         <aside className="stack">
-          <section className="card delivery-card">
+          <section className="card delivery-card checkout-summary-card">
             <h2>Order items</h2>
             <div className="checkout-line-list">
               {cart.itemsV2.items.map((item) => {
@@ -145,7 +152,7 @@ export default async function PaymentPage({
             </div>
           </section>
 
-          <section className="card delivery-card basket-totals">
+          <section className="card delivery-card basket-totals checkout-summary-card">
             <h2>Order summary</h2>
             <dl>
               <div><dt>Subtotal ex VAT</dt><dd>{money(cart.prices?.subtotal_excluding_tax)}</dd></div>
@@ -153,7 +160,7 @@ export default async function PaymentPage({
             </dl>
           </section>
 
-          {shippingAddress ? <section className="card delivery-card">
+          {shippingAddress ? <section className="card delivery-card checkout-summary-card">
             <h2>Delivery</h2>
             <p><strong>{shippingAddress.firstname} {shippingAddress.lastname}</strong></p>
             <p className="muted">{addressText(shippingAddress)}</p>
