@@ -34,8 +34,7 @@ export default async function CreditOrderPage({
   searchParams: Promise<{ error?: string; notice?: string }>;
 }) {
   const token = await requireCustomerToken();
-  const [{ number: encodedNumber }, messages] = await Promise.all([params, searchParams]);
-  const number = decodeURIComponent(encodedNumber);
+  const [{ number }, messages] = await Promise.all([params, searchParams]);
   const data = await getCreditOrder(token, number);
   const order = data.css_credit_order;
   const currentUser = data.css_company_context.selected_company_user_id;
@@ -140,7 +139,7 @@ export default async function CreditOrderPage({
                 <input type="hidden" name="number" value={order.number}/>
                 <input type="hidden" name="action" value="approve"/>
                 <strong>Approve</strong>
-                <textarea name="comment" placeholder="Optional approval comment"/>
+                {order.actions.can_add_comment ? <textarea name="comment" placeholder="Optional approval comment"/> : null}
                 <button className="button" type="submit">Approve credit order</button>
               </form> : null}
 
@@ -148,7 +147,7 @@ export default async function CreditOrderPage({
                 <input type="hidden" name="number" value={order.number}/>
                 <input type="hidden" name="action" value="reject"/>
                 <strong>Reject</strong>
-                <textarea name="comment" placeholder="Optional rejection comment"/>
+                {order.actions.can_add_comment ? <textarea name="comment" placeholder="Optional rejection comment"/> : null}
                 <button className={`button ${styles.dangerButton}`} type="submit">Reject credit order</button>
               </form> : null}
 
@@ -156,7 +155,7 @@ export default async function CreditOrderPage({
                 <input type="hidden" name="number" value={order.number}/>
                 <input type="hidden" name="action" value="cancel"/>
                 <strong>Cancel</strong>
-                <textarea name="comment" placeholder="Optional cancellation comment"/>
+                {order.actions.can_add_comment ? <textarea name="comment" placeholder="Optional cancellation comment"/> : null}
                 <button className={`button ${styles.dangerButton}`} type="submit">Cancel credit order</button>
               </form> : null}
 
@@ -175,7 +174,7 @@ export default async function CreditOrderPage({
                 <input type="hidden" name="number" value={order.number}/>
                 <input type="hidden" name="action" value="place"/>
                 <strong>Create Magento order</strong>
-                <textarea name="comment" placeholder="Optional placement comment"/>
+                {order.actions.can_add_comment ? <textarea name="comment" placeholder="Optional placement comment"/> : null}
                 <button className="button" type="submit">Place approved order</button>
               </form> : null}
 
