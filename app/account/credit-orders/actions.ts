@@ -44,6 +44,9 @@ export async function creditOrderLifecycleAction(formData: FormData) {
           : current.actions.can_place_order && !current.actions.requires_payment_details;
 
     if (!allowed) throw new Error("Fluid no longer allows that action for this credit order.");
+    if (comment && !current.actions.can_add_comment) {
+      throw new Error("Fluid allows the lifecycle action, but not an attached comment for this user.");
+    }
 
     await performCreditOrderAction(
       token,
