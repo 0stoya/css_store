@@ -93,11 +93,11 @@ export default async function PaymentPage({
                 {methods.map((method) => {
                   const selected = cart.selected_payment_method?.code === method.code;
                   return <label className={`shipping-method ${selected ? "selected" : ""}`} key={method.code}>
-                    <input type="radio" name="payment_method" value={method.code} defaultChecked={selected} required disabled={!ready}/>
                     <div>
                       <strong>{method.title}</strong>
                       <div className="muted small">{method.code}</div>
                     </div>
+                    <input type="radio" name="payment_method" value={method.code} defaultChecked={selected} required disabled={!ready}/>
                   </label>;
                 })}
               </div>
