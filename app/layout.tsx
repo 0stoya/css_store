@@ -7,6 +7,7 @@ import "./production-fixes.css";
 import "./icon-system.css";
 import "./pdp.css";
 import "./pdp-simplified.css";
+import "./pdp-runtime-tuning.css";
 import { SiteFooter } from "@/components/site-footer";
 import { getStoreName } from "@/lib/config";
 
