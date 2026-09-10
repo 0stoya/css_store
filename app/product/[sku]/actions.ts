@@ -110,7 +110,7 @@ export async function addProductToCartAction(formData: FormData) {
           const cartSku = item.configured_variant?.sku || item.product.sku;
           return cartSku === effectiveSku;
         }) || null;
-        if (matchingExisting?.css_employee?.employee_id !== undefined && matchingExisting?.css_employee?.employee_id !== null && matchingExisting.css_employee.employee_id !== employeeId) {
+        if (matchingExisting && matchingExisting.css_employee?.employee_id !== employeeId) {
           throw new Error("This exact product option is already assigned to another Employee. Use a different option or adjust it from the basket.");
         }
       }
