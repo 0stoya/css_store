@@ -11,6 +11,7 @@ import "./pdp-runtime-tuning.css";
 import "./basket-ux.css";
 import "./delivery-ux.css";
 import "./payment-ux.css";
+import "./account-ux.css";
 import { SiteFooter } from "@/components/site-footer";
 import { getStoreName } from "@/lib/config";
 
