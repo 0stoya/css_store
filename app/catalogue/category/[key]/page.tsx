@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ProductCard } from "@/components/product-card";
 import { SiteHeader } from "@/components/site-header";
@@ -37,7 +38,7 @@ export default async function CategoryPage({
   return <>
     <SiteHeader customerName={name} companyName={selected?.name}/>
     <main className="shell">
-      <a className="back-link" href="/catalogue">← All products</a>
+      <Link className="back-link" href="/catalogue">← All products</Link>
       <div className="toolbar">
         <div>
           <p className="eyebrow">Category</p>
@@ -56,9 +57,9 @@ export default async function CategoryPage({
       {!products.items.length ? <div className="empty card"><h2>No products found</h2><p className="muted">Try another search term or return to all products.</p></div> : null}
 
       {products.page_info.total_pages > 1 ? <nav className="pagination" aria-label={`${category.name} pages`}>
-        {products.page_info.current_page > 1 ? <a className="button secondary" href={pageHref(routeKey, products.page_info.current_page - 1, q)}>Previous</a> : <span/>}
+        {products.page_info.current_page > 1 ? <Link className="button secondary" href={pageHref(routeKey, products.page_info.current_page - 1, q)}>Previous</Link> : <span/>}
         <span>Page {products.page_info.current_page} of {products.page_info.total_pages}</span>
-        {products.page_info.current_page < products.page_info.total_pages ? <a className="button secondary" href={pageHref(routeKey, products.page_info.current_page + 1, q)}>Next</a> : <span/>}
+        {products.page_info.current_page < products.page_info.total_pages ? <Link className="button secondary" href={pageHref(routeKey, products.page_info.current_page + 1, q)}>Next</Link> : <span/>}
       </nav> : null}
     </main>
   </>;
