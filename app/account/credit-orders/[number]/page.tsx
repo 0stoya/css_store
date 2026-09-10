@@ -54,6 +54,7 @@ export default async function CreditOrderPage({
   const fromApprovals = messages.from === "approvals" && canApprove;
   const backHref = fromApprovals ? "/account/credit-orders?scope=APPROVAL" : "/account/credit-orders";
   const backLabel = fromApprovals ? "Back to approvals" : "Back to credit orders";
+  const approvalContext = fromApprovals ? <input type="hidden" name="from" value="approvals"/> : null;
 
   return <>
     <SiteHeader customerName={customerName} companyName={selectedCompany?.name}/>
@@ -120,6 +121,7 @@ export default async function CreditOrderPage({
 
               {order.actions.can_add_comment ? <form action={addCreditOrderCommentAction} className={styles.commentForm}>
                 <input type="hidden" name="number" value={order.number}/>
+                {approvalContext}
                 <label className="field">
                   <span>Add a comment</span>
                   <textarea name="comment" required placeholder="Write a comment about this credit order"/>
@@ -151,6 +153,7 @@ export default async function CreditOrderPage({
                 {order.actions.can_approve ? <form action={creditOrderLifecycleAction} className={styles.actionForm}>
                   <input type="hidden" name="number" value={order.number}/>
                   <input type="hidden" name="action" value="approve"/>
+                  {approvalContext}
                   <strong>Approve</strong>
                   {order.actions.can_add_comment ? <textarea name="comment" placeholder="Optional approval comment"/> : null}
                   <button className="button" type="submit">Approve credit order</button>
@@ -159,6 +162,7 @@ export default async function CreditOrderPage({
                 {order.actions.can_reject ? <form action={creditOrderLifecycleAction} className={styles.actionForm}>
                   <input type="hidden" name="number" value={order.number}/>
                   <input type="hidden" name="action" value="reject"/>
+                  {approvalContext}
                   <strong>Reject</strong>
                   {order.actions.can_add_comment ? <textarea name="comment" placeholder="Optional rejection comment"/> : null}
                   <button className={`button ${styles.dangerButton}`} type="submit">Reject credit order</button>
@@ -167,6 +171,7 @@ export default async function CreditOrderPage({
                 {order.actions.can_cancel ? <form action={creditOrderLifecycleAction} className={styles.actionForm}>
                   <input type="hidden" name="number" value={order.number}/>
                   <input type="hidden" name="action" value="cancel"/>
+                  {approvalContext}
                   <strong>Cancel</strong>
                   {order.actions.can_add_comment ? <textarea name="comment" placeholder="Optional cancellation comment"/> : null}
                   <button className={`button ${styles.dangerButton}`} type="submit">Cancel credit order</button>
@@ -174,6 +179,7 @@ export default async function CreditOrderPage({
 
                 {missingPoCandidate ? <form action={setCreditOrderPurchaseOrderNumberAction} className={styles.actionForm}>
                   <input type="hidden" name="number" value={order.number}/>
+                  {approvalContext}
                   <strong>Add purchase order number</strong>
                   <p className="muted small">This approved order may need a PO number before it can continue.</p>
                   <label className="field">
@@ -186,6 +192,7 @@ export default async function CreditOrderPage({
                 {canPlace ? <form action={creditOrderLifecycleAction} className={styles.actionForm}>
                   <input type="hidden" name="number" value={order.number}/>
                   <input type="hidden" name="action" value="place"/>
+                  {approvalContext}
                   <strong>Place approved order</strong>
                   {order.actions.can_add_comment ? <textarea name="comment" placeholder="Optional placement comment"/> : null}
                   <button className="button" type="submit">Place order</button>
