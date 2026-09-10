@@ -61,8 +61,13 @@ export default async function PaymentPage({
     && capabilities.company_context
     && capabilities.company_active
     && capabilities.can_checkout;
-  const ready = canCheckout && cart.total_quantity > 0 && Boolean(shippingAddress && shippingMethod) && methods.length > 0;
   const usesCreditOrder = capabilities.can_submit_credit_order;
+  const nativeApprovalAllowed = usesCreditOrder || cart.css_purchase_eligibility?.approval_status === "ALLOWED";
+  const ready = canCheckout
+    && nativeApprovalAllowed
+    && cart.total_quantity > 0
+    && Boolean(shippingAddress && shippingMethod)
+    && methods.length > 0;
 
   return <>
     <SiteHeader customerName={customerName} companyName={selectedCompany?.name} basketQuantity={cart.total_quantity}/>
@@ -81,6 +86,7 @@ export default async function PaymentPage({
 
       {!cart.total_quantity ? <section className="empty card"><h2>Your basket is empty</h2><p><Link className="button" href="/catalogue">Browse products</Link></p></section> : null}
       {cart.total_quantity > 0 && !canCheckout ? <p className="error">This company is not currently allowed to place this order.</p> : null}
+      {cart.total_quantity > 0 && canCheckout && !nativeApprovalAllowed ? <p className="error">Fluid has not authorised this company basket for native order placement, and the credit-order submission path is not currently available.</p> : null}
       {cart.total_quantity > 0 && (!shippingAddress || !shippingMethod) ? <section className="notice"><strong>Delivery is not complete.</strong><p className="muted small">Choose a delivery address and backend-provided shipping method before payment.</p><p><Link className="button secondary" href="/checkout/delivery">Complete delivery</Link></p></section> : null}
 
       {cart.total_quantity > 0 ? <div className="delivery-layout">
@@ -113,7 +119,7 @@ export default async function PaymentPage({
                 {cart.css_purchase_eligibility?.approval_status ? <p className="muted small">Current backend cart approval state: {cart.css_purchase_eligibility.approval_status}</p> : null}
               </div> : <div className="notice">
                 <strong>Native Magento checkout</strong>
-                <p className="muted small">This order will be submitted through Magento's standard placeOrder mutation.</p>
+                <p className="muted small">This order will be submitted through Magento's standard placeOrder mutation only when Fluid's current cart approval state is ALLOWED.</p>
               </div>}
 
               <button className="button" type="submit" disabled={!ready}>Submit order</button>
