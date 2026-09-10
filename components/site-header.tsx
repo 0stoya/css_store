@@ -25,8 +25,9 @@ export async function SiteHeader({
     }
   }
 
-  return (
+  return <>
     <header className="site-header">
+      <a className="skip-link" href="#main-content-start">Skip to main content</a>
       <Link className="brand" href="/">{getStoreName()}</Link>
       <nav aria-label="Store navigation">
         <Link href="/catalogue">Products</Link>
@@ -35,5 +36,6 @@ export async function SiteHeader({
       </nav>
       {customerName ? <div className="identity"><strong>{customerName}</strong><span>{companyName || "No company selected"}</span></div> : null}
     </header>
-  );
+    <span id="main-content-start" className="content-anchor" tabIndex={-1}/>
+  </>;
 }

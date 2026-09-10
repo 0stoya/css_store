@@ -21,9 +21,9 @@ The storefront must not duplicate Fluid business rules in the browser and must n
 | Phase 3C — payment/order submission | MERGED | PR #9; build/type/lint gate green; destructive real-order journeys remain part of launch regression |
 | Phase 4A — company order history | MERGED + RUNTIME ACCEPTED | PR #10 |
 | Phase 4B — credit-order workflow | MERGED + RUNTIME ACCEPTED | PR #11 |
-| **Phase 4C — repeat orders** | **NEXT** | Build from accepted Fluid repeat-order contract |
-| Phase 4D — returns request | PLANNED | Existing accepted `cssSubmitReturnRequest` contract |
-| Phase 5 — UX/content/commerce polish | PLANNED | Includes image optimisation/media-host configuration |
+| Phase 4C — repeat orders | MERGED + RUNTIME ACCEPTED | PR #12 |
+| Phase 4D — returns request | MERGED + RUNTIME ACCEPTED | PR #13 |
+| **Phase 5 — UX/content/commerce polish** | **IN PROGRESS** | Phase 5A accessibility foundation is the first focused slice |
 | Phase 6 — launch hardening | PLANNED | Complete production-like regression journey |
 
 A GitHub merge is not, by itself, runtime acceptance. Functional blocks should be exercised against real Magento / Fluid GraphQL fixtures, and irreversible order-placement paths must be covered again during Phase 6.
@@ -168,29 +168,33 @@ The storefront implementation/build gate is green, but Phase 6 must still repeat
 
 ### Phase 4C — repeat orders
 
-**Status: next implementation block.**
+**Status: merged and runtime accepted — PR #12.**
 
-Build against the accepted Fluid repeat-order contract:
+Delivered against the accepted Fluid repeat-order contract:
 
-- browse `css_repeat_order_lists`;
-- create/update/delete customer-owned repeat-order lists where exposed;
-- rebuild orders through the accepted repeat-order mutations;
-- use `cssRepeatGroupedConfigurableOrder` for grouped/configurable structural compatibility;
-- preserve canonical Employee attribution when the Employee remains active;
-- surface skipped/reassignment conditions rather than silently substituting products or inactive Employees;
-- keep all cart/purchase/company restrictions authoritative in Fluid / Magento;
-- do not implement repeat order by replaying stale client-side SKU/options data.
+- `/account/repeat-orders` browses and manages customer-owned repeat lists;
+- grouped-configurable PDP selections can be saved with canonical variant and Employee data resolved server-side;
+- list rows expose compatibility and intervention reasons rather than silently substituting stale selections;
+- selected/all compatible list items are rebuilt through `cssAddRepeatOrderListToCart` with the existing basket preserved;
+- previous company orders can be rebuilt through `cssRepeatGroupedConfigurableOrder`;
+- current company, Employee, stock and purchase restrictions remain authoritative in Fluid / Magento;
+- inactive/missing Employee and incompatible old rows surface intervention instead of silent reassignment.
 
 ### Phase 4D — returns
 
-After repeat orders:
+**Status: merged and runtime accepted — PR #13.**
 
-- expose `css_returns_configuration`;
-- authenticated `cssSubmitReturnRequest` form;
-- only expose the request/contact workflow the existing `Css_Returns` module actually supports;
-- do not invent RMA history, eligibility, reason or status features without an authoritative backend model.
+- `/account/returns` consumes `css_returns_configuration` and hides the form when the backend says the service is unavailable;
+- authenticated requests submit through `cssSubmitReturnRequest`;
+- order number remains an optional request reference rather than a browser-owned eligibility assertion;
+- order history can prefill that order reference;
+- successful submissions surface the authoritative request ID/message;
+- only the existing `Css_Returns` request/contact and queue/email workflow is exposed;
+- no RMA history, item eligibility, reason catalogue or lifecycle status is invented by the storefront.
 
 ### Phase 4 completion gate
+
+**Status: accepted for the implemented Phase 4 launch scope.**
 
 - own/company-visible orders match role permission;
 - credit-order lifecycle matches Fluid action state;
@@ -202,9 +206,23 @@ After repeat orders:
 
 ## Phase 5 — storefront UX, content and commerce polish
 
-After transaction/operational flows are stable:
+**Status: current implementation phase.**
 
-- responsive navigation/header/basket drawer as appropriate;
+### Phase 5A — accessibility foundation
+
+First focused slice, currently in progress:
+
+- keyboard skip navigation around the persistent storefront header;
+- clear `:focus-visible` treatment across links, buttons, form controls and expandable summaries;
+- 44px navigation targets and safer small-screen header wrapping;
+- shared textarea/form-control presentation instead of route-specific styling;
+- preserve all existing server actions and Magento/Fluid authority unchanged.
+
+### Remaining Phase 5 work
+
+After the accessibility foundation is accepted:
+
+- responsive navigation/header/basket refinement as appropriate;
 - accessible forms, dialogs and product option controls;
 - consistent loading/error/empty/success patterns;
 - session-expiry recovery with useful return context;
@@ -267,7 +285,7 @@ Do not call the storefront production-ready solely because the frontend build pa
 
 Prefer real Magento / Fluid behaviour or an explicit business requirement over frontend guesses.
 
-### Before Phase 5
+### During Phase 5
 
 - required CMS/legal pages;
 - analytics/consent requirement;
@@ -309,4 +327,4 @@ Never solve a missing customer API by calling `css_admin_*`, impersonating an ad
 
 Start the next implementation chat with:
 
-> Storefront phases through Phase 4B are merged. Phase 4A company order history and Phase 4B credit-order workflows are runtime accepted. Build Phase 4C Repeat Orders from current `css_store/main`, consuming the accepted Fluid repeat-order/customer GraphQL contract. Preserve grouped/configurable structure and canonical Employee attribution, surface inactive/reassignment/skipped conditions, and keep Magento/Fluid authoritative. Do not add backend work unless a real contract gap is reproduced.
+> Storefront Phase 4 is complete and runtime accepted through PR #13. Phase 4C Repeat Orders is PR #12 and Phase 4D Returns is PR #13. Continue Phase 5 from current `css_store/main`. Phase 5A is the focused accessibility foundation: keyboard navigation/focus, responsive header targets and shared form-control treatment without changing Magento/Fluid business rules. Keep unresolved CMS/legal, analytics/consent, SEO, media-host, accessibility-target and tax-display decisions explicit rather than guessing them.
