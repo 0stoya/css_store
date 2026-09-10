@@ -29,6 +29,25 @@ export type CartKitMetadata = {
   parent_kit_product_id: number;
 };
 
+export type CartWriteItemSnapshot = {
+  uid: string;
+  quantity: number;
+  product: { sku: string };
+  configured_variant?: { sku: string } | null;
+  css_employee: CartEmployeeAssignment | null;
+};
+
+export type CartWriteSnapshot = {
+  id: string;
+  itemsV2: { items: CartWriteItemSnapshot[] };
+};
+
+export type CartSummarySnapshot = {
+  id: string;
+  total_quantity: number;
+  itemsV2: { items: Array<{ uid: string }> };
+};
+
 export type CartItemSnapshot = {
   uid: string;
   quantity: number;
@@ -94,6 +113,25 @@ export type CartSnapshot = {
     base_currency: string;
   };
 };
+
+const CART_WRITE_FIELDS = /* GraphQL */ `
+  id
+  itemsV2 {
+    items {
+      uid
+      quantity
+      product { sku }
+      ... on ConfigurableCartItem { configured_variant { sku } }
+      css_employee { employee_id employee_name employee_code }
+    }
+  }
+`;
+
+const CART_SUMMARY_FIELDS = /* GraphQL */ `
+  id
+  total_quantity
+  itemsV2 { items { uid } }
+`;
 
 const CART_FIELDS = /* GraphQL */ `
   id
@@ -166,10 +204,16 @@ const CUSTOMER_CART = /* GraphQL */ `
   }
 `;
 
+const CUSTOMER_CART_SUMMARY = /* GraphQL */ `
+  query StoreCustomerCartSummary {
+    customerCart { ${CART_SUMMARY_FIELDS} }
+  }
+`;
+
 const ADD_PRODUCTS = /* GraphQL */ `
   mutation StoreAddProducts($cartId: String!, $items: [CartItemInput!]!) {
     addProductsToCart(cartId: $cartId, cartItems: $items) {
-      cart { ${CART_FIELDS} }
+      cart { ${CART_WRITE_FIELDS} }
       user_errors { code message }
     }
   }
@@ -183,7 +227,7 @@ const UPDATE_CART_ITEM = /* GraphQL */ `
         cart_items: [{ cart_item_uid: $itemUid, quantity: $quantity }]
       }
     ) {
-      cart { ${CART_FIELDS} }
+      cart { ${CART_WRITE_FIELDS} }
     }
   }
 `;
@@ -191,7 +235,7 @@ const UPDATE_CART_ITEM = /* GraphQL */ `
 const REMOVE_CART_ITEM = /* GraphQL */ `
   mutation StoreRemoveCartItem($cartId: String!, $itemUid: ID!) {
     removeItemFromCart(input: { cart_id: $cartId, cart_item_uid: $itemUid }) {
-      cart { ${CART_FIELDS} }
+      cart { ${CART_WRITE_FIELDS} }
     }
   }
 `;
@@ -199,7 +243,7 @@ const REMOVE_CART_ITEM = /* GraphQL */ `
 const ADD_GROUPED_CONFIGURABLE = /* GraphQL */ `
   mutation StoreAddGroupedConfigurable($input: CssAddGroupedConfigurableProductsToCartInput!) {
     cssAddGroupedConfigurableProductsToCart(input: $input) {
-      cart { ${CART_FIELDS} }
+      cart { ${CART_WRITE_FIELDS} }
       purchase_decision {
         logical_product_id
         has_active_restriction
@@ -217,7 +261,7 @@ const ADD_GROUPED_CONFIGURABLE = /* GraphQL */ `
 const ASSIGN_CART_EMPLOYEE = /* GraphQL */ `
   mutation StoreAssignCartEmployee($cartId: String!, $employeeId: Int!) {
     cssAssignCartEmployee(cart_id: $cartId, employee_id: $employeeId) {
-      ${CART_FIELDS}
+      ${CART_WRITE_FIELDS}
     }
   }
 `;
@@ -225,7 +269,7 @@ const ASSIGN_CART_EMPLOYEE = /* GraphQL */ `
 const ASSIGN_ITEM_EMPLOYEE = /* GraphQL */ `
   mutation StoreAssignCartItemEmployee($cartId: String!, $itemUid: ID!, $employeeId: Int!) {
     cssAssignCartItemEmployee(cart_id: $cartId, item_uid: $itemUid, employee_id: $employeeId) {
-      ${CART_FIELDS}
+      ${CART_WRITE_FIELDS}
     }
   }
 `;
@@ -235,7 +279,12 @@ export async function getCustomerCart(token: string) {
   return data.customerCart;
 }
 
-export function cartHasItems(cart: CartSnapshot) {
+export async function getCustomerCartSummary(token: string) {
+  const data = await magentoGraphQL<{ customerCart: CartSummarySnapshot }>(CUSTOMER_CART_SUMMARY, {}, token);
+  return data.customerCart;
+}
+
+export function cartHasItems(cart: Pick<CartSummarySnapshot, "total_quantity" | "itemsV2">) {
   return cart.total_quantity > 0 || cart.itemsV2.items.length > 0;
 }
 
@@ -246,7 +295,7 @@ export async function addNativeProduct(
 ) {
   const data = await magentoGraphQL<{
     addProductsToCart: {
-      cart: CartSnapshot;
+      cart: CartWriteSnapshot;
       user_errors: Array<{ code: string; message: string }>;
     };
   }>(
@@ -270,7 +319,7 @@ export async function addNativeProduct(
 }
 
 export async function updateCartItem(token: string, cartId: string, itemUid: string, quantity: number) {
-  const data = await magentoGraphQL<{ updateCartItems: { cart: CartSnapshot } }>(
+  const data = await magentoGraphQL<{ updateCartItems: { cart: CartWriteSnapshot } }>(
     UPDATE_CART_ITEM,
     { cartId, itemUid, quantity },
     token,
@@ -279,7 +328,7 @@ export async function updateCartItem(token: string, cartId: string, itemUid: str
 }
 
 export async function removeCartItem(token: string, cartId: string, itemUid: string) {
-  const data = await magentoGraphQL<{ removeItemFromCart: { cart: CartSnapshot } }>(
+  const data = await magentoGraphQL<{ removeItemFromCart: { cart: CartWriteSnapshot } }>(
     REMOVE_CART_ITEM,
     { cartId, itemUid },
     token,
@@ -298,7 +347,7 @@ export async function addGroupedConfigurableProduct(
 ) {
   const data = await magentoGraphQL<{
     cssAddGroupedConfigurableProductsToCart: {
-      cart: CartSnapshot;
+      cart: CartWriteSnapshot;
       purchase_decision: { status: string; reason: string | null };
     };
   }>(
@@ -329,7 +378,7 @@ export async function addGroupedConfigurableProduct(
 }
 
 export async function assignCartEmployee(token: string, cartId: string, employeeId: number) {
-  const data = await magentoGraphQL<{ cssAssignCartEmployee: CartSnapshot }>(
+  const data = await magentoGraphQL<{ cssAssignCartEmployee: CartWriteSnapshot }>(
     ASSIGN_CART_EMPLOYEE,
     { cartId, employeeId },
     token,
@@ -343,7 +392,7 @@ export async function assignCartItemEmployee(
   itemUid: string,
   employeeId: number,
 ) {
-  const data = await magentoGraphQL<{ cssAssignCartItemEmployee: CartSnapshot }>(
+  const data = await magentoGraphQL<{ cssAssignCartItemEmployee: CartWriteSnapshot }>(
     ASSIGN_ITEM_EMPLOYEE,
     { cartId, itemUid, employeeId },
     token,
