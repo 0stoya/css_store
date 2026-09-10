@@ -61,7 +61,10 @@ export default async function CataloguePage({
         <nav className="category-grid" aria-label="Product categories">
           {categories.map((category) => <Link className="category-card card" href={`/catalogue/category/${encodeURIComponent(category.url_key || category.uid)}`} key={category.uid}>
             {category.image_url ? <img src={category.image_url} alt=""/> : null}
-            <span><strong>{category.name}</strong><small>{category.product_count} product{category.product_count === 1 ? "" : "s"}</small></span>
+            <span>
+              <strong>{category.name}</strong>
+              <small>{category.product_count > 0 ? `${category.product_count} product${category.product_count === 1 ? "" : "s"}` : "Browse category"}</small>
+            </span>
           </Link>)}
         </nav>
       </> : null}
