@@ -1,6 +1,6 @@
 "use server";
 
-import { redirect } from "next/navigation";
+import { redirect, unstable_rethrow } from "next/navigation";
 import { clearCustomerToken, getCustomerToken, requireCustomerToken } from "@/lib/session";
 import { revokeCustomerToken } from "@/lib/magento/auth";
 import { cartHasItems, getCustomerCartSummary, type CartSummarySnapshot } from "@/lib/magento/cart";
@@ -21,7 +21,8 @@ export async function selectCompanyAction(formData: FormData) {
   let cart: CartSummarySnapshot;
   try {
     cart = await getCustomerCartSummary(token);
-  } catch {
+  } catch (error) {
+    unstable_rethrow(error);
     redirect("/account?error=Company%20selection%20is%20temporarily%20unavailable%20because%20the%20basket%20could%20not%20be%20verified.");
   }
 
@@ -31,7 +32,8 @@ export async function selectCompanyAction(formData: FormData) {
 
   try {
     await selectCompany(token, companyId);
-  } catch {
+  } catch (error) {
+    unstable_rethrow(error);
     redirect("/account?error=Company%20selection%20failed.");
   }
   redirect("/account?notice=Company%20updated.");
