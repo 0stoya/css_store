@@ -1,0 +1,108 @@
+/* Runtime PDP tuning from grouped-product acceptance screenshots. */
+
+.pdp-employee-section {
+  max-width: none;
+  padding: 16px 18px;
+  display: grid;
+  grid-template-columns: minmax(150px, .55fr) minmax(320px, 1fr);
+  align-items: center;
+  gap: 18px;
+}
+
+.pdp-employee-section .pdp-option-heading {
+  margin: 0;
+}
+
+.pdp-employee-section .employee-picker {
+  max-width: 460px;
+}
+
+.pdp-employee-section .employee-picker-label {
+  display: none;
+}
+
+.pdp-employee-section .employee-picker summary {
+  min-height: 54px;
+}
+
+.pdp-grouped-line {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.pdp-grouped-line .grouped-quantity-control {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  align-self: center;
+  justify-self: end;
+}
+
+.grouped-quantity-control {
+  width: max-content;
+  max-width: 100%;
+  display: grid;
+  gap: 7px;
+}
+
+.grouped-quantity-control > label {
+  color: var(--ink-strong);
+  font-size: .82rem;
+  font-weight: 800;
+}
+
+.grouped-quantity-row {
+  display: flex;
+  align-items: stretch;
+  gap: 9px;
+}
+
+.grouped-quantity-row .quantity-stepper {
+  width: 150px;
+}
+
+.grouped-line-add {
+  min-width: 92px;
+  min-height: 48px;
+  padding-inline: 15px;
+}
+
+.grouped-line-add:disabled {
+  opacity: .42;
+}
+
+@media (max-width: 760px) {
+  .pdp-employee-section {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .pdp-employee-section .employee-picker {
+    max-width: none;
+  }
+
+  .pdp-grouped-line .grouped-quantity-control {
+    grid-column: 1;
+    grid-row: auto;
+    width: 100%;
+    justify-self: stretch;
+  }
+
+  .grouped-quantity-row {
+    width: 100%;
+  }
+
+  .grouped-quantity-row .quantity-stepper {
+    flex: 1 1 auto;
+    width: auto;
+  }
+}
+
+@media (max-width: 460px) {
+  .grouped-quantity-row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+  }
+
+  .grouped-line-add {
+    min-width: 84px;
+  }
+}
