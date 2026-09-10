@@ -64,6 +64,7 @@ export default async function ConfirmationPage({
 
         <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
           <Link className="button" href="/catalogue">Continue shopping</Link>
+          {result.order ? <Link className="button secondary" href="/account/orders">View order history</Link> : null}
           <Link className="button secondary" href="/basket">Basket</Link>
           <Link className="button secondary" href="/account">Account</Link>
         </div>

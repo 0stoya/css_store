@@ -1,0 +1,164 @@
+.intro {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 18px 22px;
+}
+
+.intro p {
+  margin: 5px 0 0;
+}
+
+.list {
+  display: grid;
+  gap: 14px;
+}
+
+.card {
+  overflow: hidden;
+}
+
+.summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 22px;
+  padding: 20px 22px;
+  cursor: pointer;
+  list-style-position: inside;
+}
+
+.summary > div:first-child {
+  display: grid;
+  gap: 4px;
+}
+
+.summaryMeta {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 14px;
+  text-align: right;
+}
+
+.detail {
+  padding: 4px 22px 24px;
+  border-top: 1px solid var(--line);
+}
+
+.itemList {
+  display: grid;
+  gap: 0;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.itemRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(220px, .52fr);
+  gap: 20px;
+  padding: 18px;
+  background: #fff;
+}
+
+.itemRow + .itemRow {
+  border-top: 1px solid var(--line);
+}
+
+.itemCopy {
+  min-width: 0;
+}
+
+.itemTitle {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.employee {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 10px 0;
+}
+
+.itemMoney {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  margin: 0;
+}
+
+.itemMoney > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.itemMoney dt {
+  color: var(--muted);
+}
+
+.itemMoney dd {
+  margin: 0;
+  font-weight: 800;
+  text-align: right;
+}
+
+.totalCard {
+  width: min(440px, 100%);
+  margin-left: auto;
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--soft);
+}
+
+.totalCard dl {
+  display: grid;
+  gap: 9px;
+  margin: 12px 0 0;
+}
+
+.totalCard dl > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.totalCard dt {
+  color: var(--muted);
+}
+
+.totalCard dd {
+  margin: 0;
+  text-align: right;
+  font-weight: 800;
+}
+
+@media (max-width: 720px) {
+  .intro,
+  .summary,
+  .summaryMeta {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .summaryMeta {
+    gap: 8px;
+    text-align: left;
+  }
+
+  .itemRow {
+    grid-template-columns: 1fr;
+  }
+
+  .totalCard {
+    margin-left: 0;
+  }
+}
