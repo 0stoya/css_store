@@ -12,17 +12,25 @@ export type CustomerShippingAddress = {
   postcode: string;
   country_code: string;
   telephone: string;
-  default_shipping: boolean;
+  default_shipping: boolean | null;
 };
 
 export type ShippingMethod = {
-  available: boolean;
+  available: boolean | null;
   carrier_code: string;
   method_code: string;
   carrier_title: string | null;
   method_title: string | null;
   amount: CartMoney | null;
   error_message: string | null;
+};
+
+export type SelectedShippingMethod = {
+  carrier_code: string;
+  method_code: string;
+  carrier_title: string | null;
+  method_title: string | null;
+  amount: CartMoney | null;
 };
 
 export type ShippingCartAddress = {
@@ -36,7 +44,7 @@ export type ShippingCartAddress = {
   telephone: string;
   country: { code: string; label: string | null } | null;
   available_shipping_methods: ShippingMethod[];
-  selected_shipping_method: Omit<ShippingMethod, "available" | "error_message"> | null;
+  selected_shipping_method: SelectedShippingMethod | null;
 };
 
 export type DeliveryCartItem = {
@@ -50,6 +58,7 @@ export type DeliveryCartItem = {
 };
 
 export type DeliveryContext = {
+  countries: Array<{ id: string; full_name_locale: string }>;
   customer: {
     firstname: string;
     lastname: string;
@@ -73,6 +82,16 @@ export type DeliveryContext = {
     can_submit_credit_order: boolean;
     can_auto_approve_credit_order: boolean;
   };
+};
+
+type ShippingWriteCart = {
+  id: string;
+  total_quantity: number;
+  shipping_addresses: ShippingCartAddress[];
+  prices?: {
+    subtotal_excluding_tax: CartMoney | null;
+    grand_total: CartMoney | null;
+  } | null;
 };
 
 const SHIPPING_METHOD_FIELDS = /* GraphQL */ `
@@ -107,6 +126,7 @@ const SHIPPING_ADDRESS_FIELDS = /* GraphQL */ `
 
 const DELIVERY_CONTEXT = /* GraphQL */ `
   query StoreDeliveryContext {
+    countries { id full_name_locale }
     customer {
       firstname
       lastname
@@ -218,7 +238,7 @@ export function getDeliveryContext(token: string) {
 
 export async function setSavedShippingAddress(token: string, cartId: string, customerAddressId: number) {
   const data = await magentoGraphQL<{
-    setShippingAddressesOnCart: { cart: DeliveryContext["customerCart"] };
+    setShippingAddressesOnCart: { cart: ShippingWriteCart };
   }>(SET_SAVED_ADDRESS, { cartId, customerAddressId }, token);
   return data.setShippingAddressesOnCart.cart;
 }
@@ -240,7 +260,7 @@ export async function setNewShippingAddress(
   },
 ) {
   const data = await magentoGraphQL<{
-    setShippingAddressesOnCart: { cart: DeliveryContext["customerCart"] };
+    setShippingAddressesOnCart: { cart: ShippingWriteCart };
   }>(SET_NEW_ADDRESS, { cartId, address }, token);
   return data.setShippingAddressesOnCart.cart;
 }
@@ -252,7 +272,7 @@ export async function setShippingMethod(
   methodCode: string,
 ) {
   const data = await magentoGraphQL<{
-    setShippingMethodsOnCart: { cart: DeliveryContext["customerCart"] };
+    setShippingMethodsOnCart: { cart: ShippingWriteCart };
   }>(SET_SHIPPING_METHOD, { cartId, carrierCode, methodCode }, token);
   return data.setShippingMethodsOnCart.cart;
 }
