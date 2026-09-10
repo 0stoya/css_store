@@ -43,7 +43,8 @@ export default async function ProductPage({
   const price = product.price_range?.minimum_price;
   const allowance = product.css_purchase_allowance;
   const allowanceBlocked = Boolean(allowance?.has_active_restriction && allowance.remaining_quantity <= 0);
-  const supported = ["SimpleProduct", "ConfigurableProduct", "CssGroupedConfigurableProduct"].includes(product.__typename);
+  const grouped = product.__typename === "CssGroupedConfigurableProduct" || product.__typename === "GroupedProduct";
+  const supported = ["SimpleProduct", "ConfigurableProduct", "CssGroupedConfigurableProduct", "GroupedProduct"].includes(product.__typename);
   const canAdd = !ctx.css_storefront_policy.hide_add_to_cart && product.css_stock_info.available && !allowanceBlocked && supported;
   const gallery = (product.media_gallery || []).filter((image) => Boolean(image.url)).sort((a, b) => (a.position || 0) - (b.position || 0));
 
@@ -77,7 +78,7 @@ export default async function ProductPage({
 
       <section className="card order-panel">
         <h2>Configure order</h2>
-        {!supported ? <p className="error">This Magento product type does not yet have an accepted Phase 2 add-to-cart path.</p> : null}
+        {!supported ? <p className="error">This Magento product type does not yet have an accepted add-to-cart path.</p> : null}
         <form action={addProductToCartAction} className="stack">
           <input type="hidden" name="product_sku" value={product.sku}/>
 
@@ -104,25 +105,42 @@ export default async function ProductPage({
             />
           </label> : null}
 
-          {product.__typename === "CssGroupedConfigurableProduct" ? <div className="grouped-lines">
-            <input type="hidden" name="child_count" value={(product.items || []).length}/>
+          {grouped ? <div className="grouped-lines">
             {(product.items || []).slice().sort((a, b) => (a.position || 0) - (b.position || 0)).map((item, index) => {
               const child = item.product;
               const childPrice = child.price_range?.minimum_price.final_price;
+              const childAllowanceBlocked = Boolean(child.css_purchase_allowance?.has_active_restriction && child.css_purchase_allowance.remaining_quantity <= 0);
+              const childAvailable = child.css_stock_info.available && !childAllowanceBlocked;
               return <div className="grouped-line" key={child.uid}>
                 <input type="hidden" name={`child_${index}_sku`} value={child.sku}/>
-                <div><strong>{child.name}</strong><div className="muted">{child.sku}{childPrice && !ctx.css_storefront_policy.hide_price ? ` · ${money(childPrice.value, childPrice.currency)}` : ""}</div></div>
+                <div>
+                  <strong>{child.name}</strong>
+                  <div className="muted">{child.sku}{childPrice && !ctx.css_storefront_policy.hide_price ? ` · ${money(childPrice.value, childPrice.currency)}` : ""}</div>
+                  <div className="badge">{child.__typename === "ConfigurableProduct" ? "Configurable option" : "Grouped option"}</div>
+                </div>
                 {(child.configurable_options || []).map((option) => <label className="field" key={option.uid}>
                   <span>{option.label}</span>
-                  <select name={`child_${index}_option`} required defaultValue="">
+                  <select name={`child_${index}_option`} defaultValue="" disabled={!childAvailable}>
                     <option value="" disabled>Choose</option>
                     {option.values.map((value) => <option value={value.uid} key={value.uid}>{value.label}</option>)}
                   </select>
                 </label>)}
-                <label className="field compact-field"><span>Qty</span><input name={`child_${index}_quantity`} type="number" min="0" step={child.css_purchase_constraints?.increments_enforced ? child.css_purchase_constraints.quantity_increment : "any"} defaultValue={item.qty && item.qty > 0 ? item.qty : 0}/></label>
-                <div className="muted small">{child.css_stock_info.delivery_message}{child.css_purchase_constraints ? ` · ${constraintText(child.css_purchase_constraints)}` : ""}</div>
+                <label className="field compact-field"><span>Qty</span><input
+                  name={`child_${index}_quantity`}
+                  type="number"
+                  min="0"
+                  max={child.css_purchase_constraints?.maximum_quantity ?? undefined}
+                  step={child.css_purchase_constraints?.increments_enforced ? child.css_purchase_constraints.quantity_increment : "any"}
+                  defaultValue={item.qty && item.qty > 0 ? item.qty : 0}
+                  disabled={!childAvailable}
+                /></label>
+                <div className="muted small">
+                  {childAvailable ? child.css_stock_info.delivery_message : (child.css_purchase_allowance?.has_active_restriction && child.css_purchase_allowance.remaining_quantity <= 0 ? "No remaining purchase allowance" : child.css_stock_info.delivery_message)}
+                  {child.css_purchase_constraints ? ` · ${constraintText(child.css_purchase_constraints)}` : ""}
+                </div>
               </div>;
             })}
+            {!product.items?.length ? <p className="error">Magento has not returned any orderable children for this grouped product.</p> : null}
           </div> : null}
 
           {employeeOrdering.usesEmployee ? <label className="field employee-field">
@@ -136,8 +154,8 @@ export default async function ProductPage({
             <small className="muted">{employeeOrdering.multiEmployeeBasket ? "Employee attribution is stored per basket line." : "Selecting a different Employee reassigns the single-Employee basket."}</small>
           </label> : null}
 
-          <button className="button" type="submit" disabled={!canAdd}>
-            {canAdd ? (ctx.css_storefront_policy.add_to_cart_label || "Add to basket") : "Ordering unavailable"}
+          <button className="button" type="submit" disabled={!canAdd || (grouped && !product.items?.length)}>
+            {canAdd && (!grouped || product.items?.length) ? (ctx.css_storefront_policy.add_to_cart_label || "Add to basket") : "Ordering unavailable"}
           </button>
         </form>
       </section>

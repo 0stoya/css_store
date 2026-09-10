@@ -20,6 +20,20 @@ export type ProductPriceRange = {
   };
 };
 
+export type GroupedProductChild = {
+  __typename: string;
+  uid: string;
+  sku: string;
+  name: string;
+  stock_status: string | null;
+  price_range: ProductPriceRange | null;
+  css_purchase_allowance: PurchaseAllowance | null;
+  css_stock_info: StockInfo;
+  css_purchase_constraints: PurchaseConstraints | null;
+  configurable_options?: ConfigurableOption[] | null;
+  variants?: ConfigurableVariant[] | null;
+};
+
 export type ProductConfiguration = {
   __typename: string;
   uid: string;
@@ -38,21 +52,53 @@ export type ProductConfiguration = {
   items?: Array<{
     qty: number | null;
     position: number | null;
-    product: {
-      __typename: string;
-      uid: string;
-      sku: string;
-      name: string;
-      stock_status: string | null;
-      price_range: ProductPriceRange | null;
-      css_purchase_allowance: PurchaseAllowance | null;
-      css_stock_info: StockInfo;
-      css_purchase_constraints: PurchaseConstraints | null;
-      configurable_options?: ConfigurableOption[] | null;
-      variants?: ConfigurableVariant[] | null;
-    };
+    product: GroupedProductChild;
   }> | null;
 };
+
+const CONFIGURABLE_CONFIGURATION_FIELDS = /* GraphQL */ `
+  configurable_options {
+    uid
+    attribute_code
+    label
+    values { uid label }
+  }
+  variants {
+    attributes { uid code label value_index }
+    product { sku name stock_status }
+  }
+`;
+
+const GROUPED_CHILD_FIELDS = /* GraphQL */ `
+  __typename
+  uid
+  sku
+  name
+  stock_status
+  price_range {
+    minimum_price {
+      regular_price { value currency }
+      final_price { value currency }
+    }
+  }
+  css_purchase_allowance {
+    logical_product_id
+    has_active_restriction
+    allowed_quantity
+    purchased_quantity
+    remaining_quantity
+  }
+  css_stock_info { available stock_status delivery_message }
+  css_purchase_constraints {
+    minimum_quantity
+    maximum_quantity
+    quantity_increment
+    increments_enforced
+  }
+  ... on ConfigurableProduct {
+    ${CONFIGURABLE_CONFIGURATION_FIELDS}
+  }
+`;
 
 const PRODUCT = /* GraphQL */ `
   query StoreProduct($sku: String!) {
@@ -87,59 +133,14 @@ const PRODUCT = /* GraphQL */ `
           increments_enforced
         }
         ... on ConfigurableProduct {
-          configurable_options {
-            uid
-            attribute_code
-            label
-            values { uid label }
-          }
-          variants {
-            attributes { uid code label value_index }
-            product { sku name stock_status }
-          }
+          ${CONFIGURABLE_CONFIGURATION_FIELDS}
         }
         ... on CssGroupedConfigurableProduct {
           items {
             qty
             position
             product {
-              __typename
-              uid
-              sku
-              name
-              stock_status
-              price_range {
-                minimum_price {
-                  regular_price { value currency }
-                  final_price { value currency }
-                }
-              }
-              css_purchase_allowance {
-                logical_product_id
-                has_active_restriction
-                allowed_quantity
-                purchased_quantity
-                remaining_quantity
-              }
-              css_stock_info { available stock_status delivery_message }
-              css_purchase_constraints {
-                minimum_quantity
-                maximum_quantity
-                quantity_increment
-                increments_enforced
-              }
-              ... on ConfigurableProduct {
-                configurable_options {
-                  uid
-                  attribute_code
-                  label
-                  values { uid label }
-                }
-                variants {
-                  attributes { uid code label value_index }
-                  product { sku name stock_status }
-                }
-              }
+              ${GROUPED_CHILD_FIELDS}
             }
           }
         }
@@ -148,31 +149,7 @@ const PRODUCT = /* GraphQL */ `
             qty
             position
             product {
-              __typename
-              uid
-              sku
-              name
-              stock_status
-              price_range {
-                minimum_price {
-                  regular_price { value currency }
-                  final_price { value currency }
-                }
-              }
-              css_purchase_allowance {
-                logical_product_id
-                has_active_restriction
-                allowed_quantity
-                purchased_quantity
-                remaining_quantity
-              }
-              css_stock_info { available stock_status delivery_message }
-              css_purchase_constraints {
-                minimum_quantity
-                maximum_quantity
-                quantity_increment
-                increments_enforced
-              }
+              ${GROUPED_CHILD_FIELDS}
             }
           }
         }
