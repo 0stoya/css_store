@@ -10,11 +10,15 @@ export type CompanyOrderItem = {
   id: string;
   product_name: string;
   product_sku: string;
+  product_type: string | null;
   quantity_ordered: number;
   quantity_shipped: number;
   quantity_refunded: number;
   quantity_canceled: number;
   product_sale_price: CartMoney | null;
+  prices: {
+    row_total: CartMoney;
+  } | null;
   selected_options: OrderOption[] | null;
   entered_options: OrderOption[] | null;
   css_employee: {
@@ -30,7 +34,7 @@ export type CompanyOrder = {
   status: string;
   items: CompanyOrderItem[];
   total: {
-    subtotal: CartMoney | null;
+    subtotal_excl_tax: CartMoney | null;
     total_shipping: CartMoney | null;
     total_tax: CartMoney | null;
     grand_total: CartMoney | null;
@@ -99,17 +103,19 @@ const COMPANY_ORDERS = /* GraphQL */ `
           id
           product_name
           product_sku
+          product_type
           quantity_ordered
           quantity_shipped
           quantity_refunded
           quantity_canceled
           product_sale_price { value currency }
+          prices { row_total { value currency } }
           selected_options { label value }
           entered_options { label value }
           css_employee { employee_id employee_name employee_code }
         }
         total {
-          subtotal { value currency }
+          subtotal_excl_tax { value currency }
           total_shipping { value currency }
           total_tax { value currency }
           grand_total { value currency }
