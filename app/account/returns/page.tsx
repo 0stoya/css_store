@@ -34,8 +34,8 @@ export default async function ReturnsPage({
         <Link className="button secondary" href="/account">Back to account</Link>
       </div>
 
-      {params.error ? <p className="error">{params.error}</p> : null}
-      {params.notice ? <p className="success">{params.notice}</p> : null}
+      {params.error ? <p className="error" role="alert">{params.error}</p> : null}
+      {params.notice ? <p className="success" role="status">{params.notice}</p> : null}
 
       {!configuration.enabled ? <section className="empty card">
         <h2>Returns requests are currently unavailable</h2>
@@ -67,7 +67,7 @@ export default async function ReturnsPage({
 
           <label className="field">
             <span>Message</span>
-            <textarea name="message" rows={7} required style={{padding:12, border:"1px solid #b8cad8", borderRadius:8, font:"inherit", resize:"vertical"}}/>
+            <textarea name="message" rows={7} required/>
           </label>
 
           <div>
