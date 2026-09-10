@@ -50,39 +50,60 @@ export default async function ProductPage({
   const canAdd = !ctx.css_storefront_policy.hide_add_to_cart && product.css_stock_info.available && !allowanceBlocked && supported;
   const gallery = (product.media_gallery || []).filter((image) => Boolean(image.url)).sort((a, b) => (a.position || 0) - (b.position || 0));
   const repeatLists = repeatListsData.css_repeat_order_lists;
+  const stockLabel = product.css_stock_info.stock_status || (product.css_stock_info.available ? "Available" : "Unavailable");
 
   return <>
     <SiteHeader customerName={customerName} companyName={selectedCompany?.name}/>
     <main className="shell">
-      <Link className="back-link" href="/catalogue">← Back to products</Link>
-      {status.added === "1" ? <p className="success">Added to basket.</p> : null}
-      {status.saved === "1" ? <p className="success">Selection saved to the repeat-order list.</p> : null}
-      {status.error ? <p className="error">{status.error}</p> : null}
+      <nav className="pdp-breadcrumb" aria-label="Breadcrumb">
+        <Link href="/catalogue">Products</Link><span aria-hidden="true">/</span><span>{product.name}</span>
+      </nav>
+
+      {status.added === "1" ? <p className="success" role="status">Added to basket.</p> : null}
+      {status.saved === "1" ? <p className="success" role="status">Selection saved to your repeat-order list.</p> : null}
+      {status.error ? <p className="error" role="alert">{status.error}</p> : null}
+
       <section className="pdp">
         <div className="pdp-gallery card">
-          {gallery[0] ? <img src={gallery[0].url} alt={gallery[0].label || product.name}/> : <div className="product-media"><span className="muted">No image</span></div>}
+          {gallery[0] ? <img src={gallery[0].url} alt={gallery[0].label || product.name}/> : <div className="product-media"><span className="muted">No product image</span></div>}
           {gallery.length > 1 ? <div className="thumb-row">{gallery.slice(1, 5).map((image) => <img key={image.url} src={image.url} alt={image.label || product.name}/>)}</div> : null}
         </div>
+
         <div className="pdp-info">
-          <p className="eyebrow">{product.__typename.replace(/Product$/, " product")}</p>
+          <p className="eyebrow">Product</p>
           <h1>{product.name}</h1>
-          <p className="muted">SKU {product.sku}</p>
+          <div className="pdp-meta-row">
+            <p className="muted">SKU {product.sku}</p>
+            <span className={`product-stock ${product.css_stock_info.available ? "available" : "unavailable"}`}>{stockLabel}</span>
+          </div>
+
           {!ctx.css_storefront_policy.hide_price && price ? <div className="pdp-price">
+            <span className="pdp-price-label">Your price</span>
             <strong>{money(price.final_price.value, price.final_price.currency)}</strong>
             {price.regular_price.value > price.final_price.value ? <del>{money(price.regular_price.value, price.regular_price.currency)}</del> : null}
           </div> : null}
-          <div className="notice-list">
-            <p className={product.css_stock_info.available ? "notice" : "error"}>{product.css_stock_info.delivery_message || product.css_stock_info.stock_status}</p>
-            {allowance?.has_active_restriction ? <p className="notice">Purchase allowance: {allowance.remaining_quantity} remaining of {allowance.allowed_quantity}; {allowance.purchased_quantity} already purchased.</p> : null}
-            {product.css_purchase_constraints ? <p className="notice">Quantity rules: {constraintText(product.css_purchase_constraints)}.</p> : null}
+
+          <div className="pdp-status-list">
+            {product.css_stock_info.delivery_message ? <p className={`pdp-status ${product.css_stock_info.available ? "positive" : "blocked"}`}>{product.css_stock_info.delivery_message}</p> : null}
+            {allowance?.has_active_restriction ? <p className={`pdp-status ${allowanceBlocked ? "blocked" : ""}`}>Purchase allowance: {allowance.remaining_quantity} remaining of {allowance.allowed_quantity}.</p> : null}
+            {product.css_purchase_constraints ? <p className="pdp-status">Quantity: {constraintText(product.css_purchase_constraints)}.</p> : null}
           </div>
+
           {product.description?.html ? <div className="product-description" dangerouslySetInnerHTML={{ __html: product.description.html }}/> : null}
         </div>
       </section>
 
       <section className="card order-panel">
-        <h2>Configure order</h2>
-        {!supported ? <p className="error">This Magento product type does not yet have an accepted add-to-cart path.</p> : null}
+        <div className="order-panel-header">
+          <div>
+            <p className="eyebrow">Order this product</p>
+            <h2>Choose your options</h2>
+          </div>
+          <p>Select the options and quantity you need. Availability and order limits are checked again when the item is added.</p>
+        </div>
+
+        {!supported ? <p className="error" role="alert">This product can’t currently be ordered online.</p> : null}
+
         <form action={addProductToCartAction} className="stack">
           <input type="hidden" name="product_sku" value={product.sku}/>
 
@@ -101,6 +122,7 @@ export default async function ProductPage({
             <input
               name="quantity"
               type="number"
+              inputMode="decimal"
               defaultValue={Math.max(1, product.css_purchase_constraints?.minimum_quantity || 1)}
               min={product.css_purchase_constraints?.minimum_quantity || 1}
               max={product.css_purchase_constraints?.maximum_quantity ?? undefined}
@@ -109,7 +131,7 @@ export default async function ProductPage({
             />
           </label> : null}
 
-          {grouped ? <div className="grouped-lines">
+          {grouped ? <div className="grouped-lines" aria-label="Grouped product options">
             {(product.items || []).slice().sort((a, b) => (a.position || 0) - (b.position || 0)).map((item, index) => {
               const child = item.product;
               const childPrice = child.price_range?.minimum_price.final_price;
@@ -117,21 +139,22 @@ export default async function ProductPage({
               const childAvailable = child.css_stock_info.available && !childAllowanceBlocked;
               return <div className="grouped-line" key={child.uid}>
                 <input type="hidden" name={`child_${index}_sku`} value={child.sku}/>
-                <div>
+                <div className="grouped-product-name">
                   <strong>{child.name}</strong>
-                  <div className="muted">{child.sku}{childPrice && !ctx.css_storefront_policy.hide_price ? ` · ${money(childPrice.value, childPrice.currency)}` : ""}</div>
-                  <div className="badge">{child.__typename === "ConfigurableProduct" ? "Configurable option" : "Grouped option"}</div>
+                  <div className="muted small">SKU {child.sku}{childPrice && !ctx.css_storefront_policy.hide_price ? ` · ${money(childPrice.value, childPrice.currency)}` : ""}</div>
+                  <span className={`product-stock ${childAvailable ? "available" : "unavailable"}`}>{childAvailable ? "Available" : "Unavailable"}</span>
                 </div>
                 {(child.configurable_options || []).map((option) => <label className="field" key={option.uid}>
                   <span>{option.label}</span>
                   <select name={`child_${index}_option`} defaultValue="" disabled={!childAvailable}>
-                    <option value="" disabled>Choose</option>
+                    <option value="" disabled>Choose {option.label}</option>
                     {option.values.map((value) => <option value={value.uid} key={value.uid}>{value.label}</option>)}
                   </select>
                 </label>)}
-                <label className="field compact-field"><span>Qty</span><input
+                <label className="field compact-field"><span>Quantity</span><input
                   name={`child_${index}_quantity`}
                   type="number"
+                  inputMode="decimal"
                   min="0"
                   max={child.css_purchase_constraints?.maximum_quantity ?? undefined}
                   step={child.css_purchase_constraints?.increments_enforced ? child.css_purchase_constraints.quantity_increment : "any"}
@@ -139,12 +162,12 @@ export default async function ProductPage({
                   disabled={!childAvailable}
                 /></label>
                 <div className="muted small">
-                  {childAvailable ? child.css_stock_info.delivery_message : (child.css_purchase_allowance?.has_active_restriction && child.css_purchase_allowance.remaining_quantity <= 0 ? "No remaining purchase allowance" : child.css_stock_info.delivery_message)}
+                  {childAvailable ? child.css_stock_info.delivery_message : (child.css_purchase_allowance?.has_active_restriction && child.css_purchase_allowance.remaining_quantity <= 0 ? "Purchase allowance used" : child.css_stock_info.delivery_message)}
                   {child.css_purchase_constraints ? ` · ${constraintText(child.css_purchase_constraints)}` : ""}
                 </div>
               </div>;
             })}
-            {!product.items?.length ? <p className="error">Magento has not returned any orderable children for this grouped product.</p> : null}
+            {!product.items?.length ? <p className="error" role="alert">There are no orderable options available for this product.</p> : null}
           </div> : null}
 
           {employeeOrdering.usesEmployee && employeeOrdering.multiEmployeeBasket ? <label className="field employee-field">
@@ -155,17 +178,17 @@ export default async function ProductPage({
                 {employee.full_name}{employee.employee_code ? ` · ${employee.employee_code}` : ""}{employee.department ? ` · ${employee.department}` : ""}
               </option>)}
             </select>
-            <small className="muted">Employee attribution is stored per basket line.</small>
+            <small className="muted">Choose who this item is for.</small>
           </label> : null}
 
-          {employeeOrdering.usesEmployee && !employeeOrdering.multiEmployeeBasket ? <p className="notice">
-            This company uses one Employee for the whole order. You will choose that Employee as the first checkout step.
-          </p> : null}
+          {employeeOrdering.usesEmployee && !employeeOrdering.multiEmployeeBasket ? <div className="order-context-note">
+            You’ll choose who this order is for at the start of checkout.
+          </div> : null}
 
-          {product.__typename === "CssGroupedConfigurableProduct" ? <div className="card stack" style={{padding:16}}>
+          {product.__typename === "CssGroupedConfigurableProduct" ? <div className="repeat-save-card stack">
             <div>
-              <strong>Save this configuration</strong>
-              <p className="muted small">The same validated variant SKUs and quantities can be stored as a Fluid repeat-order list. Multi-Employee baskets also preserve the selected Employee for each saved row.</p>
+              <strong>Save for next time</strong>
+              <p className="muted small">Save this configured selection to one of your repeat-order lists.</p>
             </div>
             {repeatLists.length ? <>
               <label className="field">
@@ -180,11 +203,11 @@ export default async function ProductPage({
                 type="submit"
                 formAction={saveProductToRepeatListAction}
                 disabled={!canAdd || !product.items?.length}
-              >Save selection to repeat list</button>
+              >Save selection</button>
             </> : <p className="muted small">No repeat lists yet. <Link href="/account/repeat-orders">Create one in your account</Link>.</p>}
           </div> : null}
 
-          <button className="button" type="submit" disabled={!canAdd || (grouped && !product.items?.length)}>
+          <button className="button order-primary-action" type="submit" disabled={!canAdd || (grouped && !product.items?.length)}>
             {canAdd && (!grouped || product.items?.length) ? (ctx.css_storefront_policy.add_to_cart_label || "Add to basket") : "Ordering unavailable"}
           </button>
         </form>
