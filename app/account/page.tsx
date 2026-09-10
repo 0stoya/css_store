@@ -1,4 +1,15 @@
 import Link from "next/link";
+import {
+  Building2,
+  ChevronRight,
+  ClipboardCheck,
+  LogOut,
+  Mail,
+  PackageSearch,
+  Repeat2,
+  RotateCcw,
+  UserRound,
+} from "lucide-react";
 import { SiteHeader } from "@/components/site-header";
 import { getCustomerContext } from "@/lib/magento/context";
 import { requireCustomerToken } from "@/lib/session";
@@ -14,82 +25,131 @@ export default async function AccountPage({
   const token = await requireCustomerToken();
   const ctx = await getCustomerContext(token);
   const selected = ctx.css_company_context.companies.find((company) => company.selected) || null;
+  const activeCompanies = ctx.css_company_context.companies.filter((company) => company.active);
   const name = `${ctx.customer.firstname} ${ctx.customer.lastname}`.trim();
   const messages = await searchParams;
 
+  const accountLinks = [
+    {
+      href: "/account/orders",
+      eyebrow: "Orders",
+      title: "Order history",
+      description: "Review previous orders, product options and Employee assignments.",
+      Icon: PackageSearch,
+    },
+    {
+      href: "/account/repeat-orders",
+      eyebrow: "Reorder",
+      title: "Repeat orders",
+      description: "Manage saved repeat lists and reorder products you buy regularly.",
+      Icon: Repeat2,
+    },
+    {
+      href: "/account/credit-orders",
+      eyebrow: "Approvals",
+      title: "Credit orders",
+      description: "View submitted credit orders and any approval activity available to you.",
+      Icon: ClipboardCheck,
+    },
+    {
+      href: "/account/returns",
+      eyebrow: "Support",
+      title: "Returns",
+      description: "Request a return and reference an order when relevant.",
+      Icon: RotateCcw,
+    },
+  ];
+
   return <>
     <SiteHeader customerName={name} companyName={selected?.name}/>
-    <main className="shell stack">
-      <section className="card account-hero">
-        <div>
-          <p className="eyebrow">Your account</p>
-          <h1>{name}</h1>
-          <p className="muted">{ctx.customer.email}</p>
+    <main className="shell stack account-page">
+      <section className="card account-profile-card">
+        <div className="account-profile-main">
+          <span className="account-profile-icon"><UserRound size={24} aria-hidden="true"/></span>
+          <div>
+            <p className="eyebrow">Your account</p>
+            <h1>{name}</h1>
+            <p className="account-email"><Mail size={15} aria-hidden="true"/><span>{ctx.customer.email}</span></p>
+          </div>
         </div>
-        {selected ? <div className="identity">
-          <strong>{selected.name}</strong>
-          <span>{selected.reference || "Current ordering company"}</span>
+
+        {selected ? <div className="account-company-summary">
+          <span className="account-company-icon"><Building2 size={19} aria-hidden="true"/></span>
+          <div>
+            <span>Ordering as</span>
+            <strong>{selected.name}</strong>
+            {selected.reference ? <small>{selected.reference}</small> : null}
+          </div>
         </div> : null}
       </section>
 
       {messages.error ? <div className="error" role="alert">{messages.error}</div> : null}
       {messages.notice ? <div className="success" role="status">{messages.notice}</div> : null}
 
-      <section className="account-grid">
-        <article className="card account-company-card">
-          <p className="account-card-kicker">Company</p>
-          <h2>Ordering company</h2>
-          <p className="muted">Choose the company you are ordering for. Products, prices and ordering permissions will update automatically.</p>
-          <div className="company-list">
-            {ctx.css_company_context.companies.filter((company) => company.active).map((company) => <div className={`company-row ${company.selected ? "current" : ""}`} key={company.company_id}>
+      {activeCompanies.length > 1 ? <section className="card account-company-switcher">
+        <div className="account-section-heading">
+          <div>
+            <p className="account-card-kicker">Company</p>
+            <h2>Ordering company</h2>
+          </div>
+          <p>Switch the company you are ordering for. Product access and pricing update automatically.</p>
+        </div>
+
+        <div className="company-list account-company-list">
+          {activeCompanies.map((company) => <div className={`company-row ${company.selected ? "current" : ""}`} key={company.company_id}>
+            <div className="account-company-row-copy">
+              <span className="account-company-row-icon"><Building2 size={17} aria-hidden="true"/></span>
               <div>
                 <strong>{company.name || `Company ${company.company_id}`}</strong>
                 <div className="muted small">{company.reference || `#${company.company_id}`}</div>
               </div>
-              {company.selected
-                ? <span className="badge">Current company</span>
-                : <form action={selectCompanyAction}>
-                    <input type="hidden" name="companyId" value={company.company_id}/>
-                    <button className="button secondary" type="submit">Use company</button>
-                  </form>}
-            </div>)}
+            </div>
+            {company.selected
+              ? <span className="badge account-current-company">Current</span>
+              : <form action={selectCompanyAction}>
+                  <input type="hidden" name="companyId" value={company.company_id}/>
+                  <button className="button secondary" type="submit">Use company</button>
+                </form>}
+          </div>)}
+        </div>
+      </section> : null}
+
+      <section className="account-navigation" aria-labelledby="account-tools-heading">
+        <div className="account-navigation-heading">
+          <div>
+            <p className="eyebrow">Account tools</p>
+            <h2 id="account-tools-heading">Manage your account</h2>
           </div>
-        </article>
+          <p>Orders, repeat purchasing, approvals and returns.</p>
+        </div>
 
-        <article className="card">
-          <p className="account-card-kicker">Orders</p>
-          <h2>Order history</h2>
-          <p className="muted">View previous orders for the selected company, including product options and Employee details where applicable.</p>
-          <Link className="button" href="/account/orders">View order history</Link>
-        </article>
+        <div className="account-navigation-grid">
+          {accountLinks.map(({ href, eyebrow, title, description, Icon }) => <Link className="card account-nav-card" href={href} key={href}>
+            <span className="account-nav-icon"><Icon size={22} aria-hidden="true"/></span>
+            <div className="account-nav-copy">
+              <span className="account-nav-eyebrow">{eyebrow}</span>
+              <h3>{title}</h3>
+              <p>{description}</p>
+            </div>
+            <span className="account-nav-arrow" aria-hidden="true"><ChevronRight size={20}/></span>
+          </Link>)}
+        </div>
+      </section>
 
-        <article className="card">
-          <p className="account-card-kicker">Reorder</p>
-          <h2>Repeat orders</h2>
-          <p className="muted">Manage saved repeat lists or reorder eligible items from previous orders.</p>
-          <Link className="button" href="/account/repeat-orders">Manage repeat orders</Link>
-        </article>
-
-        <article className="card">
-          <p className="account-card-kicker">Approvals</p>
-          <h2>Credit orders</h2>
-          <p className="muted">View credit orders, approval requests and the actions available to your account.</p>
-          <Link className="button" href="/account/credit-orders">View credit orders</Link>
-        </article>
-
-        <article className="card">
-          <p className="account-card-kicker">Support</p>
-          <h2>Returns</h2>
-          <p className="muted">Send a return request to our team and include an order number when relevant.</p>
-          <Link className="button" href="/account/returns">Request a return</Link>
-        </article>
-
-        <article className="card">
-          <p className="account-card-kicker">Security</p>
-          <h2>Account access</h2>
-          <p className="muted">Signed in as {ctx.customer.email}.</p>
-          <form action={logoutAction}><button className="button secondary" type="submit">Sign out</button></form>
-        </article>
+      <section className="card account-session-card">
+        <div className="account-session-copy">
+          <span className="account-session-icon"><UserRound size={18} aria-hidden="true"/></span>
+          <div>
+            <strong>Account access</strong>
+            <span>Signed in as {ctx.customer.email}</span>
+          </div>
+        </div>
+        <form action={logoutAction}>
+          <button className="button secondary account-signout-button" type="submit">
+            <LogOut size={16} aria-hidden="true"/>
+            <span>Sign out</span>
+          </button>
+        </form>
       </section>
     </main>
   </>;
