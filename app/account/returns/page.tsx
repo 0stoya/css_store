@@ -25,28 +25,28 @@ export default async function ReturnsPage({
   return <>
     <SiteHeader customerName={customerName} companyName={selectedCompany?.name}/>
     <main className="shell stack">
-      <div className="basket-heading">
-        <div>
-          <p className="eyebrow">Customer account · returns</p>
+      <header className="portal-page-header">
+        <div className="portal-page-heading">
+          <p className="eyebrow">Account</p>
           <h1>Request a return</h1>
-          <p className="muted">Send a return enquiry to the configured Chelmsford Safety Supplies returns workflow.</p>
+          <p className="muted">Send the details to our returns team. Add the order number if you have it.</p>
         </div>
         <Link className="button secondary" href="/account">Back to account</Link>
-      </div>
+      </header>
 
       {params.error ? <p className="error" role="alert">{params.error}</p> : null}
       {params.notice ? <p className="success" role="status">{params.notice}</p> : null}
 
       {!configuration.enabled ? <section className="empty card">
-        <h2>Returns requests are currently unavailable</h2>
-        <p className="muted">The returns request service is disabled for this storefront. Please contact us through the normal customer-service channel.</p>
+        <h2>Return requests are currently unavailable</h2>
+        <p className="muted">Please contact our customer service team for help with a return.</p>
       </section> : !configuration.authenticated ? <section className="empty card">
         <h2>Sign in required</h2>
-        <p className="muted">Return requests can only be submitted by an authenticated customer.</p>
+        <p className="muted">Please sign in before submitting a return request.</p>
       </section> : <section className="card stack" style={{padding:24}}>
-        <div>
-          <h2>Return request details</h2>
-          <p className="muted small">This submits a contact/request record through Fluid and the existing Css_Returns queue. It does not create an RMA or provide return-status history.</p>
+        <div className="checkout-card-intro">
+          <h2>Return details</h2>
+          <p>Tell us what you need to return and why. Our team will review your request and follow up with you.</p>
         </div>
 
         <form action={submitReturnRequestAction} className="stack">
@@ -66,12 +66,12 @@ export default async function ReturnsPage({
           </label>
 
           <label className="field">
-            <span>Message</span>
-            <textarea name="message" rows={7} required/>
+            <span>What would you like to return?</span>
+            <textarea name="message" rows={7} required placeholder="Include the product, quantity and reason for the return."/>
           </label>
 
           <div>
-            <button className="button" type="submit">Submit return request</button>
+            <button className="button" type="submit">Send return request</button>
           </div>
         </form>
       </section>}

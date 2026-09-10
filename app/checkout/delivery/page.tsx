@@ -1,7 +1,9 @@
 import Link from "next/link";
+import { CheckoutSteps } from "@/components/checkout-steps";
 import { SiteHeader } from "@/components/site-header";
 import type { CartMoney } from "@/lib/magento/cart";
 import { getCustomerContext } from "@/lib/magento/context";
+import { getEmployeeOrdering } from "@/lib/magento/employee";
 import { getDeliveryContext } from "@/lib/magento/shipping";
 import { requireCustomerToken } from "@/lib/session";
 import { preparePaymentAction } from "../payment/actions";
@@ -50,9 +52,10 @@ export default async function DeliveryPage({
   searchParams: Promise<{ error?: string; notice?: string }>;
 }) {
   const token = await requireCustomerToken();
-  const [ctx, delivery, messages] = await Promise.all([
+  const [ctx, delivery, ordering, messages] = await Promise.all([
     getCustomerContext(token),
     getDeliveryContext(token),
+    getEmployeeOrdering(token),
     searchParams,
   ]);
   const selectedCompany = ctx.css_company_context.companies.find((company) => company.selected) || null;
@@ -68,17 +71,20 @@ export default async function DeliveryPage({
   const defaultCountry = delivery.customer.addresses.find((address) => address.default_shipping)?.country_code
     || delivery.customer.addresses[0]?.country_code
     || "GB";
+  const includeEmployee = ordering.usesEmployee && !ordering.multiEmployeeBasket;
 
   return <>
     <SiteHeader customerName={customerName} companyName={selectedCompany?.name} basketQuantity={cart.total_quantity}/>
     <main className="shell stack">
-      <div className="basket-heading">
+      <CheckoutSteps current="delivery" includeEmployee={includeEmployee}/>
+
+      <div className="basket-heading checkout-heading">
         <div>
-          <p className="eyebrow">Checkout · Delivery</p>
+          <p className="eyebrow">Checkout</p>
           <h1>Delivery</h1>
-          <p className="muted">Choose a delivery address, then select one of the available delivery methods.</p>
+          <p className="muted">Choose where your order should be delivered and how you’d like it sent.</p>
         </div>
-        <Link className="button secondary" href="/basket">Back to basket</Link>
+        <Link className="button secondary" href={includeEmployee ? "/checkout/employee" : "/basket"}>{includeEmployee ? "Back to Employee" : "Back to basket"}</Link>
       </div>
 
       {messages.error ? <p className="error" role="alert">{messages.error}</p> : null}
@@ -89,8 +95,10 @@ export default async function DeliveryPage({
       {cart.total_quantity > 0 ? <div className="delivery-layout">
         <div className="stack">
           <section className="card delivery-card">
-            <h2>Saved delivery addresses</h2>
-            <p className="muted">Choose a saved address, or enter a different address below for this order only.</p>
+            <div className="checkout-card-intro">
+              <h2>Saved delivery addresses</h2>
+              <p>Choose a saved address, or enter a different address below for this order only.</p>
+            </div>
             {delivery.customer.addresses.length ? <div className="address-grid">
               {delivery.customer.addresses.map((address) => <article className="address-card" key={address.id}>
                 <div>
@@ -108,8 +116,10 @@ export default async function DeliveryPage({
           </section>
 
           <section className="card delivery-card">
-            <h2>Use a different address</h2>
-            <p className="muted">This address will be used for this order only and will not be added to your saved addresses.</p>
+            <div className="checkout-card-intro">
+              <h2>Use a different address</h2>
+              <p>This address will be used for this order only and will not be added to your saved addresses.</p>
+            </div>
             <form action={setNewShippingAddressAction} className="delivery-form">
               <label className="field"><span>First name</span><input name="firstname" autoComplete="given-name" defaultValue={delivery.customer.firstname} required/></label>
               <label className="field"><span>Last name</span><input name="lastname" autoComplete="family-name" defaultValue={delivery.customer.lastname} required/></label>
@@ -128,8 +138,10 @@ export default async function DeliveryPage({
           </section>
 
           {shippingAddress ? <section className="card delivery-card">
-            <h2>Delivery methods</h2>
-            <p className="muted">Available options are based on your delivery address and the items in your basket.</p>
+            <div className="checkout-card-intro">
+              <h2>Delivery methods</h2>
+              <p>These are the delivery options currently available for this address and order.</p>
+            </div>
             <div className="shipping-method-list">
               {methods.map((method) => {
                 const active = selectedMethod?.carrier_code === method.carrier_code && selectedMethod.method_code === method.method_code;
@@ -147,7 +159,7 @@ export default async function DeliveryPage({
         </div>
 
         <aside className="stack">
-          <section className="card delivery-card">
+          <section className="card delivery-card checkout-summary-card">
             <h2>Order items</h2>
             <div className="checkout-line-list">
               {cart.itemsV2.items.map((item) => {
@@ -166,7 +178,7 @@ export default async function DeliveryPage({
             </div>
           </section>
 
-          <section className="card delivery-card basket-totals">
+          <section className="card delivery-card basket-totals checkout-summary-card">
             <h2>Order summary</h2>
             <dl>
               <div><dt>Subtotal ex VAT</dt><dd>{money(cart.prices?.subtotal_excluding_tax)}</dd></div>
@@ -174,17 +186,17 @@ export default async function DeliveryPage({
             </dl>
           </section>
 
-          {shippingAddress ? <section className="card delivery-card">
+          {shippingAddress ? <section className="card delivery-card checkout-summary-card">
             <h2>Current delivery</h2>
             <p><strong>{shippingAddress.firstname} {shippingAddress.lastname}</strong></p>
             <p className="muted">{addressText(shippingAddress)}</p>
             {selectedMethod ? <p><span className="badge">{selectedMethod.carrier_title || selectedMethod.carrier_code} · {selectedMethod.method_title || selectedMethod.method_code}</span></p> : <p className="notice">Choose a delivery method to complete this step.</p>}
           </section> : null}
 
-          <section className="notice">
-            <strong>{selectedMethod ? "Delivery is ready." : "Select an address and delivery method."}</strong>
+          <section className="checkout-next-card">
+            <strong>{selectedMethod ? "Delivery is ready." : "Complete delivery to continue."}</strong>
             {selectedMethod && canCheckout ? <form action={preparePaymentAction}><button className="button" type="submit">Continue to payment</button></form> : null}
-            {!selectedMethod ? <p className="muted small">Payment options will be available once delivery is complete.</p> : null}
+            {!selectedMethod ? <p className="muted small">Choose an address and delivery method before continuing.</p> : null}
           </section>
         </aside>
       </div> : null}

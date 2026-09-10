@@ -50,34 +50,34 @@ export default async function OrdersPage({
   return <>
     <SiteHeader customerName={customerName} companyName={selectedCompany?.name}/>
     <main className="shell stack">
-      <div className="basket-heading">
-        <div>
-          <p className="eyebrow">Customer account · orders</p>
+      <header className="portal-page-header">
+        <div className="portal-page-heading">
+          <p className="eyebrow">Account</p>
           <h1>Order history</h1>
           <p className="muted">
             {companyScope
-              ? `Showing orders visible across ${selectedCompany?.name || "the selected company"}.`
-              : `Showing your orders for ${selectedCompany?.name || "the selected company"}.`}
+              ? `Orders available to you across ${selectedCompany?.name || "the selected company"}.`
+              : `Your orders for ${selectedCompany?.name || "the selected company"}.`}
           </p>
         </div>
         <Link className="button secondary" href="/account">Back to account</Link>
-      </div>
+      </header>
 
-      {params.error ? <p className="error">{params.error}</p> : null}
-      {params.warning ? <p className="error">{params.warning}</p> : null}
-      {params.notice ? <p className="success">{params.notice}</p> : null}
+      {params.error ? <p className="error" role="alert">{params.error}</p> : null}
+      {params.warning ? <p className="error" role="alert">{params.warning}</p> : null}
+      {params.notice ? <p className="success" role="status">{params.notice}</p> : null}
 
       <section className={`card ${styles.intro}`}>
         <div>
           <strong>{orders.total_count} {orders.total_count === 1 ? "order" : "orders"}</strong>
-          <p className="muted small">Visibility and selected-company scope come from Fluid `css_company_orders`.</p>
+          <p className="muted small">Showing the orders available to your account for the current company.</p>
         </div>
-        <span className="badge">{companyScope ? "Company-visible orders" : "Own orders"}</span>
+        <span className="badge">{companyScope ? "Company orders" : "My orders"}</span>
       </section>
 
       {!orders.items.length ? <section className="empty card">
-        <h2>No orders found</h2>
-        <p className="muted">There are no storefront-visible Magento orders in this company context yet.</p>
+        <h2>No orders yet</h2>
+        <p className="muted">There are no orders available for this company yet.</p>
         <p><Link className="button" href="/catalogue">Browse products</Link></p>
       </section> : <div className={styles.list}>
         {orders.items.map((order) => <details className={`card ${styles.card}`} key={order.number}>
@@ -139,8 +139,8 @@ export default async function OrdersPage({
 
             <section className="stack">
               <div>
-                <h2>Repeat this order</h2>
-                <p className="muted small">Fluid rebuilds only supported grouped-configurable rows against today’s company, Employee, stock and purchase rules. Rows needing intervention are reported instead of silently changed.</p>
+                <h2>Order again</h2>
+                <p className="muted small">We’ll add any eligible items using today’s availability and purchasing rules. If something needs your attention, we’ll show it before anything is changed.</p>
               </div>
               <form action={repeatOrderAction}>
                 <input type="hidden" name="order_number" value={order.number}/>
@@ -151,8 +151,8 @@ export default async function OrdersPage({
 
             <section className="stack">
               <div>
-                <h2>Return enquiry</h2>
-                <p className="muted small">Start a return request with this order number prefilled. Fluid accepts the request through the existing Css_Returns contact workflow; no eligibility or RMA status is inferred here.</p>
+                <h2>Need to return something?</h2>
+                <p className="muted small">Start a return request with this order number already filled in.</p>
               </div>
               <div>
                 <Link className="button secondary" href={`/account/returns?order=${encodeURIComponent(order.number)}`}>Request a return</Link>
