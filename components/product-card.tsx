@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { StoreProduct } from "@/lib/magento/catalogue";
+import { ProductImage } from "./product-image";
 
 function money(value: number, currency: string) {
   return new Intl.NumberFormat("en-GB", { style: "currency", currency }).format(value);
@@ -14,9 +15,7 @@ export function ProductCard({ product, hidePrice }: { product: StoreProduct; hid
   return <article className="card product">
     <Link className="product-link" href={`/product/${encodeURIComponent(product.sku)}`}>
       <div className="product-media">
-        {product.small_image?.url
-          ? <img src={product.small_image.url} alt={product.small_image.label || product.name}/>
-          : <span className="muted">No product image</span>}
+        <ProductImage src={product.small_image?.url} alt={product.small_image?.label || product.name}/>
       </div>
       <div className="product-body">
         <span className={`product-stock ${available ? "available" : "unavailable"}`}>{stockLabel}</span>
