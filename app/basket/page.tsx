@@ -54,19 +54,19 @@ export default async function BasketPage({
     <main className="shell">
       <div className="basket-heading">
         <div>
-          <p className="eyebrow">Company basket</p>
+          <p className="eyebrow">Your order</p>
           <h1>Basket</h1>
-          <p className="muted">{cart.total_quantity} item{cart.total_quantity === 1 ? "" : "s"} for {selected?.name || "the selected company"}.</p>
+          <p className="muted">{cart.total_quantity} item{cart.total_quantity === 1 ? "" : "s"} for {selected?.name || "your selected company"}.</p>
         </div>
         <Link className="button secondary" href="/catalogue">Continue shopping</Link>
       </div>
 
-      {messages.error ? <p className="error">{messages.error}</p> : null}
-      {messages.notice ? <p className="success">{messages.notice}</p> : null}
+      {messages.error ? <p className="error" role="alert">{messages.error}</p> : null}
+      {messages.notice ? <p className="success" role="status">{messages.notice}</p> : null}
 
       {!items.length ? <section className="empty card">
         <h2>Your basket is empty</h2>
-        <p className="muted">Choose products from the company catalogue to start an order.</p>
+        <p className="muted">Browse the catalogue to add products to your order.</p>
         <p><Link className="button" href="/catalogue">Browse products</Link></p>
       </section> : <div className="basket-layout">
         <section className="basket-lines" aria-label="Basket items">
@@ -135,7 +135,7 @@ export default async function BasketPage({
         <aside className="basket-sidebar stack">
           {singleEmployeeCheckout ? <section className="card basket-card">
             <h2>Employee</h2>
-            <p className="muted">This company uses one Employee for the whole order. You will choose that Employee as the first checkout step.</p>
+            <p className="muted">This order needs one Employee. You will choose them before entering delivery details.</p>
           </section> : null}
 
           <section className="card basket-card basket-totals">
@@ -150,12 +150,12 @@ export default async function BasketPage({
           {eligibility ? <section className="card basket-card">
             <h2>Purchase status</h2>
             <p><span className="badge">{eligibility.approval_status.replaceAll("_", " ")}</span></p>
-            {decisionMessages.length ? <ul className="basket-status-list">{decisionMessages.map((reason) => <li key={reason}>{reason}</li>)}</ul> : <p className="muted">Fluid has not reported any purchase-control warnings for this basket.</p>}
+            {decisionMessages.length ? <ul className="basket-status-list">{decisionMessages.map((reason) => <li key={reason}>{reason}</li>)}</ul> : <p className="muted">There are no purchase warnings for this basket.</p>}
           </section> : null}
 
           {cart.css_company_credit?.has_credit_account ? <section className="card basket-card">
             <h2>Company credit</h2>
-            <p className="muted">Credit state is shown from Fluid for context only; payment selection comes in the checkout slice.</p>
+            <p className="muted">Your available company credit is shown below. Final payment options are confirmed during checkout.</p>
             <dl>
               <div><dt>Remaining</dt><dd>{cart.css_company_credit.remaining_amount !== null && cart.css_company_credit.currency ? new Intl.NumberFormat("en-GB", { style: "currency", currency: cart.css_company_credit.currency }).format(cart.css_company_credit.remaining_amount) : "—"}</dd></div>
               <div><dt>On-account available</dt><dd>{cart.css_company_credit.can_pay_on_account ? "Yes" : "No"}</dd></div>
@@ -163,11 +163,11 @@ export default async function BasketPage({
           </section> : null}
 
           <section className="card basket-card stack">
-            <h2>{singleEmployeeCheckout ? "Ready to choose an Employee?" : "Ready for delivery?"}</h2>
+            <h2>{singleEmployeeCheckout ? "Ready to continue?" : "Ready for delivery?"}</h2>
             <p className="muted small">{singleEmployeeCheckout
-              ? "Choose the Employee for this whole order, then continue to the Magento delivery step."
-              : "Magento will determine the available delivery methods from the address and the current simple, configurable or grouped/configurable basket."}</p>
-            <Link className="button" href={checkoutHref}>{singleEmployeeCheckout ? "Continue to Employee" : "Continue to delivery"}</Link>
+              ? "Choose the Employee for this order, then continue to delivery."
+              : "Continue to choose a delivery address and one of the available delivery methods."}</p>
+            <Link className="button" href={checkoutHref}>{singleEmployeeCheckout ? "Choose Employee" : "Continue to delivery"}</Link>
           </section>
         </aside>
       </div>}

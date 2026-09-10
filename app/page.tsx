@@ -8,5 +8,26 @@ export default async function HomePage() {
   const ctx = await getCustomerContext(token);
   const selected = ctx.css_company_context.companies.find((c) => c.selected) || null;
   const name = `${ctx.customer.firstname} ${ctx.customer.lastname}`.trim();
-  return <><SiteHeader customerName={name} companyName={selected?.name}/><main className="shell"><section className="hero"><div className="panel hero-main"><p className="eyebrow">Company purchasing</p><h1>Safety supplies, priced for your company.</h1><p className="muted">Your storefront is driven by the selected Fluid company context, catalogue permissions, OGL pricing and Magento stock.</p><p><Link className="button" href="/catalogue">Browse products</Link></p></div><aside className="panel hero-side"><span className="badge">{selected?.reference || "Customer"}</span><h2>{selected?.name || "No company selected"}</h2><p className="muted">{ctx.css_ordering_capabilities.company_context ? "Company ordering context is active." : "No company ordering context is available."}</p><Link className="button secondary" href="/account">Account & company</Link></aside></section></main></>;
+
+  return <>
+    <SiteHeader customerName={name} companyName={selected?.name}/>
+    <main className="shell">
+      <section className="hero">
+        <div className="panel hero-main">
+          <p className="eyebrow">Business purchasing</p>
+          <h1>Safety supplies, ready for your business.</h1>
+          <p className="muted">Browse your approved product range with your company pricing, stock availability and ordering rules already applied.</p>
+          <p><Link className="button" href="/catalogue">Browse products</Link></p>
+        </div>
+        <aside className="panel hero-side">
+          <span className="badge">Ordering for</span>
+          <h2>{selected?.name || "No company selected"}</h2>
+          <p className="muted">{ctx.css_ordering_capabilities.company_context
+            ? "Your company account is ready to use."
+            : "Choose a company from your account before placing an order."}</p>
+          <Link className="button secondary" href="/account">Account & company</Link>
+        </aside>
+      </section>
+    </main>
+  </>;
 }
