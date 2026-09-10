@@ -114,6 +114,13 @@ export type CartSnapshot = {
   };
 };
 
+export type NativeCartAddInput = {
+  sku: string;
+  quantity: number;
+  selectedOptions?: string[];
+  parentSku?: string;
+};
+
 const CART_WRITE_FIELDS = /* GraphQL */ `
   id
   itemsV2 {
@@ -299,11 +306,13 @@ export function cartHasItems(cart: Pick<CartSummarySnapshot, "total_quantity" | 
   return cart.total_quantity > 0 || cart.itemsV2.items.length > 0;
 }
 
-export async function addNativeProduct(
+export async function addNativeProducts(
   token: string,
   cartId: string,
-  input: { sku: string; quantity: number; selectedOptions?: string[] },
+  inputs: NativeCartAddInput[],
 ) {
+  if (!inputs.length) throw new Error("Choose at least one product quantity.");
+
   const data = await magentoGraphQL<{
     addProductsToCart: {
       cart: CartWriteSnapshot;
@@ -313,13 +322,12 @@ export async function addNativeProduct(
     ADD_PRODUCTS,
     {
       cartId,
-      items: [
-        {
-          sku: input.sku,
-          quantity: input.quantity,
-          ...(input.selectedOptions?.length ? { selected_options: input.selectedOptions } : {}),
-        },
-      ],
+      items: inputs.map((input) => ({
+        sku: input.sku,
+        quantity: input.quantity,
+        ...(input.parentSku ? { parent_sku: input.parentSku } : {}),
+        ...(input.selectedOptions?.length ? { selected_options: input.selectedOptions } : {}),
+      })),
     },
     token,
   );
@@ -327,6 +335,14 @@ export async function addNativeProduct(
   const error = data.addProductsToCart.user_errors[0];
   if (error) throw new MagentoGraphQLError(error.message, error.code);
   return data.addProductsToCart.cart;
+}
+
+export function addNativeProduct(
+  token: string,
+  cartId: string,
+  input: NativeCartAddInput,
+) {
+  return addNativeProducts(token, cartId, [input]);
 }
 
 export async function updateCartItem(token: string, cartId: string, itemUid: string, quantity: number) {
