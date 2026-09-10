@@ -31,44 +31,45 @@ export default async function RepeatOrdersPage({
   return <>
     <SiteHeader customerName={customerName} companyName={selectedCompany?.name}/>
     <main className="shell stack">
-      <div className="basket-heading">
-        <div>
-          <p className="eyebrow">Customer account · repeat orders</p>
-          <h1>Repeat-order lists</h1>
-          <p className="muted">Saved grouped-configurable selections are reconstructed by Fluid against the current company, Employee, stock and purchase rules.</p>
+      <header className="portal-page-header">
+        <div className="portal-page-heading">
+          <p className="eyebrow">Account</p>
+          <h1>Repeat orders</h1>
+          <p className="muted">Save frequently ordered product configurations and add eligible items back to your basket quickly.</p>
         </div>
         <Link className="button secondary" href="/account">Back to account</Link>
-      </div>
+      </header>
 
-      {messages.error ? <p className="error">{messages.error}</p> : null}
-      {messages.warning ? <p className="error">{messages.warning}</p> : null}
-      {messages.notice ? <p className="success">{messages.notice}</p> : null}
+      {messages.error ? <p className="error" role="alert">{messages.error}</p> : null}
+      {messages.warning ? <p className="error" role="alert">{messages.warning}</p> : null}
+      {messages.notice ? <p className="success" role="status">{messages.notice}</p> : null}
 
-      <section className="card stack">
+      <section className="card stack" style={{padding:24}}>
         <div>
-          <h2>Create repeat list</h2>
-          <p className="muted small">Create the list here, then save a configured grouped product to it from that product’s page.</p>
+          <p className="account-card-kicker">New list</p>
+          <h2>Create a repeat-order list</h2>
+          <p className="muted small">Create a list here, then save eligible configured products to it from their product page.</p>
         </div>
         <form action={createRepeatOrderListAction} className="stack">
           <label className="field">
-            <span>Name</span>
+            <span>List name</span>
             <input name="name" required maxLength={255}/>
           </label>
           <label className="field">
-            <span>Description</span>
+            <span>Description <span className="muted">(optional)</span></span>
             <textarea name="description" rows={2}/>
           </label>
-          <button className="button" type="submit">Create list</button>
+          <div><button className="button" type="submit">Create list</button></div>
         </form>
       </section>
 
       {!lists.length ? <section className="empty card">
-        <h2>No repeat lists yet</h2>
-        <p className="muted">Create a list above, then save an eligible grouped-configurable selection from the catalogue.</p>
-      </section> : lists.map((list) => <section className="card stack" key={list.list_id}>
+        <h2>No repeat-order lists yet</h2>
+        <p className="muted">Create your first list above, then save an eligible configured product from the catalogue.</p>
+      </section> : lists.map((list) => <section className="card stack" style={{padding:24}} key={list.list_id}>
         <div className="basket-heading">
           <div>
-            <p className="eyebrow">Repeat list #{list.list_id}</p>
+            <p className="account-card-kicker">Saved list</p>
             <h2>{list.name}</h2>
             {list.description ? <p className="muted">{list.description}</p> : null}
             {list.updated_at ? <p className="muted small">Updated {list.updated_at}</p> : null}
@@ -76,18 +77,21 @@ export default async function RepeatOrdersPage({
           <span className="badge">{list.items.length} {list.items.length === 1 ? "item" : "items"}</span>
         </div>
 
-        <form action={updateRepeatOrderListAction} className="stack">
-          <input type="hidden" name="list_id" value={list.list_id}/>
-          <label className="field">
-            <span>Name</span>
-            <input name="name" required defaultValue={list.name}/>
-          </label>
-          <label className="field">
-            <span>Description</span>
-            <textarea name="description" rows={2} defaultValue={list.description || ""}/>
-          </label>
-          <button className="button secondary" type="submit">Save list details</button>
-        </form>
+        <details>
+          <summary><strong>Edit list details</strong></summary>
+          <form action={updateRepeatOrderListAction} className="stack" style={{marginTop:16}}>
+            <input type="hidden" name="list_id" value={list.list_id}/>
+            <label className="field">
+              <span>Name</span>
+              <input name="name" required defaultValue={list.name}/>
+            </label>
+            <label className="field">
+              <span>Description</span>
+              <textarea name="description" rows={2} defaultValue={list.description || ""}/>
+            </label>
+            <div><button className="button secondary" type="submit">Save changes</button></div>
+          </form>
+        </details>
 
         {list.items.length ? <form className="stack">
           <input type="hidden" name="list_id" value={list.list_id}/>
@@ -98,11 +102,11 @@ export default async function RepeatOrdersPage({
                 <span>
                   <strong>{item.variant_sku || item.sku}</strong>
                   <span className="muted small" style={{display:"block"}}>
-                    {item.parent_sku ? `Parent ${item.parent_sku} · ` : ""}{item.configurable_sku ? `Configurable ${item.configurable_sku} · ` : ""}Qty {item.quantity}
+                    {item.parent_sku ? `Parent ${item.parent_sku} · ` : ""}{item.configurable_sku ? `Configured ${item.configurable_sku} · ` : ""}Qty {item.quantity}
                   </span>
                   {item.employee_name ? <span className="muted small" style={{display:"block"}}>Employee: {item.employee_name}</span> : null}
                   <span className={item.compatible ? "success" : "error"} style={{display:"block", marginTop:6}}>
-                    {item.compatible ? "Compatible now" : `Intervention required: ${item.reason || "selection is no longer compatible"}`}
+                    {item.compatible ? "Ready to order" : `Needs attention: ${item.reason || "this saved selection is no longer available"}`}
                   </span>
                 </span>
               </label>
@@ -112,15 +116,15 @@ export default async function RepeatOrdersPage({
                 formAction={deleteRepeatOrderListItemAction}
                 name="delete_item_id"
                 value={item.item_id}
-              >Delete item</button>
+              >Remove</button>
             </div>)}
           </div>
           <div style={{display:"flex", gap:10, flexWrap:"wrap"}}>
-            <button className="button" type="submit" formAction={addRepeatOrderListToCartAction} name="mode" value="all">Add all compatible items</button>
+            <button className="button" type="submit" formAction={addRepeatOrderListToCartAction} name="mode" value="all">Add all available items</button>
             <button className="button secondary" type="submit" formAction={addRepeatOrderListToCartAction} name="mode" value="selected">Add selected</button>
           </div>
-          <p className="muted small">Fluid performs the canonical rebuild. Incompatible rows are skipped and reported; the existing basket is never replaced.</p>
-        </form> : <p className="muted">This list is empty. Save a configured grouped product from its product page.</p>}
+          <p className="muted small">Saved items are checked against current availability and ordering rules before they are added. Your existing basket is kept.</p>
+        </form> : <p className="muted">This list is empty. Save an eligible configured product from its product page.</p>}
 
         <form action={deleteRepeatOrderListAction}>
           <input type="hidden" name="list_id" value={list.list_id}/>
