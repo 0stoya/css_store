@@ -3,7 +3,7 @@
 import { redirect } from "next/navigation";
 import { clearCustomerToken, getCustomerToken, requireCustomerToken } from "@/lib/session";
 import { revokeCustomerToken } from "@/lib/magento/auth";
-import { cartHasItems, getCustomerCart } from "@/lib/magento/cart";
+import { cartHasItems, getCustomerCart, type CartSnapshot } from "@/lib/magento/cart";
 import { selectCompany } from "@/lib/magento/context";
 
 export async function logoutAction() {
@@ -18,7 +18,7 @@ export async function selectCompanyAction(formData: FormData) {
   if (!Number.isInteger(companyId) || companyId <= 0) redirect("/account?error=Invalid%20company.");
   const token = await requireCustomerToken();
 
-  let cart;
+  let cart: CartSnapshot;
   try {
     cart = await getCustomerCart(token);
   } catch {
