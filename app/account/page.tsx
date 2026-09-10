@@ -69,6 +69,12 @@ export default async function AccountPage({
         </article>
 
         <article className="card">
+          <h2>Returns</h2>
+          <p className="muted">Submit an authenticated return enquiry through the existing Fluid/Css_Returns request workflow.</p>
+          <Link className="button" href="/account/returns">Request a return</Link>
+        </article>
+
+        <article className="card">
           <h2>Ordering capabilities</h2>
           <p className="muted">Storefront policy: prices {ctx.css_storefront_policy.hide_price ? "hidden" : "visible"}; add to cart {ctx.css_storefront_policy.hide_add_to_cart ? "hidden" : "available"}.</p>
           <form action={logoutAction}><button className="button secondary" type="submit">Sign out</button></form>

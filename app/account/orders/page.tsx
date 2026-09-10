@@ -148,6 +148,16 @@ export default async function OrdersPage({
                 <button className="button" type="submit">Repeat eligible items</button>
               </form>
             </section>
+
+            <section className="stack">
+              <div>
+                <h2>Return enquiry</h2>
+                <p className="muted small">Start a return request with this order number prefilled. Fluid accepts the request through the existing Css_Returns contact workflow; no eligibility or RMA status is inferred here.</p>
+              </div>
+              <div>
+                <Link className="button secondary" href={`/account/returns?order=${encodeURIComponent(order.number)}`}>Request a return</Link>
+              </div>
+            </section>
           </div>
         </details>)}
       </div>}
