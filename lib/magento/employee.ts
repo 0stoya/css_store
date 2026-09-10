@@ -16,13 +16,18 @@ export type EmployeeOrdering = {
   employees: StoreEmployee[];
 };
 
-const EMPLOYEE_ORDERING = /* GraphQL */ `
-  query StoreEmployeeOrdering {
+const EMPLOYEE_CONFIGURATION = /* GraphQL */ `
+  query StoreEmployeeConfiguration {
     css_company_employee_configuration {
       company_id
       uses_employee
       multi_employee_basket
     }
+  }
+`;
+
+const ACTIVE_EMPLOYEES = /* GraphQL */ `
+  query StoreActiveEmployees {
     css_company_employees(currentPage: 1, pageSize: 250, active: true) {
       items {
         employee_id
@@ -39,22 +44,25 @@ const EMPLOYEE_ORDERING = /* GraphQL */ `
 `;
 
 export async function getEmployeeOrdering(token: string): Promise<EmployeeOrdering> {
-  const data = await magentoGraphQL<{
+  const configuration = await magentoGraphQL<{
     css_company_employee_configuration: {
       uses_employee: boolean;
       multi_employee_basket: boolean;
     };
-    css_company_employees: {
-      items: Array<StoreEmployee & { active: boolean }>;
-    };
-  }>(EMPLOYEE_ORDERING, {}, token);
+  }>(EMPLOYEE_CONFIGURATION, {}, token);
 
-  const config = data.css_company_employee_configuration;
+  const config = configuration.css_company_employee_configuration;
+  if (!config.uses_employee) {
+    return { usesEmployee: false, multiEmployeeBasket: config.multi_employee_basket, employees: [] };
+  }
+
+  const data = await magentoGraphQL<{
+    css_company_employees: { items: Array<StoreEmployee & { active: boolean }> };
+  }>(ACTIVE_EMPLOYEES, {}, token);
+
   return {
-    usesEmployee: config.uses_employee,
+    usesEmployee: true,
     multiEmployeeBasket: config.multi_employee_basket,
-    employees: config.uses_employee
-      ? data.css_company_employees.items.filter((employee) => employee.active)
-      : [],
+    employees: data.css_company_employees.items.filter((employee) => employee.active),
   };
 }
