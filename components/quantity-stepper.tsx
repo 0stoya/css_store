@@ -1,7 +1,7 @@
 "use client";
 
-import { Minus, Plus } from "lucide-react";
-import { useId, useRef } from "react";
+import { Minus, Plus, ShoppingCart } from "lucide-react";
+import { useId, useState } from "react";
 
 export function QuantityStepper({
   name,
@@ -13,6 +13,7 @@ export function QuantityStepper({
   step = 1,
   disabled = false,
   compact = false,
+  submitControl,
 }: {
   name: string;
   label?: string;
@@ -23,18 +24,23 @@ export function QuantityStepper({
   step?: number | "any";
   disabled?: boolean;
   compact?: boolean;
+  submitControl?: {
+    name: string;
+    value: string;
+    label?: string;
+    disabled?: boolean;
+  };
 }) {
   const id = useId();
-  const inputRef = useRef<HTMLInputElement>(null);
-  const visibleLabel = compact ? "Quantity" : label;
+  const [value, setValue] = useState(String(defaultValue));
   const controlLabel = ariaLabel || label;
   const buttonStep = typeof step === "number" && Number.isFinite(step) && step > 0 ? step : 1;
+  const numericValue = Number(value);
 
   function adjust(direction: -1 | 1) {
-    const input = inputRef.current;
-    if (!input || disabled) return;
+    if (disabled) return;
 
-    const current = Number(input.value || defaultValue || 0);
+    const current = Number.isFinite(numericValue) ? numericValue : defaultValue || 0;
     const lower = Number.isFinite(min) ? min : 0;
     const upper = typeof max === "number" && Number.isFinite(max) ? max : Number.POSITIVE_INFINITY;
     const raw = Math.min(upper, Math.max(lower, current + (buttonStep * direction)));
@@ -43,35 +49,50 @@ export function QuantityStepper({
       String(lower).split(".")[1]?.length || 0,
     );
     const next = precision ? Number(raw.toFixed(precision)) : raw;
-
-    input.value = String(next);
-    input.dispatchEvent(new Event("input", { bubbles: true }));
-    input.dispatchEvent(new Event("change", { bubbles: true }));
+    setValue(String(next));
   }
 
-  return <div className={`quantity-control ${compact ? "compact" : ""}`}>
-    <label htmlFor={id}>{visibleLabel}</label>
-    <div className="quantity-stepper">
-      <button type="button" onClick={() => adjust(-1)} disabled={disabled} aria-label={`Decrease ${controlLabel.toLowerCase()}`}>
-        <Minus size={16} strokeWidth={2.2}/>
-      </button>
-      <input
-        ref={inputRef}
-        id={id}
-        name={name}
-        type="number"
-        inputMode="decimal"
-        aria-label={ariaLabel}
-        defaultValue={defaultValue}
-        min={min}
-        max={max}
-        step={step}
-        disabled={disabled}
-        required={!disabled}
-      />
-      <button type="button" onClick={() => adjust(1)} disabled={disabled} aria-label={`Increase ${controlLabel.toLowerCase()}`}>
-        <Plus size={16} strokeWidth={2.2}/>
-      </button>
+  const addDisabled = disabled
+    || submitControl?.disabled === true
+    || !Number.isFinite(numericValue)
+    || numericValue <= 0;
+
+  return <div className={`quantity-control ${compact ? "compact" : ""} ${submitControl ? "with-submit" : ""}`}>
+    <label htmlFor={id}>{label}</label>
+    <div className="quantity-control-row">
+      <div className="quantity-stepper">
+        <button type="button" onClick={() => adjust(-1)} disabled={disabled} aria-label={`Decrease ${controlLabel.toLowerCase()}`}>
+          <Minus size={16} strokeWidth={2.2}/>
+        </button>
+        <input
+          id={id}
+          name={name}
+          type="number"
+          inputMode="decimal"
+          aria-label={ariaLabel}
+          value={value}
+          min={min}
+          max={max}
+          step={step}
+          disabled={disabled}
+          required={!disabled}
+          onChange={(event) => setValue(event.target.value)}
+        />
+        <button type="button" onClick={() => adjust(1)} disabled={disabled} aria-label={`Increase ${controlLabel.toLowerCase()}`}>
+          <Plus size={16} strokeWidth={2.2}/>
+        </button>
+      </div>
+
+      {submitControl ? <button
+        className="button quantity-line-add"
+        type="submit"
+        name={submitControl.name}
+        value={submitControl.value}
+        disabled={addDisabled}
+      >
+        <ShoppingCart size={16} aria-hidden="true"/>
+        <span>{submitControl.label || "Add"}</span>
+      </button> : null}
     </div>
   </div>;
 }
