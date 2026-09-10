@@ -5,7 +5,6 @@ import { getCustomerContext } from "@/lib/magento/context";
 import { getEmployeeOrdering } from "@/lib/magento/employee";
 import { requireCustomerToken } from "@/lib/session";
 import {
-  assignBasketEmployeeAction,
   assignBasketItemEmployeeAction,
   removeBasketItemAction,
   updateBasketItemAction,
@@ -42,13 +41,13 @@ export default async function BasketPage({
   const customerName = `${ctx.customer.firstname} ${ctx.customer.lastname}`.trim();
   const items = cart.itemsV2.items;
   const activeEmployeeIds = new Set(ordering.employees.map((employee) => employee.employee_id));
-  const assignedEmployeeIds = items.map(employeeId).filter((id): id is number => id !== null);
-  const basketEmployeeId = assignedEmployeeIds.find((id) => activeEmployeeIds.has(id)) || null;
   const eligibility = cart.css_purchase_eligibility;
   const decisions = eligibility?.items || [];
   const decisionMessages = Array.from(new Set(decisions.map((decision) => decision.reason).filter((reason): reason is string => Boolean(reason))));
   const totalCurrency = cart.prices?.grand_total?.currency || cart.prices?.subtotal_excluding_tax?.currency || "GBP";
   const discountCurrency = cart.css_company_discount.currency || totalCurrency;
+  const singleEmployeeCheckout = ordering.usesEmployee && !ordering.multiEmployeeBasket;
+  const checkoutHref = singleEmployeeCheckout ? "/checkout/employee" : "/checkout/delivery";
 
   return <>
     <SiteHeader customerName={customerName} companyName={selected?.name} basketQuantity={cart.total_quantity}/>
@@ -91,7 +90,7 @@ export default async function BasketPage({
                   </ul> : null}
                   {item.product.css_stock_info.delivery_message ? <p className="muted small">{item.product.css_stock_info.delivery_message}</p> : null}
                   {constraints ? <p className="muted small">Quantity: minimum {constraints.minimum_quantity}{constraints.maximum_quantity !== null ? `, maximum ${constraints.maximum_quantity}` : ""}{constraints.increments_enforced ? `, increments of ${constraints.quantity_increment}` : ""}.</p> : null}
-                  {ordering.usesEmployee ? <p className="basket-employee"><strong>Employee:</strong> {assignedName || "Not assigned"}</p> : null}
+                  {ordering.usesEmployee && ordering.multiEmployeeBasket ? <p className="basket-employee"><strong>Employee:</strong> {assignedName || "Not assigned"}</p> : null}
                 </div>
                 <div className="basket-line-price">
                   <span className="muted">Unit</span>
@@ -134,16 +133,9 @@ export default async function BasketPage({
         </section>
 
         <aside className="basket-sidebar stack">
-          {ordering.usesEmployee && !ordering.multiEmployeeBasket ? <section className="card basket-card">
-            <h2>Basket Employee</h2>
-            <p className="muted">This company uses one Employee for the entire basket. Reassigning here updates every line through Fluid.</p>
-            <form action={assignBasketEmployeeAction} className="stack">
-              <label className="field"><span>Employee</span><select name="employee_id" required defaultValue={basketEmployeeId || ""}>
-                <option value="" disabled>Choose Employee</option>
-                {ordering.employees.map((employee) => <option value={employee.employee_id} key={employee.employee_id}>{employee.full_name}{employee.employee_code ? ` · ${employee.employee_code}` : ""}</option>)}
-              </select></label>
-              <button className="button secondary" type="submit">Assign basket</button>
-            </form>
+          {singleEmployeeCheckout ? <section className="card basket-card">
+            <h2>Employee</h2>
+            <p className="muted">This company uses one Employee for the whole order. You will choose that Employee as the first checkout step.</p>
           </section> : null}
 
           <section className="card basket-card basket-totals">
@@ -171,9 +163,11 @@ export default async function BasketPage({
           </section> : null}
 
           <section className="card basket-card stack">
-            <h2>Ready for delivery?</h2>
-            <p className="muted small">Magento will determine the available delivery methods from the address and the current simple, configurable or grouped/configurable basket.</p>
-            <Link className="button" href="/checkout/delivery">Continue to delivery</Link>
+            <h2>{singleEmployeeCheckout ? "Ready to choose an Employee?" : "Ready for delivery?"}</h2>
+            <p className="muted small">{singleEmployeeCheckout
+              ? "Choose the Employee for this whole order, then continue to the Magento delivery step."
+              : "Magento will determine the available delivery methods from the address and the current simple, configurable or grouped/configurable basket."}</p>
+            <Link className="button" href={checkoutHref}>{singleEmployeeCheckout ? "Continue to Employee" : "Continue to delivery"}</Link>
           </section>
         </aside>
       </div>}
