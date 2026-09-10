@@ -10,6 +10,7 @@ import {
   Truck,
 } from "lucide-react";
 import { EmployeePicker } from "@/components/employee-picker";
+import { GroupedQuantityControl } from "@/components/grouped-quantity-control";
 import { ProductGallery } from "@/components/product-gallery";
 import { QuantityStepper } from "@/components/quantity-stepper";
 import { SiteHeader } from "@/components/site-header";
@@ -204,23 +205,14 @@ export default async function ProductPage({
                       </label>)}
                     </div> : null}
 
-                    <QuantityStepper
+                    <GroupedQuantityControl
                       name={`child_${originalIndex}_quantity`}
-                      label="Quantity"
-                      ariaLabel={`${child.name} quantity`}
-                      defaultValue={0}
-                      min={0}
+                      productName={child.name}
+                      childSku={child.sku}
+                      minPositive={Math.max(1, child.css_purchase_constraints?.minimum_quantity || 1)}
                       max={child.css_purchase_constraints?.maximum_quantity ?? undefined}
                       step={child.css_purchase_constraints?.increments_enforced ? child.css_purchase_constraints.quantity_increment : 1}
-                      firstPositiveValue={Math.max(1, child.css_purchase_constraints?.minimum_quantity || 1)}
-                      disabled={!childAvailable}
-                      compact
-                      submitControl={{
-                        name: "grouped_child_sku",
-                        value: child.sku,
-                        label: "Add",
-                        disabled: !canAdd || !childAvailable,
-                      }}
+                      disabled={!canAdd || !childAvailable}
                     />
                   </article>;
                 })}
