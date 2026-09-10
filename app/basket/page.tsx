@@ -170,9 +170,10 @@ export default async function BasketPage({
             </dl>
           </section> : null}
 
-          <section className="notice">
-            <strong>Checkout is the next slice.</strong>
-            <p className="muted small">Shipping, backend-provided delivery methods, payment methods and final order placement are deliberately not simulated here.</p>
+          <section className="card basket-card stack">
+            <h2>Ready for delivery?</h2>
+            <p className="muted small">Magento will determine the available delivery methods from the address and the current simple, configurable or grouped/configurable basket.</p>
+            <Link className="button" href="/checkout/delivery">Continue to delivery</Link>
           </section>
         </aside>
       </div>}
