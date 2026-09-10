@@ -26,6 +26,7 @@ export function QuantityStepper({
 }) {
   const id = useId();
   const inputRef = useRef<HTMLInputElement>(null);
+  const visibleLabel = compact ? "Quantity" : label;
   const controlLabel = ariaLabel || label;
   const buttonStep = typeof step === "number" && Number.isFinite(step) && step > 0 ? step : 1;
 
@@ -49,7 +50,7 @@ export function QuantityStepper({
   }
 
   return <div className={`quantity-control ${compact ? "compact" : ""}`}>
-    <label htmlFor={id}>{label}</label>
+    <label htmlFor={id}>{visibleLabel}</label>
     <div className="quantity-stepper">
       <button type="button" onClick={() => adjust(-1)} disabled={disabled} aria-label={`Decrease ${controlLabel.toLowerCase()}`}>
         <Minus size={16} strokeWidth={2.2}/>
