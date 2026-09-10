@@ -110,6 +110,7 @@ export default async function PaymentPage({
               {usesCreditOrder ? <div className="notice">
                 <strong>Fluid company credit workflow</strong>
                 <p className="muted small">Fluid will make the authoritative approval decision after submission. {capabilities.can_auto_approve_credit_order ? "This user may be eligible for automatic approval, but the backend still decides the result." : "The order may be held for approval according to the company workflow."}</p>
+                {cart.css_purchase_eligibility?.approval_status ? <p className="muted small">Current backend cart approval state: {cart.css_purchase_eligibility.approval_status}</p> : null}
               </div> : <div className="notice">
                 <strong>Native Magento checkout</strong>
                 <p className="muted small">This order will be submitted through Magento's standard placeOrder mutation.</p>
@@ -135,7 +136,6 @@ export default async function PaymentPage({
                     {item.configurable_options?.length ? <div className="muted small">{item.configurable_options.map((option) => `${option.option_label}: ${option.value_label}`).join(" · ")}</div> : null}
                     {item.css_kit ? <div className="badge">Grouped/configurable item</div> : item.configured_variant ? <div className="badge">Configurable item</div> : null}
                     {employee ? <div className="muted small">Employee: {employee}</div> : null}
-                    {item.css_purchase_eligibility?.message ? <div className="muted small">{item.css_purchase_eligibility.message}</div> : null}
                   </div>
                 </div>;
               })}
