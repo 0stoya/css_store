@@ -74,23 +74,23 @@ export default async function DeliveryPage({
     <main className="shell stack">
       <div className="basket-heading">
         <div>
-          <p className="eyebrow">Checkout · delivery</p>
+          <p className="eyebrow">Checkout · Delivery</p>
           <h1>Delivery</h1>
-          <p className="muted">Choose where this company basket should be delivered, then select a method returned by Magento.</p>
+          <p className="muted">Choose a delivery address, then select one of the available delivery methods.</p>
         </div>
         <Link className="button secondary" href="/basket">Back to basket</Link>
       </div>
 
-      {messages.error ? <p className="error">{messages.error}</p> : null}
-      {messages.notice ? <p className="success">{messages.notice}</p> : null}
+      {messages.error ? <p className="error" role="alert">{messages.error}</p> : null}
+      {messages.notice ? <p className="success" role="status">{messages.notice}</p> : null}
       {!cart.total_quantity ? <section className="empty card"><h2>Your basket is empty</h2><p><Link className="button" href="/catalogue">Browse products</Link></p></section> : null}
-      {cart.total_quantity > 0 && !canCheckout ? <p className="error">This company is not currently allowed to proceed through checkout.</p> : null}
+      {cart.total_quantity > 0 && !canCheckout ? <p className="error" role="alert">This company is not currently able to continue through checkout.</p> : null}
 
       {cart.total_quantity > 0 ? <div className="delivery-layout">
         <div className="stack">
           <section className="card delivery-card">
             <h2>Saved delivery addresses</h2>
-            <p className="muted">These addresses come from the authenticated Magento customer account.</p>
+            <p className="muted">Choose a saved address, or enter a different address below for this order only.</p>
             {delivery.customer.addresses.length ? <div className="address-grid">
               {delivery.customer.addresses.map((address) => <article className="address-card" key={address.id}>
                 <div>
@@ -104,32 +104,32 @@ export default async function DeliveryPage({
                   <button className="button secondary" type="submit" disabled={!canCheckout}>Deliver here</button>
                 </form>
               </article>)}
-            </div> : <p className="notice">No saved Magento delivery addresses are available. Use a one-off address below.</p>}
+            </div> : <p className="notice">You do not have a saved delivery address. Enter an address below to continue.</p>}
           </section>
 
           <section className="card delivery-card">
-            <h2>Use a one-off delivery address</h2>
-            <p className="muted">This address is applied to the current cart only and is not written into the Magento address book.</p>
+            <h2>Use a different address</h2>
+            <p className="muted">This address will be used for this order only and will not be added to your saved addresses.</p>
             <form action={setNewShippingAddressAction} className="delivery-form">
-              <label className="field"><span>First name</span><input name="firstname" defaultValue={delivery.customer.firstname} required/></label>
-              <label className="field"><span>Last name</span><input name="lastname" defaultValue={delivery.customer.lastname} required/></label>
-              <label className="field delivery-span-2"><span>Company</span><input name="company" defaultValue={selectedCompany?.name || ""}/></label>
-              <label className="field delivery-span-2"><span>Address line 1</span><input name="street_1" required/></label>
-              <label className="field delivery-span-2"><span>Address line 2</span><input name="street_2"/></label>
-              <label className="field"><span>Town / city</span><input name="city" required/></label>
-              <label className="field"><span>County / region</span><input name="region"/></label>
-              <label className="field"><span>Postcode</span><input name="postcode" required/></label>
-              <label className="field"><span>Country</span><select name="country_code" defaultValue={defaultCountry} required>
+              <label className="field"><span>First name</span><input name="firstname" autoComplete="given-name" defaultValue={delivery.customer.firstname} required/></label>
+              <label className="field"><span>Last name</span><input name="lastname" autoComplete="family-name" defaultValue={delivery.customer.lastname} required/></label>
+              <label className="field delivery-span-2"><span>Company</span><input name="company" autoComplete="organization" defaultValue={selectedCompany?.name || ""}/></label>
+              <label className="field delivery-span-2"><span>Address line 1</span><input name="street_1" autoComplete="address-line1" required/></label>
+              <label className="field delivery-span-2"><span>Address line 2</span><input name="street_2" autoComplete="address-line2"/></label>
+              <label className="field"><span>Town / city</span><input name="city" autoComplete="address-level2" required/></label>
+              <label className="field"><span>County / region</span><input name="region" autoComplete="address-level1"/></label>
+              <label className="field"><span>Postcode</span><input name="postcode" autoComplete="postal-code" required/></label>
+              <label className="field"><span>Country</span><select name="country_code" autoComplete="country" defaultValue={defaultCountry} required>
                 {delivery.countries.map((country) => <option value={country.id} key={country.id}>{country.full_name_locale || country.id}</option>)}
               </select></label>
-              <label className="field delivery-span-2"><span>Telephone</span><input name="telephone" type="tel" required/></label>
+              <label className="field delivery-span-2"><span>Telephone</span><input name="telephone" type="tel" autoComplete="tel" required/></label>
               <div className="delivery-span-2"><button className="button" type="submit" disabled={!canCheckout}>Use this address</button></div>
             </form>
           </section>
 
           {shippingAddress ? <section className="card delivery-card">
             <h2>Delivery methods</h2>
-            <p className="muted">Available methods are returned by Magento for the selected address and current basket.</p>
+            <p className="muted">Available options are based on your delivery address and the items in your basket.</p>
             <div className="shipping-method-list">
               {methods.map((method) => {
                 const active = selectedMethod?.carrier_code === method.carrier_code && selectedMethod.method_code === method.method_code;
@@ -142,13 +142,13 @@ export default async function DeliveryPage({
                 </form>;
               })}
             </div>
-            {!methods.length ? <p className="error">Magento has not returned an available delivery method for this address and basket.</p> : null}
+            {!methods.length ? <p className="error" role="alert">No delivery methods are currently available for this address and basket.</p> : null}
           </section> : null}
         </div>
 
         <aside className="stack">
           <section className="card delivery-card">
-            <h2>Basket carried into checkout</h2>
+            <h2>Order items</h2>
             <div className="checkout-line-list">
               {cart.itemsV2.items.map((item) => {
                 const sku = item.configured_variant?.sku || item.product.sku;
@@ -158,7 +158,7 @@ export default async function DeliveryPage({
                     <strong>{item.product.name}</strong>
                     <div className="muted small">{sku} · Qty {item.quantity}</div>
                     {item.configurable_options?.length ? <div className="muted small">{item.configurable_options.map((option) => `${option.option_label}: ${option.value_label}`).join(" · ")}</div> : null}
-                    {item.css_kit ? <div className="badge">Grouped/configurable item</div> : item.configured_variant ? <div className="badge">Configurable item</div> : null}
+                    {item.css_kit ? <div className="badge">Grouped item</div> : item.configured_variant ? <div className="badge">Configured item</div> : null}
                     {employee ? <div className="muted small">Employee: {employee}</div> : null}
                   </div>
                 </div>;
@@ -182,9 +182,9 @@ export default async function DeliveryPage({
           </section> : null}
 
           <section className="notice">
-            <strong>{selectedMethod ? "Delivery step complete." : "Select an address and delivery method."}</strong>
+            <strong>{selectedMethod ? "Delivery is ready." : "Select an address and delivery method."}</strong>
             {selectedMethod && canCheckout ? <form action={preparePaymentAction}><button className="button" type="submit">Continue to payment</button></form> : null}
-            {!selectedMethod ? <p className="muted small">Payment options are loaded only after Magento has a delivery address and shipping method for the current basket.</p> : null}
+            {!selectedMethod ? <p className="muted small">Payment options will be available once delivery is complete.</p> : null}
           </section>
         </aside>
       </div> : null}
