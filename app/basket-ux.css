@@ -1,0 +1,153 @@
+/* Production basket refinement. */
+
+.basket-page {
+  padding-top: 36px;
+}
+
+.basket-message {
+  margin-bottom: 18px;
+}
+
+.basket-production-layout {
+  grid-template-columns: minmax(0, 1.65fr) minmax(300px, .72fr);
+  gap: 24px;
+}
+
+.basket-production-line {
+  padding: 24px;
+}
+
+.basket-production-line .basket-line-copy h2 {
+  margin: 9px 0 4px;
+  font-size: 1.08rem;
+}
+
+.basket-production-line .basket-options {
+  margin-bottom: 0;
+}
+
+.basket-production-actions {
+  align-items: end;
+  margin-top: 18px;
+  padding-top: 18px;
+}
+
+.basket-production-actions .basket-quantity-form {
+  display: flex;
+  align-items: end;
+  gap: 10px;
+}
+
+.basket-production-actions .quantity-control {
+  width: auto;
+}
+
+.basket-production-actions .quantity-stepper {
+  width: 150px;
+}
+
+.basket-update-button {
+  min-height: 48px;
+}
+
+.basket-remove-button {
+  min-height: 48px;
+  color: var(--danger);
+}
+
+.basket-remove-button:hover {
+  border-color: #e5b8b3;
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+.basket-production-employee {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 10px;
+  margin-top: 16px;
+  padding: 16px;
+}
+
+.basket-production-employee .employee-picker {
+  max-width: none;
+}
+
+.basket-production-employee .employee-picker-label {
+  font-size: .82rem;
+}
+
+.basket-production-employee .employee-picker summary {
+  min-height: 52px;
+}
+
+.basket-production-employee > .button {
+  min-height: 52px;
+  white-space: nowrap;
+}
+
+.basket-checkout-summary {
+  padding: 24px;
+}
+
+.basket-checkout-summary h2 {
+  margin: 0 0 14px;
+}
+
+.basket-checkout-summary dl {
+  margin: 0;
+}
+
+.basket-checkout-action {
+  margin-top: 20px;
+  padding-top: 18px;
+  display: grid;
+  gap: 13px;
+  border-top: 1px solid var(--line);
+}
+
+.basket-checkout-action p {
+  margin: 0;
+}
+
+.basket-checkout-action .button {
+  width: 100%;
+  justify-content: space-between;
+}
+
+@media (max-width: 980px) {
+  .basket-production-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .basket-sidebar {
+    position: static;
+  }
+
+  .basket-checkout-summary {
+    max-width: 560px;
+  }
+}
+
+@media (max-width: 640px) {
+  .basket-production-line {
+    padding: 18px;
+  }
+
+  .basket-production-actions,
+  .basket-production-actions .basket-quantity-form,
+  .basket-production-employee {
+    display: grid;
+    grid-template-columns: 1fr;
+    align-items: stretch;
+  }
+
+  .basket-production-actions .quantity-control,
+  .basket-production-actions .quantity-stepper,
+  .basket-production-actions .basket-update-button,
+  .basket-production-actions form,
+  .basket-production-actions button,
+  .basket-production-employee > .button {
+    width: 100%;
+  }
+}

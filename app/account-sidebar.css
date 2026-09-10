@@ -1,0 +1,379 @@
+/* Shared account workspace/sidebar foundation. */
+
+.account-workspace {
+  padding-bottom: 52px;
+  display: grid;
+  grid-template-columns: 260px minmax(0, 1fr);
+  gap: 28px;
+  align-items: start;
+}
+
+.account-sidebar {
+  position: sticky;
+  top: 96px;
+  min-width: 0;
+  padding: 18px;
+  display: grid;
+  gap: 14px;
+}
+
+.account-sidebar-profile {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+}
+
+.account-sidebar-avatar,
+.account-sidebar-company-icon,
+.account-overview-icon,
+.account-overview-action-icon {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  background: var(--blue-soft);
+  color: var(--blue);
+}
+
+.account-sidebar-avatar {
+  width: 38px;
+  height: 38px;
+  border-radius: 11px;
+}
+
+.account-sidebar-profile > div {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.account-sidebar-profile strong {
+  overflow: hidden;
+  color: var(--ink-strong);
+  font-size: .88rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.account-sidebar-profile span {
+  overflow: hidden;
+  color: var(--muted);
+  font-size: .72rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.account-sidebar-nav {
+  display: grid;
+  gap: 5px;
+}
+
+.account-sidebar-link {
+  min-height: 44px;
+  padding: 10px 11px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border-radius: 10px;
+  color: #355068;
+  font-size: .84rem;
+  font-weight: 750;
+  text-decoration: none;
+  transition: background-color .16s ease, color .16s ease;
+}
+
+.account-sidebar-link svg {
+  color: #668096;
+}
+
+.account-sidebar-link:hover {
+  background: #f4f8fb;
+  color: var(--ink-strong);
+}
+
+.account-sidebar-link.active {
+  background: var(--blue-soft);
+  color: var(--blue);
+}
+
+.account-sidebar-link.active svg {
+  color: var(--blue);
+}
+
+.account-sidebar-link:focus-visible,
+.account-sidebar-signout:focus-visible,
+.account-overview-action:focus-visible {
+  outline: 3px solid rgb(0 96 184 / 20%);
+  outline-offset: 2px;
+}
+
+.account-sidebar-divider {
+  height: 1px;
+  background: var(--line);
+}
+
+.account-sidebar-overview {
+  margin-top: -2px;
+}
+
+.account-sidebar-company {
+  min-width: 0;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.account-sidebar-company-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 9px;
+}
+
+.account-sidebar-company > div {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.account-sidebar-company span,
+.account-sidebar-company small {
+  color: var(--muted);
+  font-size: .68rem;
+}
+
+.account-sidebar-company strong {
+  overflow: hidden;
+  color: var(--ink-strong);
+  font-size: .82rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.account-sidebar-switcher {
+  margin-top: -6px;
+}
+
+.account-sidebar-switcher > summary {
+  cursor: pointer;
+  color: var(--blue);
+  font-size: .76rem;
+  font-weight: 800;
+}
+
+.account-sidebar-company-list {
+  margin-top: 10px;
+  display: grid;
+  gap: 7px;
+}
+
+.account-sidebar-company-option {
+  padding: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: #fbfdff;
+}
+
+.account-sidebar-company-option.current {
+  border-color: #b9dfc5;
+  background: #f2faf5;
+}
+
+.account-sidebar-company-option > div {
+  min-width: 0;
+  display: grid;
+  gap: 1px;
+}
+
+.account-sidebar-company-option strong {
+  font-size: .74rem;
+}
+
+.account-sidebar-company-option span {
+  color: var(--muted);
+  font-size: .66rem;
+}
+
+.account-sidebar-company-option .button {
+  min-height: 34px;
+  padding: 6px 10px;
+  font-size: .7rem;
+}
+
+.account-sidebar-signout {
+  width: 100%;
+  min-height: 42px;
+  padding: 9px 10px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: #5a7084;
+  font: inherit;
+  font-size: .8rem;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.account-sidebar-signout:hover {
+  background: #fff4f3;
+  color: #9a352d;
+}
+
+.account-workspace-content {
+  min-width: 0;
+}
+
+.account-workspace-heading {
+  padding: 10px 2px 2px;
+}
+
+.account-workspace-heading h1 {
+  margin-bottom: 8px;
+  font-size: clamp(2.25rem, 4vw, 3.35rem);
+}
+
+.account-workspace-heading p:last-child {
+  max-width: 720px;
+  margin-bottom: 0;
+}
+
+.account-overview-company {
+  padding: 24px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(260px, .8fr);
+  gap: 28px;
+  align-items: center;
+}
+
+.account-overview-company-title {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 13px;
+}
+
+.account-overview-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 11px;
+}
+
+.account-overview-company h2 {
+  margin: 2px 0 4px;
+}
+
+.account-overview-company p {
+  margin-bottom: 0;
+}
+
+.account-overview-company > p {
+  justify-self: end;
+  max-width: 360px;
+  text-align: right;
+}
+
+.account-overview-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.account-overview-action {
+  min-height: 108px;
+  padding: 18px;
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  color: inherit;
+  text-decoration: none;
+  transition: transform .16s ease, border-color .16s ease, box-shadow .16s ease;
+}
+
+.account-overview-action:hover {
+  transform: translateY(-1px);
+  border-color: #b4cddd;
+  box-shadow: var(--shadow-md);
+}
+
+.account-overview-action-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 11px;
+}
+
+.account-overview-action > div {
+  display: grid;
+  gap: 3px;
+}
+
+.account-overview-action strong {
+  color: var(--ink-strong);
+  font-size: .94rem;
+}
+
+.account-overview-action span {
+  color: var(--muted);
+  font-size: .78rem;
+}
+
+@media (max-width: 980px) {
+  .account-workspace {
+    grid-template-columns: 220px minmax(0, 1fr);
+    gap: 20px;
+  }
+
+  .account-overview-company {
+    grid-template-columns: 1fr;
+  }
+
+  .account-overview-company > p {
+    justify-self: start;
+    max-width: none;
+    text-align: left;
+  }
+}
+
+@media (max-width: 760px) {
+  .account-workspace {
+    grid-template-columns: 1fr;
+  }
+
+  .account-sidebar {
+    position: static;
+  }
+
+  .account-sidebar-nav {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .account-sidebar-divider,
+  .account-sidebar-company,
+  .account-sidebar-switcher {
+    display: none;
+  }
+
+  .account-overview-actions {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 480px) {
+  .account-sidebar {
+    padding: 14px;
+  }
+
+  .account-sidebar-nav {
+    grid-template-columns: 1fr;
+  }
+
+  .account-overview-company,
+  .account-overview-action {
+    padding: 17px;
+  }
+}

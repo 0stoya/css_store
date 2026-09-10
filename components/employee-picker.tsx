@@ -14,13 +14,18 @@ export function EmployeePicker({
   employees,
   name = "employee_id",
   label = "Employee",
+  defaultSelectedId = null,
 }: {
   employees: EmployeeOption[];
   name?: string;
   label?: string;
+  defaultSelectedId?: number | null;
 }) {
   const detailsRef = useRef<HTMLDetailsElement>(null);
-  const [selectedId, setSelectedId] = useState<number | null>(null);
+  const validDefault = defaultSelectedId !== null && employees.some((employee) => employee.employee_id === defaultSelectedId)
+    ? defaultSelectedId
+    : null;
+  const [selectedId, setSelectedId] = useState<number | null>(validDefault);
   const selected = employees.find((employee) => employee.employee_id === selectedId) || null;
 
   function choose(employee: EmployeeOption) {
