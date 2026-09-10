@@ -1,6 +1,6 @@
 "use server";
 
-import { redirect } from "next/navigation";
+import { redirect, unstable_rethrow } from "next/navigation";
 import {
   getDeliveryContext,
   setNewShippingAddress,
@@ -20,6 +20,7 @@ function deliveryRedirect(kind: "error" | "notice", value: string): never {
 }
 
 function message(error: unknown) {
+  unstable_rethrow(error);
   return error instanceof Error ? error.message : "Delivery details could not be updated.";
 }
 
