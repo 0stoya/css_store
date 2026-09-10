@@ -3,6 +3,8 @@ import type { ReactNode } from "react";
 import "./globals.css";
 import "./accessibility.css";
 import "./portal-ux.css";
+import "./production-fixes.css";
+import { SiteFooter } from "@/components/site-footer";
 import { getStoreName } from "@/lib/config";
 
 export const metadata: Metadata = {
@@ -11,5 +13,5 @@ export const metadata: Metadata = {
 };
 
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
-  return <html lang="en"><body>{children}</body></html>;
+  return <html lang="en"><body>{children}<SiteFooter/></body></html>;
 }
