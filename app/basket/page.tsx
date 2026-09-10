@@ -48,6 +48,7 @@ export default async function BasketPage({
   const decisions = eligibility?.items || [];
   const decisionMessages = Array.from(new Set(decisions.map((decision) => decision.reason).filter((reason): reason is string => Boolean(reason))));
   const totalCurrency = cart.prices?.grand_total?.currency || cart.prices?.subtotal_excluding_tax?.currency || "GBP";
+  const discountCurrency = cart.css_company_discount.currency || totalCurrency;
 
   return <>
     <SiteHeader customerName={customerName} companyName={selected?.name} basketQuantity={cart.total_quantity}/>
@@ -75,18 +76,21 @@ export default async function BasketPage({
             const assignedName = employeeName(item);
             const effectiveSku = item.configured_variant?.sku || item.product.sku;
             const activeAssignedId = assignedId !== null && activeEmployeeIds.has(assignedId) ? assignedId : "";
+            const constraints = item.product.css_purchase_constraints;
             return <article className="card basket-line" key={item.uid}>
               <div className="basket-line-main">
                 <div className="basket-line-copy">
                   <div className="basket-line-badges">
                     {item.css_kit ? <span className="badge">Grouped item</span> : null}
-                    <span className="badge">{item.product.stock_status || "Stock status unavailable"}</span>
+                    <span className="badge">{item.product.css_stock_info.stock_status || item.product.stock_status || "Stock status unavailable"}</span>
                   </div>
                   <h2>{item.product.name}</h2>
                   <p className="muted">SKU {effectiveSku}</p>
                   {item.configurable_options?.length ? <ul className="basket-options">
                     {item.configurable_options.map((option) => <li key={`${option.option_label}:${option.value_label}`}><strong>{option.option_label}:</strong> {option.value_label}</li>)}
                   </ul> : null}
+                  {item.product.css_stock_info.delivery_message ? <p className="muted small">{item.product.css_stock_info.delivery_message}</p> : null}
+                  {constraints ? <p className="muted small">Quantity: minimum {constraints.minimum_quantity}{constraints.maximum_quantity !== null ? `, maximum ${constraints.maximum_quantity}` : ""}{constraints.increments_enforced ? `, increments of ${constraints.quantity_increment}` : ""}.</p> : null}
                   {ordering.usesEmployee ? <p className="basket-employee"><strong>Employee:</strong> {assignedName || "Not assigned"}</p> : null}
                 </div>
                 <div className="basket-line-price">
@@ -100,7 +104,15 @@ export default async function BasketPage({
               <div className="basket-line-actions">
                 <form action={updateBasketItemAction} className="basket-quantity-form">
                   <input type="hidden" name="item_uid" value={item.uid}/>
-                  <label className="field compact-field"><span>Quantity</span><input name="quantity" type="number" min="0.0001" step="any" defaultValue={item.quantity} required/></label>
+                  <label className="field compact-field"><span>Quantity</span><input
+                    name="quantity"
+                    type="number"
+                    min={constraints?.minimum_quantity ?? 0.0001}
+                    max={constraints?.maximum_quantity ?? undefined}
+                    step={constraints?.increments_enforced ? constraints.quantity_increment : "any"}
+                    defaultValue={item.quantity}
+                    required
+                  /></label>
                   <button className="button secondary" type="submit">Update</button>
                 </form>
                 <form action={removeBasketItemAction}>
@@ -138,7 +150,7 @@ export default async function BasketPage({
             <h2>Order summary</h2>
             <dl>
               <div><dt>Subtotal ex VAT</dt><dd>{money(cart.prices?.subtotal_excluding_tax)}</dd></div>
-              {cart.css_company_discount.applied ? <div><dt>{cart.css_company_discount.label || "Company discount"} ({cart.css_company_discount.percent}%)</dt><dd>−{new Intl.NumberFormat("en-GB", { style: "currency", currency: totalCurrency }).format(cart.css_company_discount.amount)}</dd></div> : null}
+              {cart.css_company_discount.applied ? <div><dt>{cart.css_company_discount.label || "Company discount"} ({cart.css_company_discount.percent}%)</dt><dd>−{new Intl.NumberFormat("en-GB", { style: "currency", currency: discountCurrency }).format(cart.css_company_discount.amount)}</dd></div> : null}
               <div className="basket-grand-total"><dt>Grand total</dt><dd>{money(cart.prices?.grand_total)}</dd></div>
             </dl>
           </section>
