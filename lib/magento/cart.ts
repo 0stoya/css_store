@@ -37,6 +37,17 @@ export type CartItemSnapshot = {
     name: string;
     stock_status: string | null;
     small_image: { url: string; label: string | null } | null;
+    css_stock_info: {
+      available: boolean;
+      stock_status: string;
+      delivery_message: string;
+    };
+    css_purchase_constraints: {
+      minimum_quantity: number;
+      maximum_quantity: number | null;
+      quantity_increment: number;
+      increments_enforced: boolean;
+    } | null;
   };
   prices: {
     price: CartMoney | null;
@@ -79,6 +90,8 @@ export type CartSnapshot = {
     percent: number;
     amount: number;
     base_amount: number;
+    currency: string;
+    base_currency: string;
   };
 };
 
@@ -94,6 +107,13 @@ const CART_FIELDS = /* GraphQL */ `
         name
         stock_status
         small_image { url label }
+        css_stock_info { available stock_status delivery_message }
+        css_purchase_constraints {
+          minimum_quantity
+          maximum_quantity
+          quantity_increment
+          increments_enforced
+        }
       }
       prices {
         price { value currency }
@@ -137,7 +157,7 @@ const CART_FIELDS = /* GraphQL */ `
     credit_sufficient_for_cart
     can_pay_on_account
   }
-  css_company_discount { applied label percent amount base_amount }
+  css_company_discount { applied label percent amount base_amount currency base_currency }
 `;
 
 const CUSTOMER_CART = /* GraphQL */ `
