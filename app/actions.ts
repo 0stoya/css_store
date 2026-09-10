@@ -3,7 +3,7 @@
 import { redirect } from "next/navigation";
 import { clearCustomerToken, getCustomerToken, requireCustomerToken } from "@/lib/session";
 import { revokeCustomerToken } from "@/lib/magento/auth";
-import { cartHasItems, getCustomerCart, type CartSnapshot } from "@/lib/magento/cart";
+import { cartHasItems, getCustomerCartSummary, type CartSummarySnapshot } from "@/lib/magento/cart";
 import { selectCompany } from "@/lib/magento/context";
 
 export async function logoutAction() {
@@ -18,9 +18,9 @@ export async function selectCompanyAction(formData: FormData) {
   if (!Number.isInteger(companyId) || companyId <= 0) redirect("/account?error=Invalid%20company.");
   const token = await requireCustomerToken();
 
-  let cart: CartSnapshot;
+  let cart: CartSummarySnapshot;
   try {
-    cart = await getCustomerCart(token);
+    cart = await getCustomerCartSummary(token);
   } catch {
     redirect("/account?error=Company%20selection%20is%20temporarily%20unavailable%20because%20the%20basket%20could%20not%20be%20verified.");
   }
