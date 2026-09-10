@@ -4,6 +4,7 @@ export type CartItemSnapshot = {
   uid: string;
   quantity: number;
   product: { sku: string };
+  configured_variant?: { sku: string } | null;
   css_employee: { employee_id: number | null; employee_name: string } | null;
 };
 
@@ -19,6 +20,7 @@ const CART_FIELDS = /* GraphQL */ `
       uid
       quantity
       product { sku }
+      ... on ConfigurableCartItem { configured_variant { sku } }
       css_employee { employee_id employee_name }
     }
   }
