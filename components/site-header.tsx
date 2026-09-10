@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { getStoreName } from "@/lib/config";
-import { getCustomerCart } from "@/lib/magento/cart";
+import { getCustomerCartSummary } from "@/lib/magento/cart";
 import { getCustomerToken } from "@/lib/session";
 
 export async function SiteHeader({
@@ -17,7 +17,7 @@ export async function SiteHeader({
   if (customerName && quantity === undefined) {
     try {
       const token = await getCustomerToken();
-      if (token) quantity = (await getCustomerCart(token)).total_quantity;
+      if (token) quantity = (await getCustomerCartSummary(token)).total_quantity;
     } catch {
       quantity = undefined;
     }
