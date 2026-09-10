@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { ProductCard } from "@/components/product-card";
 import { SiteHeader } from "@/components/site-header";
 import { getCategories, getProducts } from "@/lib/magento/catalogue";
@@ -46,10 +47,10 @@ export default async function CataloguePage({
       </div>
 
       {categories.length ? <nav className="category-grid" aria-label="Product categories">
-        {categories.map((category) => <a className="category-card card" href={`/catalogue/category/${encodeURIComponent(category.url_key || category.uid)}`} key={category.uid}>
+        {categories.map((category) => <Link className="category-card card" href={`/catalogue/category/${encodeURIComponent(category.url_key || category.uid)}`} key={category.uid}>
           {category.image_url ? <img src={category.image_url} alt=""/> : null}
           <span><strong>{category.name}</strong><small>{category.product_count} products</small></span>
-        </a>)}
+        </Link>)}
       </nav> : null}
 
       <section className="product-grid">
@@ -58,9 +59,9 @@ export default async function CataloguePage({
       {!products.items.length ? <div className="empty card"><h2>No products found</h2><p className="muted">Try another search term or browse a category.</p></div> : null}
 
       {products.page_info.total_pages > 1 ? <nav className="pagination" aria-label="Catalogue pages">
-        {products.page_info.current_page > 1 ? <a className="button secondary" href={pageHref(products.page_info.current_page - 1, q)}>Previous</a> : <span/>}
+        {products.page_info.current_page > 1 ? <Link className="button secondary" href={pageHref(products.page_info.current_page - 1, q)}>Previous</Link> : <span/>}
         <span>Page {products.page_info.current_page} of {products.page_info.total_pages}</span>
-        {products.page_info.current_page < products.page_info.total_pages ? <a className="button secondary" href={pageHref(products.page_info.current_page + 1, q)}>Next</a> : <span/>}
+        {products.page_info.current_page < products.page_info.total_pages ? <Link className="button secondary" href={pageHref(products.page_info.current_page + 1, q)}>Next</Link> : <span/>}
       </nav> : null}
     </main>
   </>;
