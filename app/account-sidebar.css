@@ -350,8 +350,7 @@
 
   .account-sidebar-divider,
   .account-sidebar-company,
-  .account-sidebar-switcher,
-  .account-sidebar form {
+  .account-sidebar-switcher {
     display: none;
   }
 
