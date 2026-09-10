@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { ProductCard } from "@/components/product-card";
 import { SiteHeader } from "@/components/site-header";
-import { getCategories, getProducts } from "@/lib/magento/catalogue";
+import { getProducts } from "@/lib/magento/catalogue";
 import { getCustomerContext } from "@/lib/magento/context";
 import { requireCustomerToken } from "@/lib/session";
 
@@ -24,9 +24,8 @@ export default async function CataloguePage({
   const { q = "", page: rawPage = "1" } = await searchParams;
   const page = Math.max(1, Math.trunc(Number(rawPage) || 1));
   const searchTerm = q.trim();
-  const [ctx, categories, products] = await Promise.all([
+  const [ctx, products] = await Promise.all([
     getCustomerContext(token),
-    getCategories(token),
     getProducts(token, searchTerm, page),
   ]);
   const selected = ctx.css_company_context.companies.find((company) => company.selected) || null;
@@ -51,25 +50,7 @@ export default async function CataloguePage({
         </form>
       </header>
 
-      {categories.length ? <>
-        <div className="portal-section-heading">
-          <div>
-            <h2>Browse categories</h2>
-            <p>Find the right range quickly.</p>
-          </div>
-        </div>
-        <nav className="category-grid" aria-label="Product categories">
-          {categories.map((category) => <Link className="category-card card" href={`/catalogue/category/${encodeURIComponent(category.url_key || category.uid)}`} key={category.uid}>
-            {category.image_url ? <img src={category.image_url} alt=""/> : null}
-            <span>
-              <strong>{category.name}</strong>
-              <small>{category.product_count > 0 ? `${category.product_count} product${category.product_count === 1 ? "" : "s"}` : "Browse category"}</small>
-            </span>
-          </Link>)}
-        </nav>
-      </> : null}
-
-      <div className="portal-section-heading">
+      <div className="portal-section-heading catalogue-products-heading">
         <div>
           <h2>{searchTerm ? "Search results" : "All products"}</h2>
           <p>{products.total_count} product{products.total_count === 1 ? "" : "s"}</p>
@@ -80,7 +61,7 @@ export default async function CataloguePage({
       <section className="product-grid" aria-label={searchTerm ? `Search results for ${searchTerm}` : "Products"}>
         {products.items.map((product) => <ProductCard product={product} hidePrice={ctx.css_storefront_policy.hide_price} key={product.uid}/>)}
       </section>
-      {!products.items.length ? <div className="empty card"><h2>No products found</h2><p className="muted">Try a different search term or browse the product categories.</p>{searchTerm ? <p><Link className="button secondary" href="/catalogue">View all products</Link></p> : null}</div> : null}
+      {!products.items.length ? <div className="empty card"><h2>No products found</h2><p className="muted">Try a different search term or choose a category from the Products menu.</p>{searchTerm ? <p><Link className="button secondary" href="/catalogue">View all products</Link></p> : null}</div> : null}
 
       {products.page_info.total_pages > 1 ? <nav className="pagination" aria-label="Catalogue pages">
         {products.page_info.current_page > 1 ? <Link className="button secondary" href={pageHref(products.page_info.current_page - 1, q)}>Previous</Link> : <span/>}
