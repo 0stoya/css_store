@@ -11,6 +11,8 @@ const accreditationImages = [
 
 const website = "https://www.chelmsfordsafety.co.uk";
 
+// Social brand marks are intentionally kept from the existing Chelmsford Safety footer.
+// Lucide is used for generic portal UI controls, not as a replacement for brand identities.
 function InstagramIcon() {
   return <svg aria-hidden="true" viewBox="0 0 22 23" width="22" height="23" fill="none">
     <circle cx="11" cy="11.8159" r="11" fill="currentColor"/>
