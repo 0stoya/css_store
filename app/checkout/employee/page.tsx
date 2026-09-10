@@ -51,7 +51,7 @@ export default async function CheckoutEmployeePage({
         <div>
           <p className="eyebrow">Checkout · Employee</p>
           <h1>Who is this order for?</h1>
-          <p className="muted">Choose one active Employee for the whole basket before delivery.</p>
+          <p className="muted">Choose one Employee for the whole order before continuing to delivery.</p>
         </div>
         <Link className="button secondary" href="/basket">Back to basket</Link>
       </div>
@@ -65,8 +65,8 @@ export default async function CheckoutEmployeePage({
       </section> : <div className="delivery-layout">
         <section className="card delivery-card stack">
           <div>
-            <h2>Employee</h2>
-            <p className="muted">Fluid will assign or reassign every visible basket item to the Employee selected here.</p>
+            <h2>Choose an Employee</h2>
+            <p className="muted">The Employee you select will be assigned to every item in this order.</p>
           </div>
 
           {ordering.employees.length ? <form action={selectCheckoutEmployeeAction} className="stack">
@@ -82,12 +82,12 @@ export default async function CheckoutEmployeePage({
             <div>
               <button className="button" type="submit">Continue to delivery</button>
             </div>
-          </form> : <p className="error">No active Employees are available for this company. The order cannot continue until an Employee is available.</p>}
+          </form> : <p className="error">No active Employees are available for this company. Please contact your account administrator before continuing.</p>}
         </section>
 
         <aside className="stack">
           <section className="card delivery-card">
-            <h2>Basket</h2>
+            <h2>Order items</h2>
             <div className="checkout-line-list">
               {cart.itemsV2.items.map((item) => <div className="checkout-line" key={item.uid}>
                 <strong>{item.product.name}</strong>
