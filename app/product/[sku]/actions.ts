@@ -5,7 +5,6 @@ import {
   addGroupedConfigurableProduct,
   addNativeProduct,
   addNativeProducts,
-  assignCartEmployee,
   assignCartItemEmployee,
   getCustomerCartWriteContext,
 } from "@/lib/magento/cart";
@@ -110,24 +109,21 @@ export async function addProductToCartAction(formData: FormData) {
     if (!product.css_stock_info.available) throw new Error(product.css_stock_info.delivery_message || "Product is unavailable.");
 
     let employeeId: number | undefined;
-    if (employees.usesEmployee) {
+    if (employees.usesEmployee && employees.multiEmployeeBasket) {
       employeeId = Number(formData.get("employee_id"));
       if (!Number.isInteger(employeeId) || !employees.employees.some((employee) => employee.employee_id === employeeId)) {
-        throw new Error("Choose an active Employee for this order.");
+        throw new Error("Choose an active Employee for this order line.");
       }
     }
 
     if (product.__typename === "CssGroupedConfigurableProduct") {
       const items = groupedConfigurableSelections(product, formData);
-      const cart = await addGroupedConfigurableProduct(token, {
+      await addGroupedConfigurableProduct(token, {
         cartId: before.id,
         parentSku: product.sku,
         employeeId,
         items,
       });
-      if (employeeId && !employees.multiEmployeeBasket) {
-        await assignCartEmployee(token, cart.id, employeeId);
-      }
     } else if (product.__typename === "GroupedProduct") {
       const items: Array<{ sku: string; quantity: number }> = [];
       const childCount = product.items?.length || 0;
@@ -150,7 +146,7 @@ export async function addProductToCartAction(formData: FormData) {
 
       if (!items.length) throw new Error("Choose at least one grouped product quantity.");
 
-      if (employeeId && employees.multiEmployeeBasket) {
+      if (employeeId) {
         for (const selected of items) {
           const matching = before.itemsV2.items.filter((item) => cartItemSku(item) === selected.sku);
           if (matching.some((item) => item.css_employee?.employee_id !== employeeId)) {
@@ -161,14 +157,10 @@ export async function addProductToCartAction(formData: FormData) {
 
       const after = await addNativeProducts(token, before.id, items);
       if (employeeId) {
-        if (!employees.multiEmployeeBasket) {
-          await assignCartEmployee(token, after.id, employeeId);
-        } else {
-          const previousUids = new Set(before.itemsV2.items.map((item) => item.uid));
-          const added = after.itemsV2.items.filter((item) => !previousUids.has(item.uid));
-          for (const item of added) {
-            await assignCartItemEmployee(token, after.id, item.uid, employeeId);
-          }
+        const previousUids = new Set(before.itemsV2.items.map((item) => item.uid));
+        const added = after.itemsV2.items.filter((item) => !previousUids.has(item.uid));
+        for (const item of added) {
+          await assignCartItemEmployee(token, after.id, item.uid, employeeId);
         }
       }
     } else if (product.__typename === "SimpleProduct" || product.__typename === "ConfigurableProduct") {
@@ -180,7 +172,7 @@ export async function addProductToCartAction(formData: FormData) {
       const effectiveSku = variant?.product.sku || product.sku;
 
       let matchingExisting = null;
-      if (employeeId && employees.multiEmployeeBasket) {
+      if (employeeId) {
         matchingExisting = before.itemsV2.items.find((item) => cartItemSku(item) === effectiveSku) || null;
         if (matchingExisting && matchingExisting.css_employee?.employee_id !== employeeId) {
           throw new Error("This exact product option is already assigned to another Employee. Use a different option or adjust it from the basket.");
@@ -193,17 +185,13 @@ export async function addProductToCartAction(formData: FormData) {
         selectedOptions: selected,
       });
 
-      if (employeeId) {
-        if (!employees.multiEmployeeBasket) {
-          await assignCartEmployee(token, after.id, employeeId);
-        } else if (!matchingExisting) {
-          const previousUids = new Set(before.itemsV2.items.map((item) => item.uid));
-          const added = after.itemsV2.items.filter((item) => !previousUids.has(item.uid));
-          if (added.length !== 1) {
-            throw new Error("Magento did not expose a unique new basket line for Employee assignment.");
-          }
-          await assignCartItemEmployee(token, after.id, added[0].uid, employeeId);
+      if (employeeId && !matchingExisting) {
+        const previousUids = new Set(before.itemsV2.items.map((item) => item.uid));
+        const added = after.itemsV2.items.filter((item) => !previousUids.has(item.uid));
+        if (added.length !== 1) {
+          throw new Error("Magento did not expose a unique new basket line for Employee assignment.");
         }
+        await assignCartItemEmployee(token, after.id, added[0].uid, employeeId);
       }
     } else {
       throw new Error("This Magento product type does not yet have an accepted add-to-cart path.");
@@ -241,7 +229,7 @@ export async function saveProductToRepeatListAction(formData: FormData) {
     }
 
     let employeeName: string | undefined;
-    if (employees.usesEmployee) {
+    if (employees.usesEmployee && employees.multiEmployeeBasket) {
       const employeeId = Number(formData.get("employee_id"));
       const employee = employees.employees.find((candidate) => candidate.employee_id === employeeId);
       if (!Number.isInteger(employeeId) || !employee) throw new Error("Choose an active Employee for this repeat selection.");
