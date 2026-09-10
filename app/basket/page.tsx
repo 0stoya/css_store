@@ -106,6 +106,7 @@ export default async function BasketPage({
                   <label className="field compact-field"><span>Quantity</span><input
                     name="quantity"
                     type="number"
+                    inputMode="decimal"
                     min={constraints?.minimum_quantity ?? 0.0001}
                     max={constraints?.maximum_quantity ?? undefined}
                     step={constraints?.increments_enforced ? constraints.quantity_increment : "any"}
@@ -162,7 +163,7 @@ export default async function BasketPage({
             </dl>
           </section> : null}
 
-          <section className="card basket-card stack">
+          <section className="card basket-card stack basket-checkout-card">
             <h2>{singleEmployeeCheckout ? "Ready to continue?" : "Ready for delivery?"}</h2>
             <p className="muted small">{singleEmployeeCheckout
               ? "Choose the Employee for this order, then continue to delivery."
