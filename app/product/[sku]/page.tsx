@@ -147,7 +147,7 @@ export default async function ProductPage({
             {!product.items?.length ? <p className="error">Magento has not returned any orderable children for this grouped product.</p> : null}
           </div> : null}
 
-          {employeeOrdering.usesEmployee ? <label className="field employee-field">
+          {employeeOrdering.usesEmployee && employeeOrdering.multiEmployeeBasket ? <label className="field employee-field">
             <span>Employee</span>
             <select name="employee_id" required defaultValue="">
               <option value="" disabled>Choose Employee</option>
@@ -155,13 +155,17 @@ export default async function ProductPage({
                 {employee.full_name}{employee.employee_code ? ` · ${employee.employee_code}` : ""}{employee.department ? ` · ${employee.department}` : ""}
               </option>)}
             </select>
-            <small className="muted">{employeeOrdering.multiEmployeeBasket ? "Employee attribution is stored per basket line." : "Selecting a different Employee reassigns the single-Employee basket."}</small>
+            <small className="muted">Employee attribution is stored per basket line.</small>
           </label> : null}
+
+          {employeeOrdering.usesEmployee && !employeeOrdering.multiEmployeeBasket ? <p className="notice">
+            This company uses one Employee for the whole order. You will choose that Employee as the first checkout step.
+          </p> : null}
 
           {product.__typename === "CssGroupedConfigurableProduct" ? <div className="card stack" style={{padding:16}}>
             <div>
               <strong>Save this configuration</strong>
-              <p className="muted small">The same validated variant SKUs, quantities and Employee selection can be stored as a Fluid repeat-order list.</p>
+              <p className="muted small">The same validated variant SKUs and quantities can be stored as a Fluid repeat-order list. Multi-Employee baskets also preserve the selected Employee for each saved row.</p>
             </div>
             {repeatLists.length ? <>
               <label className="field">
