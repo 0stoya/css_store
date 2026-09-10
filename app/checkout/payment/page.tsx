@@ -119,7 +119,7 @@ export default async function PaymentPage({
                 {cart.css_purchase_eligibility?.approval_status ? <p className="muted small">Current backend cart approval state: {cart.css_purchase_eligibility.approval_status}</p> : null}
               </div> : <div className="notice">
                 <strong>Native Magento checkout</strong>
-                <p className="muted small">This order will be submitted through Magento's standard placeOrder mutation only when Fluid's current cart approval state is ALLOWED.</p>
+                <p className="muted small">This order will be submitted through Magento&apos;s standard placeOrder mutation only when Fluid&apos;s current cart approval state is ALLOWED.</p>
               </div>}
 
               <button className="button" type="submit" disabled={!ready}>Submit order</button>
