@@ -4,8 +4,9 @@ import { SiteHeader } from "@/components/site-header";
 import { getCustomerContext } from "@/lib/magento/context";
 import { getEmployeeOrdering } from "@/lib/magento/employee";
 import { getProduct } from "@/lib/magento/product";
+import { getRepeatOrderLists } from "@/lib/magento/repeat-orders";
 import { requireCustomerToken } from "@/lib/session";
-import { addProductToCartAction } from "./actions";
+import { addProductToCartAction, saveProductToRepeatListAction } from "./actions";
 
 function money(value: number, currency: string) {
   return new Intl.NumberFormat("en-GB", { style: "currency", currency }).format(value);
@@ -26,15 +27,16 @@ export default async function ProductPage({
   searchParams,
 }: {
   params: Promise<{ sku: string }>;
-  searchParams: Promise<{ added?: string; error?: string }>;
+  searchParams: Promise<{ added?: string; saved?: string; error?: string }>;
 }) {
   const token = await requireCustomerToken();
   const [{ sku: rawSku }, status] = await Promise.all([params, searchParams]);
   const sku = decodeURIComponent(rawSku);
-  const [product, ctx, employeeOrdering] = await Promise.all([
+  const [product, ctx, employeeOrdering, repeatListsData] = await Promise.all([
     getProduct(token, sku),
     getCustomerContext(token),
     getEmployeeOrdering(token),
+    getRepeatOrderLists(token),
   ]);
   if (!product) notFound();
 
@@ -47,12 +49,14 @@ export default async function ProductPage({
   const supported = ["SimpleProduct", "ConfigurableProduct", "CssGroupedConfigurableProduct", "GroupedProduct"].includes(product.__typename);
   const canAdd = !ctx.css_storefront_policy.hide_add_to_cart && product.css_stock_info.available && !allowanceBlocked && supported;
   const gallery = (product.media_gallery || []).filter((image) => Boolean(image.url)).sort((a, b) => (a.position || 0) - (b.position || 0));
+  const repeatLists = repeatListsData.css_repeat_order_lists;
 
   return <>
     <SiteHeader customerName={customerName} companyName={selectedCompany?.name}/>
     <main className="shell">
       <Link className="back-link" href="/catalogue">← Back to products</Link>
       {status.added === "1" ? <p className="success">Added to basket.</p> : null}
+      {status.saved === "1" ? <p className="success">Selection saved to the repeat-order list.</p> : null}
       {status.error ? <p className="error">{status.error}</p> : null}
       <section className="pdp">
         <div className="pdp-gallery card">
@@ -153,6 +157,28 @@ export default async function ProductPage({
             </select>
             <small className="muted">{employeeOrdering.multiEmployeeBasket ? "Employee attribution is stored per basket line." : "Selecting a different Employee reassigns the single-Employee basket."}</small>
           </label> : null}
+
+          {product.__typename === "CssGroupedConfigurableProduct" ? <div className="card stack" style={{padding:16}}>
+            <div>
+              <strong>Save this configuration</strong>
+              <p className="muted small">The same validated variant SKUs, quantities and Employee selection can be stored as a Fluid repeat-order list.</p>
+            </div>
+            {repeatLists.length ? <>
+              <label className="field">
+                <span>Repeat-order list</span>
+                <select name="repeat_list_id" defaultValue="">
+                  <option value="" disabled>Choose a list</option>
+                  {repeatLists.map((list) => <option key={list.list_id} value={list.list_id}>{list.name}</option>)}
+                </select>
+              </label>
+              <button
+                className="button secondary"
+                type="submit"
+                formAction={saveProductToRepeatListAction}
+                disabled={!canAdd || !product.items?.length}
+              >Save selection to repeat list</button>
+            </> : <p className="muted small">No repeat lists yet. <Link href="/account/repeat-orders">Create one in your account</Link>.</p>}
+          </div> : null}
 
           <button className="button" type="submit" disabled={!canAdd || (grouped && !product.items?.length)}>
             {canAdd && (!grouped || product.items?.length) ? (ctx.css_storefront_policy.add_to_cart_label || "Add to basket") : "Ordering unavailable"}
