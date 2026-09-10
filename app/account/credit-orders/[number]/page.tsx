@@ -49,29 +49,29 @@ export default async function CreditOrderPage({
   return <>
     <SiteHeader customerName={customerName} companyName={selectedCompany?.name}/>
     <main className="shell stack">
-      <div className="basket-heading">
-        <div>
+      <header className="portal-page-header">
+        <div className="portal-page-heading">
           <p className="eyebrow">Credit order {order.number}</p>
           <h1>{readableStatus(order.status)}</h1>
-          <p className="muted">Fluid is authoritative for visibility, status and every available action on this credit order.</p>
+          <p className="muted">Review the order status, activity and any actions currently available to you.</p>
         </div>
         <Link className="button secondary" href="/account/credit-orders">Back to credit orders</Link>
-      </div>
+      </header>
 
-      {messages.error ? <p className="error">{messages.error}</p> : null}
-      {messages.notice ? <p className="success">{messages.notice}</p> : null}
-      {order.actions.requires_payment_details ? <div className={styles.warning}>
-        <strong>Payment details are required before this credit order can become a Magento order.</strong>
-        <p className="small">The `approved_pending_payment` resume path is intentionally outside the current storefront launch UI. Do not use Place order for this state.</p>
+      {messages.error ? <p className="error" role="alert">{messages.error}</p> : null}
+      {messages.notice ? <p className="success" role="status">{messages.notice}</p> : null}
+      {order.actions.requires_payment_details ? <div className={styles.warning} role="status">
+        <strong>Payment details are required before this order can be completed.</strong>
+        <p className="small">This portal can’t collect the required payment details for this order yet. Please contact our team for help completing it.</p>
       </div> : null}
 
       <div className={styles.detailGrid}>
         <div className="stack">
           <section className={`card ${styles.summaryCard}`}>
             <div className={styles.linkedOrder}>
-              <span className="badge">{order.status}</span>
-              {order.auto_approved ? <span className="badge">Auto approved</span> : null}
-              {order.order_number ? <span className="badge">Magento order {order.order_number}</span> : null}
+              <span className="badge">{readableStatus(order.status)}</span>
+              {order.auto_approved ? <span className="badge">Automatically approved</span> : null}
+              {order.order_number ? <span className="badge">Order {order.order_number}</span> : null}
             </div>
             <dl className={styles.summaryGrid}>
               <div><dt>Credit order</dt><dd>{order.number}</dd></div>
@@ -79,12 +79,12 @@ export default async function CreditOrderPage({
               <div><dt>Created by</dt><dd>{actorLabel(order.creator_company_user_id, currentUser)}</dd></div>
               <div><dt>Approvals recorded</dt><dd>{order.approved_by.length}</dd></div>
               <div><dt>Payment method</dt><dd>{order.payment_method || "—"}</dd></div>
-              <div><dt>Shipping method</dt><dd>{order.shipping_method || "—"}</dd></div>
+              <div><dt>Delivery method</dt><dd>{order.shipping_method || "—"}</dd></div>
               <div><dt>Created</dt><dd>{order.created_at || "—"}</dd></div>
               <div><dt>Updated</dt><dd>{order.updated_at || "—"}</dd></div>
             </dl>
             {order.order_number ? <p>
-              <Link className="button secondary" href="/account/orders">View Magento order history</Link>
+              <Link className="button secondary" href="/account/orders">View order history</Link>
             </p> : null}
           </section>
 
@@ -104,36 +104,31 @@ export default async function CreditOrderPage({
               <input type="hidden" name="number" value={order.number}/>
               <label className="field">
                 <span>Add a comment</span>
-                <textarea name="comment" required placeholder="Comment for this credit order"/>
+                <textarea name="comment" required placeholder="Write a comment about this credit order"/>
               </label>
               <div><button className="button secondary" type="submit">Add comment</button></div>
             </form> : null}
           </section>
 
           <section className={`card ${styles.timelineCard}`}>
-            <h2>Lifecycle history</h2>
+            <h2>Activity history</h2>
             {order.logs.length ? <div className={styles.timeline}>
               {order.logs.map((log) => <article className={styles.timelineItem} key={log.log_id}>
                 <div className={styles.timelineMeta}>
-                  <strong>{log.activity_type ? readableStatus(log.activity_type) : "Credit-order update"}</strong>
+                  <strong>{log.activity_type ? readableStatus(log.activity_type) : "Order update"}</strong>
                   <span className="muted small">{log.created_at || ""}</span>
                 </div>
                 {log.message ? <p>{log.message}</p> : null}
                 <div className="muted small">{actorLabel(log.actor_company_user_id, currentUser)}</div>
               </article>)}
-            </div> : <p className={styles.emptyTimeline}>No lifecycle history is available.</p>}
-          </section>
-
-          <section className="notice">
-            <strong>Product and Employee line detail</strong>
-            <p className="muted small">The current Fluid credit-order GraphQL detail does not expose immutable item lines. The storefront therefore does not reconstruct them from client state. Once a Magento sales order exists, configured/grouped line detail and Employee snapshots remain available through Order history.</p>
+            </div> : <p className={styles.emptyTimeline}>No activity history is available.</p>}
           </section>
         </div>
 
         <aside className="stack">
           <section className={`card ${styles.actionCard}`}>
             <h2>Available actions</h2>
-            <p className="muted small">Controls are rendered from the current Fluid action state and re-checked on the server before mutation.</p>
+            <p className="muted small">Only actions available to your account are shown here.</p>
             <div className={styles.actionStack}>
               {order.actions.can_approve ? <form action={creditOrderLifecycleAction} className={styles.actionForm}>
                 <input type="hidden" name="number" value={order.number}/>
@@ -161,8 +156,8 @@ export default async function CreditOrderPage({
 
               {missingPoCandidate ? <form action={setCreditOrderPurchaseOrderNumberAction} className={styles.actionForm}>
                 <input type="hidden" name="number" value={order.number}/>
-                <strong>Complete purchase order number</strong>
-                <p className="muted small">Approved but not yet placeable. Fluid will validate both your PO-entry permission and whether a PO number is actually required.</p>
+                <strong>Add purchase order number</strong>
+                <p className="muted small">This approved order may need a PO number before it can continue.</p>
                 <label className="field">
                   <span>PO number</span>
                   <input name="purchase_order_number" required maxLength={16} pattern="[A-Za-z0-9-]+" autoComplete="off"/>
@@ -173,9 +168,9 @@ export default async function CreditOrderPage({
               {canPlace ? <form action={creditOrderLifecycleAction} className={styles.actionForm}>
                 <input type="hidden" name="number" value={order.number}/>
                 <input type="hidden" name="action" value="place"/>
-                <strong>Create Magento order</strong>
+                <strong>Place approved order</strong>
                 {order.actions.can_add_comment ? <textarea name="comment" placeholder="Optional placement comment"/> : null}
-                <button className="button" type="submit">Place approved order</button>
+                <button className="button" type="submit">Place order</button>
               </form> : null}
 
               {!order.actions.can_approve
@@ -183,7 +178,7 @@ export default async function CreditOrderPage({
                 && !order.actions.can_cancel
                 && !missingPoCandidate
                 && !canPlace
-                ? <p className="muted">No lifecycle action is currently available to this user.</p>
+                ? <p className="muted">No action is currently available.</p>
                 : null}
             </div>
           </section>

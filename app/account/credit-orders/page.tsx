@@ -41,10 +41,10 @@ function readableStatus(value: string) {
 
 function actionSummary(order: CreditOrder) {
   const actions: string[] = [];
-  if (order.actions.can_approve) actions.push("Approve");
-  if (order.actions.can_reject) actions.push("Reject");
-  if (order.actions.can_cancel) actions.push("Cancel");
-  if (order.actions.can_place_order && !order.actions.requires_payment_details) actions.push("Place order");
+  if (order.actions.can_approve) actions.push("Approval available");
+  if (order.actions.can_reject) actions.push("Rejection available");
+  if (order.actions.can_cancel) actions.push("Cancellation available");
+  if (order.actions.can_place_order && !order.actions.requires_payment_details) actions.push("Ready to place");
   if (order.actions.requires_payment_details) actions.push("Payment details required");
   return actions;
 }
@@ -81,16 +81,16 @@ export default async function CreditOrdersPage({
     return <>
       <SiteHeader customerName={customerName} companyName={selectedCompany?.name}/>
       <main className="shell stack">
-        <div className="basket-heading">
-          <div>
-            <p className="eyebrow">Customer account · credit orders</p>
+        <header className="portal-page-header">
+          <div className="portal-page-heading">
+            <p className="eyebrow">Account</p>
             <h1>Credit orders</h1>
           </div>
           <Link className="button secondary" href="/account">Back to account</Link>
-        </div>
+        </header>
         <section className="card empty">
-          <h2>Credit-order access is not available</h2>
-          <p className="muted">Fluid does not currently allow this company user to view a credit-order queue.</p>
+          <h2>Credit orders aren’t available for this account</h2>
+          <p className="muted">Your current account does not have access to a credit-order queue.</p>
         </section>
       </main>
     </>;
@@ -103,19 +103,19 @@ export default async function CreditOrdersPage({
   return <>
     <SiteHeader customerName={customerName} companyName={selectedCompany?.name}/>
     <main className="shell stack">
-      <div className="basket-heading">
-        <div>
-          <p className="eyebrow">Customer account · credit orders</p>
+      <header className="portal-page-header">
+        <div className="portal-page-heading">
+          <p className="eyebrow">Account</p>
           <h1>Credit orders</h1>
-          <p className="muted">Fluid controls company scope, queue visibility and every lifecycle action shown here.</p>
+          <p className="muted">Track credit orders and complete any approval actions available to you.</p>
         </div>
         <Link className="button secondary" href="/account">Back to account</Link>
-      </div>
+      </header>
 
-      {params.error ? <p className="error">{params.error}</p> : null}
-      {requested !== activeScope ? <p className="notice">That credit-order scope is not available to this user. Showing the nearest permitted scope instead.</p> : null}
+      {params.error ? <p className="error" role="alert">{params.error}</p> : null}
+      {requested !== activeScope ? <p className="notice" role="status">That view isn’t available to your account, so we’ve shown the closest available view instead.</p> : null}
 
-      <nav className={styles.scopeBar} aria-label="Credit-order queues">
+      <nav className={styles.scopeBar} aria-label="Credit-order views">
         {SCOPES.filter((scope) => allowedScopes.has(scope.value)).map((scope) => {
           const active = scope.value === activeScope;
           return <Link
@@ -129,12 +129,12 @@ export default async function CreditOrdersPage({
 
       <section className="card basket-card">
         <strong>{result.total_count} {result.total_count === 1 ? "credit order" : "credit orders"}</strong>
-        <p className="muted small">Current queue: {SCOPES.find((scope) => scope.value === activeScope)?.label} · selected company: {selectedCompany?.name || "Company"}</p>
+        <p className="muted small">{SCOPES.find((scope) => scope.value === activeScope)?.label} · {selectedCompany?.name || "Current company"}</p>
       </section>
 
       {!result.items.length ? <section className="card empty">
-        <h2>No credit orders in this queue</h2>
-        <p className="muted">There are no Fluid credit orders visible in the selected scope right now.</p>
+        <h2>No credit orders here</h2>
+        <p className="muted">There are no credit orders in this view right now.</p>
       </section> : <div className={styles.list}>
         {result.items.map((order) => {
           const actions = actionSummary(order);
@@ -143,10 +143,10 @@ export default async function CreditOrdersPage({
               <p className="eyebrow">Credit order {order.number}</p>
               <h2>{readableStatus(order.status)}</h2>
               <div className={styles.orderMeta}>
-                <span className="badge">{order.status}</span>
+                <span className="badge">{readableStatus(order.status)}</span>
                 {order.created_at ? <span className="muted small">Created {order.created_at}</span> : null}
-                {order.order_number ? <span className="badge">Magento order {order.order_number}</span> : null}
-                {order.auto_approved ? <span className="badge">Auto approved</span> : null}
+                {order.order_number ? <span className="badge">Order {order.order_number}</span> : null}
+                {order.auto_approved ? <span className="badge">Automatically approved</span> : null}
               </div>
               {actions.length ? <div className={styles.actionBadges}>
                 {actions.map((action) => <span className="badge" key={action}>{action}</span>)}
@@ -154,7 +154,7 @@ export default async function CreditOrdersPage({
             </div>
             <div className={styles.orderActions}>
               <span className={styles.amount}>{money(order.grand_total)}</span>
-              <Link className="button" href={`/account/credit-orders/${encodeURIComponent(order.number)}`}>View credit order</Link>
+              <Link className="button" href={`/account/credit-orders/${encodeURIComponent(order.number)}`}>View details</Link>
             </div>
           </article>;
         })}

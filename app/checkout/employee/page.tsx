@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { CheckoutSteps } from "@/components/checkout-steps";
 import { SiteHeader } from "@/components/site-header";
 import { getCustomerCart } from "@/lib/magento/cart";
 import { getCustomerContext } from "@/lib/magento/context";
@@ -47,9 +48,11 @@ export default async function CheckoutEmployeePage({
   return <>
     <SiteHeader customerName={customerName} companyName={selectedCompany?.name} basketQuantity={cart.total_quantity}/>
     <main className="shell stack">
-      <div className="basket-heading">
+      <CheckoutSteps current="employee" includeEmployee/>
+
+      <div className="basket-heading checkout-heading">
         <div>
-          <p className="eyebrow">Checkout · Employee</p>
+          <p className="eyebrow">Checkout</p>
           <h1>Who is this order for?</h1>
           <p className="muted">Choose one Employee for the whole order before continuing to delivery.</p>
         </div>
@@ -64,9 +67,9 @@ export default async function CheckoutEmployeePage({
         <p><Link className="button" href="/catalogue">Browse products</Link></p>
       </section> : <div className="delivery-layout">
         <section className="card delivery-card stack">
-          <div>
+          <div className="checkout-card-intro">
             <h2>Choose an Employee</h2>
-            <p className="muted">The Employee you select will be assigned to every item in this order.</p>
+            <p>The Employee you select will be assigned to every item in this order.</p>
           </div>
 
           {ordering.employees.length ? <form action={selectCheckoutEmployeeAction} className="stack">
@@ -82,11 +85,11 @@ export default async function CheckoutEmployeePage({
             <div>
               <button className="button" type="submit">Continue to delivery</button>
             </div>
-          </form> : <p className="error">No active Employees are available for this company. Please contact your account administrator before continuing.</p>}
+          </form> : <p className="error" role="alert">No active Employees are available for this company. Please contact your account administrator before continuing.</p>}
         </section>
 
         <aside className="stack">
-          <section className="card delivery-card">
+          <section className="card delivery-card checkout-summary-card">
             <h2>Order items</h2>
             <div className="checkout-line-list">
               {cart.itemsV2.items.map((item) => <div className="checkout-line" key={item.uid}>

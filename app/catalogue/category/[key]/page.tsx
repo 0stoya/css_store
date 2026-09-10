@@ -26,11 +26,12 @@ export default async function CategoryPage({
   const [{ key: rawKey }, { q = "", page: rawPage = "1" }] = await Promise.all([params, searchParams]);
   const key = decodeURIComponent(rawKey);
   const page = Math.max(1, Math.trunc(Number(rawPage) || 1));
+  const searchTerm = q.trim();
   const [ctx, categories] = await Promise.all([getCustomerContext(token), getCategories(token)]);
   const category = categories.find((item) => item.url_key === key || item.uid === key);
   if (!category) notFound();
 
-  const products = await getProducts(token, q.trim(), page, 24, category.uid);
+  const products = await getProducts(token, searchTerm, page, 24, category.uid);
   const selected = ctx.css_company_context.companies.find((company) => company.selected) || null;
   const name = `${ctx.customer.firstname} ${ctx.customer.lastname}`.trim();
   const routeKey = category.url_key || category.uid;
@@ -38,23 +39,36 @@ export default async function CategoryPage({
   return <>
     <SiteHeader customerName={name} companyName={selected?.name}/>
     <main className="shell">
-      <Link className="back-link" href="/catalogue">← All products</Link>
-      <div className="toolbar">
-        <div>
+      <nav className="pdp-breadcrumb" aria-label="Breadcrumb">
+        <Link href="/catalogue">Products</Link><span aria-hidden="true">/</span><span>{category.name}</span>
+      </nav>
+
+      <header className="portal-page-header">
+        <div className="portal-page-heading">
           <p className="eyebrow">Category</p>
           <h1>{category.name}</h1>
-          <p className="muted">{products.total_count} products visible in this company-scoped category.</p>
+          <p className="muted">Products in this range available to {selected?.name || "your company"}.</p>
+          {searchTerm ? <p className="catalogue-result-note">{products.total_count} result{products.total_count === 1 ? "" : "s"} for “{searchTerm}”.</p> : null}
         </div>
-        <form className="search">
-          <input name="q" type="search" defaultValue={q} placeholder={`Search ${category.name}`}/>
+        <form className="catalogue-search" role="search">
+          <label className="sr-only" htmlFor="category-search">Search {category.name}</label>
+          <input id="category-search" name="q" type="search" defaultValue={q} placeholder={`Search ${category.name}`}/>
           <button className="button secondary" type="submit">Search</button>
         </form>
+      </header>
+
+      <div className="portal-section-heading">
+        <div>
+          <h2>{searchTerm ? "Search results" : category.name}</h2>
+          <p>{products.total_count} product{products.total_count === 1 ? "" : "s"}</p>
+        </div>
+        {searchTerm ? <Link className="button secondary" href={`/catalogue/category/${encodeURIComponent(routeKey)}`}>Clear search</Link> : null}
       </div>
 
-      <section className="product-grid">
+      <section className="product-grid" aria-label={`${category.name} products`}>
         {products.items.map((product) => <ProductCard product={product} hidePrice={ctx.css_storefront_policy.hide_price} key={product.uid}/>)}
       </section>
-      {!products.items.length ? <div className="empty card"><h2>No products found</h2><p className="muted">Try another search term or return to all products.</p></div> : null}
+      {!products.items.length ? <div className="empty card"><h2>No products found</h2><p className="muted">Try a different search term or return to all products.</p><p><Link className="button secondary" href="/catalogue">View all products</Link></p></div> : null}
 
       {products.page_info.total_pages > 1 ? <nav className="pagination" aria-label={`${category.name} pages`}>
         {products.page_info.current_page > 1 ? <Link className="button secondary" href={pageHref(routeKey, products.page_info.current_page - 1, q)}>Previous</Link> : <span/>}

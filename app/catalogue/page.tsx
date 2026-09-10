@@ -23,10 +23,11 @@ export default async function CataloguePage({
   const token = await requireCustomerToken();
   const { q = "", page: rawPage = "1" } = await searchParams;
   const page = Math.max(1, Math.trunc(Number(rawPage) || 1));
+  const searchTerm = q.trim();
   const [ctx, categories, products] = await Promise.all([
     getCustomerContext(token),
     getCategories(token),
-    getProducts(token, q.trim(), page),
+    getProducts(token, searchTerm, page),
   ]);
   const selected = ctx.css_company_context.companies.find((company) => company.selected) || null;
   const name = `${ctx.customer.firstname} ${ctx.customer.lastname}`.trim();
@@ -34,29 +35,49 @@ export default async function CataloguePage({
   return <>
     <SiteHeader customerName={name} companyName={selected?.name}/>
     <main className="shell">
-      <div className="toolbar">
-        <div>
-          <p className="eyebrow">Company catalogue</p>
+      <header className="portal-page-header">
+        <div className="portal-page-heading">
+          <p className="eyebrow">Catalogue</p>
           <h1>Products</h1>
-          <p className="muted">{products.total_count} products visible for the current Magento / Fluid company context.</p>
+          <p className="muted">
+            Browse products available to {selected?.name || "your company"}. Your prices and availability are shown automatically.
+          </p>
+          {searchTerm ? <p className="catalogue-result-note">{products.total_count} result{products.total_count === 1 ? "" : "s"} for “{searchTerm}”.</p> : null}
         </div>
-        <form className="search">
-          <input name="q" type="search" defaultValue={q} placeholder="Search products"/>
+        <form className="catalogue-search" role="search">
+          <label className="sr-only" htmlFor="catalogue-search">Search products</label>
+          <input id="catalogue-search" name="q" type="search" defaultValue={q} placeholder="Search by product name or SKU"/>
           <button className="button secondary" type="submit">Search</button>
         </form>
+      </header>
+
+      {categories.length ? <>
+        <div className="portal-section-heading">
+          <div>
+            <h2>Browse categories</h2>
+            <p>Find the right range quickly.</p>
+          </div>
+        </div>
+        <nav className="category-grid" aria-label="Product categories">
+          {categories.map((category) => <Link className="category-card card" href={`/catalogue/category/${encodeURIComponent(category.url_key || category.uid)}`} key={category.uid}>
+            {category.image_url ? <img src={category.image_url} alt=""/> : null}
+            <span><strong>{category.name}</strong><small>{category.product_count} product{category.product_count === 1 ? "" : "s"}</small></span>
+          </Link>)}
+        </nav>
+      </> : null}
+
+      <div className="portal-section-heading">
+        <div>
+          <h2>{searchTerm ? "Search results" : "All products"}</h2>
+          <p>{products.total_count} product{products.total_count === 1 ? "" : "s"}</p>
+        </div>
+        {searchTerm ? <Link className="button secondary" href="/catalogue">Clear search</Link> : null}
       </div>
 
-      {categories.length ? <nav className="category-grid" aria-label="Product categories">
-        {categories.map((category) => <Link className="category-card card" href={`/catalogue/category/${encodeURIComponent(category.url_key || category.uid)}`} key={category.uid}>
-          {category.image_url ? <img src={category.image_url} alt=""/> : null}
-          <span><strong>{category.name}</strong><small>{category.product_count} products</small></span>
-        </Link>)}
-      </nav> : null}
-
-      <section className="product-grid">
+      <section className="product-grid" aria-label={searchTerm ? `Search results for ${searchTerm}` : "Products"}>
         {products.items.map((product) => <ProductCard product={product} hidePrice={ctx.css_storefront_policy.hide_price} key={product.uid}/>)}
       </section>
-      {!products.items.length ? <div className="empty card"><h2>No products found</h2><p className="muted">Try another search term or browse a category.</p></div> : null}
+      {!products.items.length ? <div className="empty card"><h2>No products found</h2><p className="muted">Try a different search term or browse the product categories.</p>{searchTerm ? <p><Link className="button secondary" href="/catalogue">View all products</Link></p> : null}</div> : null}
 
       {products.page_info.total_pages > 1 ? <nav className="pagination" aria-label="Catalogue pages">
         {products.page_info.current_page > 1 ? <Link className="button secondary" href={pageHref(products.page_info.current_page - 1, q)}>Previous</Link> : <span/>}
