@@ -4,6 +4,7 @@ import type { CartMoney } from "@/lib/magento/cart";
 import { getCustomerContext } from "@/lib/magento/context";
 import { getDeliveryContext } from "@/lib/magento/shipping";
 import { requireCustomerToken } from "@/lib/session";
+import { preparePaymentAction } from "../payment/actions";
 import {
   selectSavedShippingAddressAction,
   selectShippingMethodAction,
@@ -182,7 +183,8 @@ export default async function DeliveryPage({
 
           <section className="notice">
             <strong>{selectedMethod ? "Delivery step complete." : "Select an address and delivery method."}</strong>
-            <p className="muted small">Payment and final order placement remain in the next Phase 3 slice.</p>
+            {selectedMethod && canCheckout ? <form action={preparePaymentAction}><button className="button" type="submit">Continue to payment</button></form> : null}
+            {!selectedMethod ? <p className="muted small">Payment options are loaded only after Magento has a delivery address and shipping method for the current basket.</p> : null}
           </section>
         </aside>
       </div> : null}
