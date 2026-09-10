@@ -59,6 +59,9 @@ export default async function ProductPage({
   const stockLabel = product.css_stock_info.stock_status || (product.css_stock_info.available ? "Available" : "Unavailable");
   const productTypeLabel = grouped ? "Product set" : configurable ? "Choose your options" : "Product";
   const addLabel = ctx.css_storefront_policy.add_to_cart_label || "Add to basket";
+  const groupedItems = (product.items || [])
+    .map((item, originalIndex) => ({ item, originalIndex }))
+    .sort((a, b) => (a.item.position || 0) - (b.item.position || 0));
 
   return <>
     <SiteHeader customerName={customerName} companyName={selectedCompany?.name}/>
@@ -176,13 +179,13 @@ export default async function ProductPage({
                 <strong>Products in this set</strong>
               </div>
               <div className="grouped-lines" aria-label="Grouped product options">
-                {(product.items || []).slice().sort((a, b) => (a.position || 0) - (b.position || 0)).map((item, index) => {
+                {groupedItems.map(({ item, originalIndex }) => {
                   const child = item.product;
                   const childPrice = child.price_range?.minimum_price.final_price;
                   const childAllowanceBlocked = Boolean(child.css_purchase_allowance?.has_active_restriction && child.css_purchase_allowance.remaining_quantity <= 0);
                   const childAvailable = child.css_stock_info.available && !childAllowanceBlocked;
                   return <article className={`grouped-line pdp-grouped-line ${childAvailable ? "" : "unavailable"}`} key={child.uid}>
-                    <input type="hidden" name={`child_${index}_sku`} value={child.sku}/>
+                    <input type="hidden" name={`child_${originalIndex}_sku`} value={child.sku}/>
                     <div className="grouped-product-name">
                       <div className="pdp-grouped-title-row">
                         <strong>{child.name}</strong>
@@ -194,7 +197,7 @@ export default async function ProductPage({
                     {(child.configurable_options || []).length ? <div className="pdp-grouped-options">
                       {(child.configurable_options || []).map((option) => <label className="field" key={option.uid}>
                         <span>{option.label}</span>
-                        <select name={`child_${index}_option`} defaultValue="" disabled={!childAvailable}>
+                        <select name={`child_${originalIndex}_option`} defaultValue="" disabled={!childAvailable}>
                           <option value="" disabled>Choose {option.label}</option>
                           {option.values.map((value) => <option value={value.uid} key={value.uid}>{value.label}</option>)}
                         </select>
@@ -202,13 +205,14 @@ export default async function ProductPage({
                     </div> : null}
 
                     <QuantityStepper
-                      name={`child_${index}_quantity`}
+                      name={`child_${originalIndex}_quantity`}
                       label="Quantity"
                       ariaLabel={`${child.name} quantity`}
                       defaultValue={0}
                       min={0}
                       max={child.css_purchase_constraints?.maximum_quantity ?? undefined}
                       step={child.css_purchase_constraints?.increments_enforced ? child.css_purchase_constraints.quantity_increment : 1}
+                      firstPositiveValue={Math.max(1, child.css_purchase_constraints?.minimum_quantity || 1)}
                       disabled={!childAvailable}
                       compact
                       submitControl={{
