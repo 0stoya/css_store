@@ -22,12 +22,16 @@ export default async function ConfirmationPage({
   const [ctx, result] = await Promise.all([getCustomerContext(token), searchParams]);
   const selectedCompany = ctx.css_company_context.companies.find((company) => company.selected) || null;
   const customerName = `${ctx.customer.firstname} ${ctx.customer.lastname}`.trim();
-  const isCredit = result.kind === "credit";
+  const isCredit = result.kind === "credit" && Boolean(result.credit);
+  const isNativeOrder = result.kind === "order" && Boolean(result.order);
+  const hasResult = isCredit || isNativeOrder;
   const approvalRequired = result.approval === "1";
   const orderPlaced = result.placed === "1";
 
-  let heading = "Order submitted";
-  let explanation = "Magento accepted the order submission.";
+  let heading = hasResult ? "Order submitted" : "No checkout result";
+  let explanation = hasResult
+    ? "Magento accepted the order submission."
+    : "This page does not contain a completed checkout result. Return to your basket or catalogue to continue.";
 
   if (isCredit && approvalRequired) {
     heading = "Order submitted for approval";
@@ -45,21 +49,22 @@ export default async function ConfirmationPage({
     <main className="shell">
       <section className="card delivery-card stack" style={{maxWidth:760,margin:"36px auto"}}>
         <div>
-          <p className="eyebrow">Checkout complete</p>
+          <p className="eyebrow">{hasResult ? "Checkout complete" : "Checkout"}</p>
           <h1>{heading}</h1>
           <p className="muted">{explanation}</p>
         </div>
 
-        <dl className="basket-totals">
+        {hasResult ? <dl className="basket-totals">
           {isCredit && result.credit ? <div><dt>Credit order</dt><dd>{result.credit}</dd></div> : null}
           {result.order ? <div><dt>Magento order</dt><dd>{result.order}</dd></div> : null}
           {isCredit && result.status ? <div><dt>Fluid status</dt><dd>{result.status}</dd></div> : null}
           {isCredit ? <div><dt>Approval required</dt><dd>{approvalRequired ? "Yes" : "No"}</dd></div> : null}
           {isCredit && result.auto === "1" ? <div><dt>Auto approved</dt><dd>Yes</dd></div> : null}
-        </dl>
+        </dl> : null}
 
         <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
           <Link className="button" href="/catalogue">Continue shopping</Link>
+          <Link className="button secondary" href="/basket">Basket</Link>
           <Link className="button secondary" href="/account">Account</Link>
         </div>
       </section>
