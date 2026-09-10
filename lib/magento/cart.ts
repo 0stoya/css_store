@@ -140,7 +140,7 @@ export async function addGroupedConfigurableProduct(
   );
 
   const result = data.cssAddGroupedConfigurableProductsToCart;
-  if (result.purchase_decision.status !== "approved") {
+  if (result.purchase_decision.status === "NOT_ALLOWED") {
     throw new MagentoGraphQLError(
       result.purchase_decision.reason || "Fluid rejected this purchase request.",
       result.purchase_decision.status,
