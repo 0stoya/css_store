@@ -90,10 +90,10 @@ export function SiteFooter() {
         <section className="footer-column">
           <h2>Follow us</h2>
           <div className="footer-socials">
-            <a href="https://www.instagram.com/chelmsford_safety/?hl=en" aria-label="Chelmsford Safety Supplies on Instagram" title="Instagram" target="_blank" rel="noopener noreferrer"><InstagramIcon/></a>
-            <a href="https://x.com/ChelmsfordSfty/" aria-label="Chelmsford Safety Supplies on X" title="X" target="_blank" rel="noopener noreferrer"><XIcon/></a>
-            <a href="https://www.facebook.com/chelmsfordsafety/" aria-label="Chelmsford Safety Supplies on Facebook" title="Facebook" target="_blank" rel="noopener noreferrer"><FacebookIcon/></a>
-            <a href="https://www.linkedin.com/company/chelmsford-safety-supplies/" aria-label="Chelmsford Safety Supplies on LinkedIn" title="LinkedIn" target="_blank" rel="noopener noreferrer"><LinkedInIcon/></a>
+            <a href="https://www.instagram.com/chelmsford_safety/?hl=en" aria-label="Instagram" title="Instagram" target="_blank" rel="noopener noreferrer"><InstagramIcon/></a>
+            <a href="https://x.com/ChelmsfordSfty/" aria-label="X" title="X" target="_blank" rel="noopener noreferrer"><XIcon/></a>
+            <a href="https://www.facebook.com/chelmsfordsafety/" aria-label="Facebook" title="Facebook" target="_blank" rel="noopener noreferrer"><FacebookIcon/></a>
+            <a href="https://www.linkedin.com/company/chelmsford-safety-supplies/" aria-label="LinkedIn" title="LinkedIn" target="_blank" rel="noopener noreferrer"><LinkedInIcon/></a>
           </div>
         </section>
       </div>
