@@ -125,7 +125,7 @@ export default async function OrdersPage({
               <h2>Order totals</h2>
               <dl>
                 <div><dt>Subtotal ex VAT</dt><dd>{money(order.total?.subtotal_excl_tax)}</dd></div>
-                {(order.total?.discounts || []).map((discount, index) => <div key={`${order.number}-discount-${index}`}><dt>{discount.label || "Discount"}</dt><dd>-{money(discount.amount)}</dd></div>)}
+                {(order.total?.discounts || []).map((discount, index) => <div key={`${order.number}-discount-${index}`}><dt>{discount.label || "Discount"}</dt><dd>{money(discount.amount)}</dd></div>)}
                 <div><dt>Delivery</dt><dd>{money(order.total?.total_shipping)}</dd></div>
                 <div><dt>VAT</dt><dd>{money(order.total?.total_tax)}</dd></div>
                 <div className="basket-grand-total"><dt>Grand total</dt><dd>{money(order.total?.grand_total)}</dd></div>
