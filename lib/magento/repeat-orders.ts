@@ -61,23 +61,25 @@ export type AddRepeatListToCartResult = {
   purchase_decisions: RepeatPurchaseDecision[];
 };
 
+const REPEAT_ITEM_FIELDS = /* GraphQL */ `
+  item_id
+  sku
+  quantity
+  store_id
+  compatible
+  reason
+  parent_sku
+  configurable_sku
+  variant_sku
+  employee_name
+`;
+
 const REPEAT_LIST_FIELDS = /* GraphQL */ `
   list_id
   name
   description
   updated_at
-  items {
-    item_id
-    sku
-    quantity
-    store_id
-    compatible
-    reason
-    parent_sku
-    configurable_sku
-    variant_sku
-    employee_name
-  }
+  items { ${REPEAT_ITEM_FIELDS} }
 `;
 
 const REPEAT_LISTS = /* GraphQL */ `
@@ -121,8 +123,8 @@ const ADD_REPEAT_LIST_TO_CART = /* GraphQL */ `
     cssAddRepeatOrderListToCart(input: $input) {
       cart { id }
       list { ${REPEAT_LIST_FIELDS} }
-      added_items { ${REPEAT_LIST_FIELDS.replace(/list_id\n  name\n  description\n  updated_at\n  items \{[\s\S]*\}\n/, "")} }
-      skipped_items { ${REPEAT_LIST_FIELDS.replace(/list_id\n  name\n  description\n  updated_at\n  items \{[\s\S]*\}\n/, "")} }
+      added_items { ${REPEAT_ITEM_FIELDS} }
+      skipped_items { ${REPEAT_ITEM_FIELDS} }
       purchase_decisions { parent_sku decision { status reason } }
     }
   }
@@ -143,31 +145,6 @@ const REPEAT_GROUPED_ORDER = /* GraphQL */ `
         employee_code
       }
       skipped_items { order_item_id sku reason }
-      purchase_decisions { parent_sku decision { status reason } }
-    }
-  }
-`;
-
-const REPEAT_ITEM_FIELDS = /* GraphQL */ `
-  item_id
-  sku
-  quantity
-  store_id
-  compatible
-  reason
-  parent_sku
-  configurable_sku
-  variant_sku
-  employee_name
-`;
-
-const ADD_REPEAT_LIST_TO_CART_SAFE = /* GraphQL */ `
-  mutation StoreAddRepeatOrderListToCart($input: CssAddRepeatOrderListToCartInput!) {
-    cssAddRepeatOrderListToCart(input: $input) {
-      cart { id }
-      list { ${REPEAT_LIST_FIELDS} }
-      added_items { ${REPEAT_ITEM_FIELDS} }
-      skipped_items { ${REPEAT_ITEM_FIELDS} }
       purchase_decisions { parent_sku decision { status reason } }
     }
   }
@@ -241,7 +218,7 @@ export async function addRepeatOrderListToCart(
   input: { cartId: string; listId: number; itemIds?: number[] },
 ) {
   const data = await magentoGraphQL<{ cssAddRepeatOrderListToCart: AddRepeatListToCartResult }>(
-    ADD_REPEAT_LIST_TO_CART_SAFE,
+    ADD_REPEAT_LIST_TO_CART,
     {
       input: {
         cart_id: input.cartId,
