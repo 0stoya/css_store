@@ -9,8 +9,17 @@ import {
 } from "@/lib/magento/credit-orders";
 import { requireCustomerToken } from "@/lib/session";
 
-function detailRedirect(number: string, kind: "error" | "notice", message: string): never {
-  redirect(`/account/credit-orders/${encodeURIComponent(number)}?${kind}=${encodeURIComponent(message)}`);
+type DetailSource = "approvals" | undefined;
+
+function detailRedirect(
+  number: string,
+  kind: "error" | "notice",
+  message: string,
+  from?: DetailSource,
+): never {
+  const query = new URLSearchParams({ [kind]: message });
+  if (from === "approvals") query.set("from", "approvals");
+  redirect(`/account/credit-orders/${encodeURIComponent(number)}?${query.toString()}`);
 }
 
 function errorMessage(error: unknown) {
@@ -22,15 +31,20 @@ function cleanNumber(value: FormDataEntryValue | null) {
   return String(value || "").trim();
 }
 
+function detailSource(formData: FormData): DetailSource {
+  return String(formData.get("from") || "") === "approvals" ? "approvals" : undefined;
+}
+
 export async function creditOrderLifecycleAction(formData: FormData) {
   const token = await requireCustomerToken();
   const number = cleanNumber(formData.get("number"));
   const action = String(formData.get("action") || "").trim();
   const comment = String(formData.get("comment") || "").trim();
+  const from = detailSource(formData);
 
-  if (!number) redirect("/account/credit-orders?error=Missing%20credit-order%20number.");
+  if (!number) redirect(from === "approvals" ? "/account/credit-orders?scope=APPROVAL&error=Missing%20credit-order%20number." : "/account/credit-orders?error=Missing%20credit-order%20number.");
   if (!(["approve", "reject", "cancel", "place"] as string[]).includes(action)) {
-    detailRedirect(number, "error", "Unknown credit-order action.");
+    detailRedirect(number, "error", "Unknown credit-order action.", from);
   }
 
   try {
@@ -43,9 +57,9 @@ export async function creditOrderLifecycleAction(formData: FormData) {
           ? current.actions.can_cancel
           : current.actions.can_place_order && !current.actions.requires_payment_details;
 
-    if (!allowed) throw new Error("Fluid no longer allows that action for this credit order.");
+    if (!allowed) throw new Error("This action is no longer available for this credit order.");
     if (comment && !current.actions.can_add_comment) {
-      throw new Error("Fluid allows the lifecycle action, but not an attached comment for this user.");
+      throw new Error("Comments are not available for your account on this credit order.");
     }
 
     await performCreditOrderAction(
@@ -55,7 +69,7 @@ export async function creditOrderLifecycleAction(formData: FormData) {
       comment || undefined,
     );
   } catch (error) {
-    detailRedirect(number, "error", errorMessage(error));
+    detailRedirect(number, "error", errorMessage(error), from);
   }
 
   const label = action === "approve"
@@ -64,38 +78,40 @@ export async function creditOrderLifecycleAction(formData: FormData) {
       ? "Credit order rejected."
       : action === "cancel"
         ? "Credit order cancelled."
-        : "Magento sales-order creation completed.";
-  detailRedirect(number, "notice", label);
+        : "Order created.";
+  detailRedirect(number, "notice", label, from);
 }
 
 export async function addCreditOrderCommentAction(formData: FormData) {
   const token = await requireCustomerToken();
   const number = cleanNumber(formData.get("number"));
   const comment = String(formData.get("comment") || "").trim();
+  const from = detailSource(formData);
 
-  if (!number) redirect("/account/credit-orders?error=Missing%20credit-order%20number.");
-  if (!comment) detailRedirect(number, "error", "Enter a comment before submitting.");
+  if (!number) redirect(from === "approvals" ? "/account/credit-orders?scope=APPROVAL&error=Missing%20credit-order%20number." : "/account/credit-orders?error=Missing%20credit-order%20number.");
+  if (!comment) detailRedirect(number, "error", "Enter a comment before submitting.", from);
 
   try {
     const current = (await getCreditOrder(token, number)).css_credit_order;
     if (!current.actions.can_add_comment) {
-      throw new Error("Fluid no longer allows comments on this credit order.");
+      throw new Error("Comments are no longer available for this credit order.");
     }
     await addCreditOrderComment(token, number, comment);
   } catch (error) {
-    detailRedirect(number, "error", errorMessage(error));
+    detailRedirect(number, "error", errorMessage(error), from);
   }
 
-  detailRedirect(number, "notice", "Comment added.");
+  detailRedirect(number, "notice", "Comment added.", from);
 }
 
 export async function setCreditOrderPurchaseOrderNumberAction(formData: FormData) {
   const token = await requireCustomerToken();
   const number = cleanNumber(formData.get("number"));
   const purchaseOrderNumber = String(formData.get("purchase_order_number") || "").trim();
+  const from = detailSource(formData);
 
-  if (!number) redirect("/account/credit-orders?error=Missing%20credit-order%20number.");
-  if (!purchaseOrderNumber) detailRedirect(number, "error", "Enter a PO number before submitting.");
+  if (!number) redirect(from === "approvals" ? "/account/credit-orders?scope=APPROVAL&error=Missing%20credit-order%20number." : "/account/credit-orders?error=Missing%20credit-order%20number.");
+  if (!purchaseOrderNumber) detailRedirect(number, "error", "Enter a PO number before submitting.", from);
 
   try {
     const current = (await getCreditOrder(token, number)).css_credit_order;
@@ -110,8 +126,8 @@ export async function setCreditOrderPurchaseOrderNumberAction(formData: FormData
 
     await setCreditOrderPurchaseOrderNumber(token, number, purchaseOrderNumber);
   } catch (error) {
-    detailRedirect(number, "error", errorMessage(error));
+    detailRedirect(number, "error", errorMessage(error), from);
   }
 
-  detailRedirect(number, "notice", "PO number submitted. Fluid has re-evaluated order readiness.");
+  detailRedirect(number, "notice", "PO number submitted. Order readiness has been refreshed.", from);
 }
