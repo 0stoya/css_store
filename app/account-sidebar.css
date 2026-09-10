@@ -14,7 +14,7 @@
   min-width: 0;
   padding: 18px;
   display: grid;
-  gap: 16px;
+  gap: 14px;
 }
 
 .account-sidebar-profile {
@@ -110,6 +110,10 @@
 .account-sidebar-divider {
   height: 1px;
   background: var(--line);
+}
+
+.account-sidebar-overview {
+  margin-top: -2px;
 }
 
 .account-sidebar-company {
