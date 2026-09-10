@@ -12,6 +12,7 @@ import "./basket-ux.css";
 import "./delivery-ux.css";
 import "./payment-ux.css";
 import "./account-ux.css";
+import "./account-sidebar.css";
 import { SiteFooter } from "@/components/site-footer";
 import { getStoreName } from "@/lib/config";
 
