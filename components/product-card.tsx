@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { StoreProduct } from "@/lib/magento/catalogue";
 
 function money(value: number, currency: string) {
@@ -8,7 +9,7 @@ export function ProductCard({ product, hidePrice }: { product: StoreProduct; hid
   const price = product.price_range?.minimum_price;
   const restricted = product.css_purchase_allowance?.has_active_restriction === true;
   return <article className="card product">
-    <a className="product-link" href={`/product/${encodeURIComponent(product.sku)}`}>
+    <Link className="product-link" href={`/product/${encodeURIComponent(product.sku)}`}>
       <div className="product-media">
         {product.small_image?.url ? <img src={product.small_image.url} alt={product.small_image.label || product.name}/> : <span className="muted">No image</span>}
       </div>
@@ -20,6 +21,6 @@ export function ProductCard({ product, hidePrice }: { product: StoreProduct; hid
         {restricted ? <span className="muted small">Allowance: {product.css_purchase_allowance?.remaining_quantity} remaining</span> : null}
         {product.css_stock_info.delivery_message ? <span className="muted small">{product.css_stock_info.delivery_message}</span> : null}
       </div>
-    </a>
+    </Link>
   </article>;
 }
