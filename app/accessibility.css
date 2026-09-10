@@ -1,1 +1,70 @@
-.skip-link{position:fixed;top:12px;left:12px;z-index:1000;transform:translateY(-180%);padding:10px 14px;border:2px solid var(--ink);border-radius:8px;background:var(--yellow);color:var(--ink);font-weight:800;text-decoration:none}.skip-link:focus{transform:translateY(0)}.content-anchor{display:block;scroll-margin-top:96px}:where(a,button,input,select,textarea,summary):focus-visible{outline:3px solid var(--yellow);outline-offset:3px;box-shadow:0 0 0 2px var(--ink)}.site-header nav a{display:inline-flex;align-items:center;min-height:44px}.field textarea{min-height:120px;border:1px solid #b8cad8;border-radius:8px;padding:12px;font:inherit;color:inherit;background:#fff;resize:vertical}@media(max-width:560px){.site-header{height:auto;min-height:76px;grid-template-columns:1fr;align-content:center;padding:8px 14px;gap:2px}.site-header nav{width:100%;justify-content:space-between;gap:4px;overflow-x:auto}.site-header nav a{padding:0 6px;white-space:nowrap}}@media(forced-colors:active){:where(a,button,input,select,textarea,summary):focus-visible{outline:2px solid CanvasText;box-shadow:none}.skip-link{border-color:CanvasText;background:Canvas;color:CanvasText}}
+.skip-link {
+  position: fixed;
+  top: 12px;
+  left: 12px;
+  z-index: 1000;
+  transform: translateY(-180%);
+  padding: 10px 14px;
+  border: 2px solid var(--ink);
+  border-radius: 9px;
+  background: var(--yellow);
+  color: var(--ink);
+  font-weight: 850;
+  text-decoration: none;
+  box-shadow: var(--shadow-sm);
+}
+
+.skip-link:focus { transform: translateY(0); }
+
+.content-anchor {
+  display: block;
+  scroll-margin-top: 104px;
+}
+
+:where(a, button, input, select, textarea, summary):focus-visible {
+  outline: 3px solid var(--yellow);
+  outline-offset: 3px;
+  box-shadow: 0 0 0 2px var(--ink);
+}
+
+.site-header nav a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+}
+
+@media (max-width: 560px) {
+  .site-header {
+    height: auto;
+    min-height: 92px;
+    grid-template-columns: 1fr;
+    align-content: center;
+    padding: 10px 14px;
+    gap: 5px;
+  }
+
+  .site-header nav {
+    width: 100%;
+    justify-content: space-between;
+    gap: 4px;
+    overflow-x: auto;
+  }
+
+  .site-header nav a {
+    padding: 0 7px;
+    white-space: nowrap;
+  }
+}
+
+@media (forced-colors: active) {
+  :where(a, button, input, select, textarea, summary):focus-visible {
+    outline: 2px solid CanvasText;
+    box-shadow: none;
+  }
+
+  .skip-link {
+    border-color: CanvasText;
+    background: Canvas;
+    color: CanvasText;
+  }
+}
