@@ -3,6 +3,7 @@ import { SiteHeader } from "@/components/site-header";
 import type { CartMoney } from "@/lib/magento/cart";
 import { getCompanyOrders, type CompanyOrderItem } from "@/lib/magento/orders";
 import { requireCustomerToken } from "@/lib/session";
+import styles from "./orders.module.css";
 
 export const metadata = { title: "Order history" };
 
@@ -61,7 +62,7 @@ export default async function OrdersPage({
         <Link className="button secondary" href="/account">Back to account</Link>
       </div>
 
-      <section className="card order-history-intro">
+      <section className={`card ${styles.intro}`}>
         <div>
           <strong>{orders.total_count} {orders.total_count === 1 ? "order" : "orders"}</strong>
           <p className="muted small">Visibility and selected-company scope come from Fluid `css_company_orders`.</p>
@@ -73,30 +74,30 @@ export default async function OrdersPage({
         <h2>No orders found</h2>
         <p className="muted">There are no storefront-visible Magento orders in this company context yet.</p>
         <p><Link className="button" href="/catalogue">Browse products</Link></p>
-      </section> : <div className="order-history-list">
-        {orders.items.map((order) => <details className="card order-history-card" key={order.number}>
-          <summary className="order-history-summary">
+      </section> : <div className={styles.list}>
+        {orders.items.map((order) => <details className={`card ${styles.card}`} key={order.number}>
+          <summary className={styles.summary}>
             <div>
               <span className="eyebrow">Order {order.number}</span>
               <strong>{order.order_date}</strong>
             </div>
-            <div className="order-history-summary-meta">
+            <div className={styles.summaryMeta}>
               <span className="badge">{order.status}</span>
               <strong>{money(order.total?.grand_total)}</strong>
               <span className="muted small">View details</span>
             </div>
           </summary>
 
-          <div className="order-history-detail stack">
+          <div className={`${styles.detail} stack`}>
             <section>
               <h2>Items</h2>
-              <div className="order-item-list">
+              <div className={styles.itemList}>
                 {(order.items || []).map((item) => {
                   const options = itemOptions(item);
                   const state = itemState(item);
-                  return <article className="order-item-row" key={item.id}>
-                    <div className="order-item-copy">
-                      <div className="order-item-title">
+                  return <article className={styles.itemRow} key={item.id}>
+                    <div className={styles.itemCopy}>
+                      <div className={styles.itemTitle}>
                         <strong>{item.product_name || item.product_sku}</strong>
                         {options.length ? <span className="badge">Configured item</span> : item.product_type === "grouped" ? <span className="badge">Grouped item</span> : null}
                       </div>
@@ -104,13 +105,13 @@ export default async function OrdersPage({
                       {options.length ? <ul className="basket-options">
                         {options.map((option, index) => <li key={`${item.id}-${option.label}-${index}`}><strong>{option.label}:</strong> {option.value}</li>)}
                       </ul> : null}
-                      {item.css_employee ? <div className="order-employee">
+                      {item.css_employee ? <div className={styles.employee}>
                         <span className="badge">Employee</span>
                         <span>{item.css_employee.employee_name}{item.css_employee.employee_code ? ` · ${item.css_employee.employee_code}` : ""}</span>
                       </div> : null}
                       {state ? <div className="muted small">{state}</div> : null}
                     </div>
-                    <dl className="order-item-money">
+                    <dl className={styles.itemMoney}>
                       <div><dt>Quantity</dt><dd>{item.quantity_ordered}</dd></div>
                       <div><dt>Unit price</dt><dd>{money(item.product_sale_price)}</dd></div>
                       <div><dt>Row total</dt><dd>{money(item.prices?.row_total)}</dd></div>
@@ -120,9 +121,9 @@ export default async function OrdersPage({
               </div>
             </section>
 
-            <section className="order-total-card">
+            <section className={styles.totalCard}>
               <h2>Order totals</h2>
-              <dl className="basket-totals">
+              <dl>
                 <div><dt>Subtotal ex VAT</dt><dd>{money(order.total?.subtotal_excl_tax)}</dd></div>
                 {(order.total?.discounts || []).map((discount, index) => <div key={`${order.number}-discount-${index}`}><dt>{discount.label || "Discount"}</dt><dd>-{money(discount.amount)}</dd></div>)}
                 <div><dt>Delivery</dt><dd>{money(order.total?.total_shipping)}</dd></div>
