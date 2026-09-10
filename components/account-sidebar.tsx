@@ -1,6 +1,7 @@
 import Link from "next/link";
 import {
   Building2,
+  CheckCircle2,
   ClipboardCheck,
   LayoutDashboard,
   LogOut,
@@ -10,32 +11,69 @@ import {
   UserRound,
 } from "lucide-react";
 import { logoutAction, selectCompanyAction } from "@/app/actions";
-import type { CompanySummary } from "@/lib/magento/context";
 
-export type AccountSection = "overview" | "orders" | "repeat-orders" | "credit-orders" | "returns";
+export type AccountSection = "overview" | "orders" | "approvals" | "repeat-orders" | "credit-orders" | "returns";
+
+type SidebarCompany = {
+  company_id: number;
+  name: string | null;
+  reference: string | null;
+  selected: boolean;
+  active?: boolean;
+};
 
 type AccountSidebarProps = {
   name: string;
   email: string;
-  companies: CompanySummary[];
+  companies: SidebarCompany[];
   active: AccountSection;
+  showApprovals?: boolean;
 };
 
-const links: Array<{
-  section: AccountSection;
+const operationalLinks: Array<{
+  section: Exclude<AccountSection, "overview" | "approvals">;
   href: string;
   label: string;
   Icon: typeof LayoutDashboard;
 }> = [
-  { section: "overview", href: "/account", label: "Overview", Icon: LayoutDashboard },
   { section: "orders", href: "/account/orders", label: "Order history", Icon: PackageSearch },
   { section: "repeat-orders", href: "/account/repeat-orders", label: "Repeat orders", Icon: Repeat2 },
   { section: "credit-orders", href: "/account/credit-orders", label: "Credit orders", Icon: ClipboardCheck },
   { section: "returns", href: "/account/returns", label: "Returns", Icon: RotateCcw },
 ];
 
-export function AccountSidebar({ name, email, companies, active }: AccountSidebarProps) {
-  const activeCompanies = companies.filter((company) => company.active);
+function SidebarLink({
+  section,
+  href,
+  label,
+  Icon,
+  active,
+}: {
+  section: AccountSection;
+  href: string;
+  label: string;
+  Icon: typeof LayoutDashboard;
+  active: AccountSection;
+}) {
+  const isActive = section === active;
+  return <Link
+    className={`account-sidebar-link ${isActive ? "active" : ""}`}
+    href={href}
+    aria-current={isActive ? "page" : undefined}
+  >
+    <Icon size={18} aria-hidden="true"/>
+    <span>{label}</span>
+  </Link>;
+}
+
+export function AccountSidebar({
+  name,
+  email,
+  companies,
+  active,
+  showApprovals = false,
+}: AccountSidebarProps) {
+  const activeCompanies = companies.filter((company) => company.active !== false);
   const selected = activeCompanies.find((company) => company.selected) || null;
 
   return <aside className="account-sidebar card" aria-label="Account navigation">
@@ -48,21 +86,43 @@ export function AccountSidebar({ name, email, companies, active }: AccountSideba
     </div>
 
     <nav className="account-sidebar-nav" aria-label="Account sections">
-      {links.map(({ section, href, label, Icon }) => {
-        const isActive = section === active;
-        return <Link
-          className={`account-sidebar-link ${isActive ? "active" : ""}`}
-          href={href}
-          key={href}
-          aria-current={isActive ? "page" : undefined}
-        >
-          <Icon size={18} aria-hidden="true"/>
-          <span>{label}</span>
-        </Link>;
-      })}
+      <SidebarLink
+        section="orders"
+        href="/account/orders"
+        label="Order history"
+        Icon={PackageSearch}
+        active={active}
+      />
+
+      {showApprovals ? <SidebarLink
+        section="approvals"
+        href="/account/credit-orders?scope=APPROVAL"
+        label="Order approvals"
+        Icon={CheckCircle2}
+        active={active}
+      /> : null}
+
+      {operationalLinks.slice(1).map(({ section, href, label, Icon }) => <SidebarLink
+        section={section}
+        href={href}
+        label={label}
+        Icon={Icon}
+        active={active}
+        key={href}
+      />)}
     </nav>
 
     <div className="account-sidebar-divider"/>
+
+    <nav className="account-sidebar-nav account-sidebar-overview" aria-label="Account overview">
+      <SidebarLink
+        section="overview"
+        href="/account"
+        label="Overview"
+        Icon={LayoutDashboard}
+        active={active}
+      />
+    </nav>
 
     <section className="account-sidebar-company" aria-label="Ordering company">
       <span className="account-sidebar-company-icon"><Building2 size={17} aria-hidden="true"/></span>
