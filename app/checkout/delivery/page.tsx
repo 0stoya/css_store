@@ -1,10 +1,15 @@
 import Link from "next/link";
+import { ArrowLeft, Check, ChevronDown, MapPin, Phone, Plus, Truck } from "lucide-react";
 import { CheckoutSteps } from "@/components/checkout-steps";
 import { SiteHeader } from "@/components/site-header";
 import type { CartMoney } from "@/lib/magento/cart";
 import { getCustomerContext } from "@/lib/magento/context";
 import { getEmployeeOrdering } from "@/lib/magento/employee";
-import { getDeliveryContext } from "@/lib/magento/shipping";
+import {
+  getDeliveryContext,
+  type CustomerShippingAddress,
+  type ShippingCartAddress,
+} from "@/lib/magento/shipping";
 import { requireCustomerToken } from "@/lib/session";
 import { preparePaymentAction } from "../payment/actions";
 import {
@@ -20,30 +25,24 @@ function money(value: CartMoney | null | undefined) {
   return new Intl.NumberFormat("en-GB", { style: "currency", currency: value.currency }).format(value.value);
 }
 
-function lineEmployee(item: {
-  css_employee: { employee_name: string } | null;
-  css_kit: { employee_name: string } | null;
-}) {
-  return item.css_employee?.employee_name || item.css_kit?.employee_name || null;
+function normalise(value: string | null | undefined) {
+  return (value || "").trim().toLowerCase();
 }
 
-function addressText(address: {
-  company?: string | null;
-  street: string[];
-  city: string;
-  region?: { region?: string | null; label?: string | null } | null;
-  postcode: string;
-  country_code?: string;
-  country?: { code: string; label: string | null } | null;
-}) {
-  return [
-    address.company,
-    ...address.street,
-    address.city,
-    address.region?.region || address.region?.label,
-    address.postcode,
-    address.country_code || address.country?.label || address.country?.code,
-  ].filter(Boolean).join(", ");
+function streetKey(street: string[]) {
+  return street.map(normalise).filter(Boolean).join("|");
+}
+
+function isSelectedSavedAddress(saved: CustomerShippingAddress, current: ShippingCartAddress | null) {
+  if (!current) return false;
+  return normalise(saved.firstname) === normalise(current.firstname)
+    && normalise(saved.lastname) === normalise(current.lastname)
+    && normalise(saved.company) === normalise(current.company)
+    && streetKey(saved.street) === streetKey(current.street)
+    && normalise(saved.city) === normalise(current.city)
+    && normalise(saved.postcode) === normalise(current.postcode)
+    && normalise(saved.country_code) === normalise(current.country?.code)
+    && normalise(saved.telephone) === normalise(current.telephone);
 }
 
 export default async function DeliveryPage({
@@ -64,6 +63,9 @@ export default async function DeliveryPage({
   const shippingAddress = cart.shipping_addresses[0] || null;
   const methods = (shippingAddress?.available_shipping_methods || []).filter((method) => method.available !== false);
   const selectedMethod = shippingAddress?.selected_shipping_method || null;
+  const selectedMethodOption = selectedMethod
+    ? methods.find((method) => method.carrier_code === selectedMethod.carrier_code && method.method_code === selectedMethod.method_code) || null
+    : null;
   const canCheckout = delivery.css_ordering_capabilities.authenticated
     && delivery.css_ordering_capabilities.company_context
     && delivery.css_ordering_capabilities.company_active
@@ -75,7 +77,7 @@ export default async function DeliveryPage({
 
   return <>
     <SiteHeader customerName={customerName} companyName={selectedCompany?.name} basketQuantity={cart.total_quantity}/>
-    <main className="shell stack">
+    <main className="shell stack delivery-page">
       <CheckoutSteps current="delivery" includeEmployee={includeEmployee}/>
 
       <div className="basket-heading checkout-heading">
@@ -84,7 +86,10 @@ export default async function DeliveryPage({
           <h1>Delivery</h1>
           <p className="muted">Choose where your order should be delivered and how you’d like it sent.</p>
         </div>
-        <Link className="button secondary" href={includeEmployee ? "/checkout/employee" : "/basket"}>{includeEmployee ? "Back to Employee" : "Back to basket"}</Link>
+        <Link className="button secondary delivery-back" href={includeEmployee ? "/checkout/employee" : "/basket"}>
+          <ArrowLeft size={16} aria-hidden="true"/>
+          <span>{includeEmployee ? "Back to Employee" : "Back to basket"}</span>
+        </Link>
       </div>
 
       {messages.error ? <p className="error" role="alert">{messages.error}</p> : null}
@@ -92,65 +97,108 @@ export default async function DeliveryPage({
       {!cart.total_quantity ? <section className="empty card"><h2>Your basket is empty</h2><p><Link className="button" href="/catalogue">Browse products</Link></p></section> : null}
       {cart.total_quantity > 0 && !canCheckout ? <p className="error" role="alert">This company is not currently able to continue through checkout.</p> : null}
 
-      {cart.total_quantity > 0 ? <div className="delivery-layout">
-        <div className="stack">
-          <section className="card delivery-card">
+      {cart.total_quantity > 0 ? <div className="delivery-layout delivery-layout-refined">
+        <div className="stack delivery-main-column">
+          <section className="card delivery-card delivery-address-card">
             <div className="checkout-card-intro">
-              <h2>Saved delivery addresses</h2>
-              <p>Choose a saved address, or enter a different address below for this order only.</p>
+              <h2>Delivery address</h2>
+              <p>Choose one of your saved addresses.</p>
             </div>
-            {delivery.customer.addresses.length ? <div className="address-grid">
-              {delivery.customer.addresses.map((address) => <article className="address-card" key={address.id}>
-                <div>
-                  <strong>{address.firstname} {address.lastname}</strong>
-                  {address.default_shipping ? <span className="badge">Default</span> : null}
-                </div>
-                <p>{addressText(address)}</p>
-                <p className="muted small">{address.telephone}</p>
-                <form action={selectSavedShippingAddressAction}>
-                  <input type="hidden" name="customer_address_id" value={address.id}/>
-                  <button className="button secondary" type="submit" disabled={!canCheckout}>Deliver here</button>
-                </form>
-              </article>)}
+            {delivery.customer.addresses.length ? <div className="address-grid delivery-address-grid">
+              {delivery.customer.addresses.map((address) => {
+                const selectedAddress = isSelectedSavedAddress(address, shippingAddress);
+                const countryName = delivery.countries.find((country) => country.id === address.country_code)?.full_name_locale || address.country_code;
+                return <article className={`address-card delivery-saved-address ${selectedAddress ? "selected" : ""}`} key={address.id}>
+                  <div className="delivery-address-heading">
+                    <span className="delivery-address-icon"><MapPin size={18} aria-hidden="true"/></span>
+                    <div>
+                      <strong>{address.firstname} {address.lastname}</strong>
+                      {address.default_shipping ? <span className="badge">Default</span> : null}
+                      {address.company ? <small>{address.company}</small> : null}
+                    </div>
+                  </div>
+
+                  <div className="delivery-address-details">
+                    <div className="delivery-address-detail">
+                      <span>Address</span>
+                      <strong className="delivery-address-lines">{address.street.filter(Boolean).map((line) => <span key={line}>{line}</span>)}</strong>
+                    </div>
+                    <div className="delivery-address-detail">
+                      <span>City</span>
+                      <strong>{[address.city, address.region?.region].filter(Boolean).join(", ")}</strong>
+                    </div>
+                    <div className="delivery-address-detail">
+                      <span>Country</span>
+                      <strong>{countryName}</strong>
+                    </div>
+                    <div className="delivery-address-detail">
+                      <span>Postcode</span>
+                      <strong>{address.postcode}</strong>
+                    </div>
+                  </div>
+
+                  {address.telephone ? <a className="delivery-address-phone" href={`tel:${address.telephone}`}>
+                    <Phone size={16} aria-hidden="true"/>
+                    <span>{address.telephone}</span>
+                  </a> : null}
+
+                  <form action={selectSavedShippingAddressAction}>
+                    <input type="hidden" name="customer_address_id" value={address.id}/>
+                    <button className={`button ${selectedAddress ? "delivery-address-selected-button" : "secondary"}`} type="submit" disabled={selectedAddress || !canCheckout}>
+                      {selectedAddress ? <><Check size={16} aria-hidden="true"/><span>Selected</span></> : "Deliver here"}
+                    </button>
+                  </form>
+                </article>;
+              })}
             </div> : <p className="notice">You do not have a saved delivery address. Enter an address below to continue.</p>}
+
+            <details className="delivery-alt-address" open={!delivery.customer.addresses.length}>
+              <summary>
+                <span><Plus size={17} aria-hidden="true"/>Use a different address</span>
+                <ChevronDown className="delivery-alt-chevron" size={18} aria-hidden="true"/>
+              </summary>
+              <div className="delivery-alt-address-body">
+                <p className="muted small">This address will be used for this order only and won’t be added to your saved addresses.</p>
+                <form action={setNewShippingAddressAction} className="delivery-form">
+                  <label className="field"><span>First name</span><input name="firstname" autoComplete="given-name" defaultValue={delivery.customer.firstname} required/></label>
+                  <label className="field"><span>Last name</span><input name="lastname" autoComplete="family-name" defaultValue={delivery.customer.lastname} required/></label>
+                  <label className="field delivery-span-2"><span>Company</span><input name="company" autoComplete="organization" defaultValue={selectedCompany?.name || ""}/></label>
+                  <label className="field delivery-span-2"><span>Address line 1</span><input name="street_1" autoComplete="address-line1" required/></label>
+                  <label className="field delivery-span-2"><span>Address line 2</span><input name="street_2" autoComplete="address-line2"/></label>
+                  <label className="field"><span>Town / city</span><input name="city" autoComplete="address-level2" required/></label>
+                  <label className="field"><span>County / region</span><input name="region" autoComplete="address-level1"/></label>
+                  <label className="field"><span>Postcode</span><input name="postcode" autoComplete="postal-code" required/></label>
+                  <label className="field"><span>Country</span><select name="country_code" autoComplete="country" defaultValue={defaultCountry} required>
+                    {delivery.countries.map((country) => <option value={country.id} key={country.id}>{country.full_name_locale || country.id}</option>)}
+                  </select></label>
+                  <label className="field delivery-span-2"><span>Telephone</span><input name="telephone" type="tel" autoComplete="tel" required/></label>
+                  <div className="delivery-span-2"><button className="button" type="submit" disabled={!canCheckout}>Use this address</button></div>
+                </form>
+              </div>
+            </details>
           </section>
 
-          <section className="card delivery-card">
+          {shippingAddress ? <section className="card delivery-card delivery-method-card">
             <div className="checkout-card-intro">
-              <h2>Use a different address</h2>
-              <p>This address will be used for this order only and will not be added to your saved addresses.</p>
+              <h2>Delivery method</h2>
+              <p>Choose how you’d like this order delivered.</p>
             </div>
-            <form action={setNewShippingAddressAction} className="delivery-form">
-              <label className="field"><span>First name</span><input name="firstname" autoComplete="given-name" defaultValue={delivery.customer.firstname} required/></label>
-              <label className="field"><span>Last name</span><input name="lastname" autoComplete="family-name" defaultValue={delivery.customer.lastname} required/></label>
-              <label className="field delivery-span-2"><span>Company</span><input name="company" autoComplete="organization" defaultValue={selectedCompany?.name || ""}/></label>
-              <label className="field delivery-span-2"><span>Address line 1</span><input name="street_1" autoComplete="address-line1" required/></label>
-              <label className="field delivery-span-2"><span>Address line 2</span><input name="street_2" autoComplete="address-line2"/></label>
-              <label className="field"><span>Town / city</span><input name="city" autoComplete="address-level2" required/></label>
-              <label className="field"><span>County / region</span><input name="region" autoComplete="address-level1"/></label>
-              <label className="field"><span>Postcode</span><input name="postcode" autoComplete="postal-code" required/></label>
-              <label className="field"><span>Country</span><select name="country_code" autoComplete="country" defaultValue={defaultCountry} required>
-                {delivery.countries.map((country) => <option value={country.id} key={country.id}>{country.full_name_locale || country.id}</option>)}
-              </select></label>
-              <label className="field delivery-span-2"><span>Telephone</span><input name="telephone" type="tel" autoComplete="tel" required/></label>
-              <div className="delivery-span-2"><button className="button" type="submit" disabled={!canCheckout}>Use this address</button></div>
-            </form>
-          </section>
-
-          {shippingAddress ? <section className="card delivery-card">
-            <div className="checkout-card-intro">
-              <h2>Delivery methods</h2>
-              <p>These are the delivery options currently available for this address and order.</p>
-            </div>
-            <div className="shipping-method-list">
+            <div className="shipping-method-list delivery-method-list">
               {methods.map((method) => {
                 const active = selectedMethod?.carrier_code === method.carrier_code && selectedMethod.method_code === method.method_code;
-                return <form action={selectShippingMethodAction} className={`shipping-method ${active ? "selected" : ""}`} key={`${method.carrier_code}:${method.method_code}`}>
+                return <form action={selectShippingMethodAction} className={`shipping-method delivery-method-option ${active ? "selected" : ""}`} key={`${method.carrier_code}:${method.method_code}`}>
                   <input type="hidden" name="carrier_code" value={method.carrier_code}/>
                   <input type="hidden" name="method_code" value={method.method_code}/>
-                  <div><strong>{method.carrier_title || method.carrier_code} · {method.method_title || method.method_code}</strong>{method.error_message ? <p className="muted small">{method.error_message}</p> : null}</div>
-                  <strong>{money(method.amount)}</strong>
-                  <button className="button secondary" type="submit" disabled={active || !canCheckout}>{active ? "Selected" : "Select"}</button>
+                  <span className="delivery-method-icon"><Truck size={18} aria-hidden="true"/></span>
+                  <div className="delivery-method-copy">
+                    <strong>{method.carrier_title || method.carrier_code}</strong>
+                    <span>{method.method_title || method.method_code}</span>
+                    {method.error_message ? <span className="muted small">{method.error_message}</span> : null}
+                  </div>
+                  <strong className="delivery-method-price">{money(method.amount)}</strong>
+                  <button className={`button ${active ? "delivery-selected-button" : "secondary"}`} type="submit" disabled={active || !canCheckout}>
+                    {active ? <><Check size={16} aria-hidden="true"/><span>Selected</span></> : "Select"}
+                  </button>
                 </form>;
               })}
             </div>
@@ -158,45 +206,24 @@ export default async function DeliveryPage({
           </section> : null}
         </div>
 
-        <aside className="stack">
-          <section className="card delivery-card checkout-summary-card">
-            <h2>Order items</h2>
-            <div className="checkout-line-list">
-              {cart.itemsV2.items.map((item) => {
-                const sku = item.configured_variant?.sku || item.product.sku;
-                const employee = lineEmployee(item);
-                return <div className="checkout-line" key={item.uid}>
-                  <div>
-                    <strong>{item.product.name}</strong>
-                    <div className="muted small">{sku} · Qty {item.quantity}</div>
-                    {item.configurable_options?.length ? <div className="muted small">{item.configurable_options.map((option) => `${option.option_label}: ${option.value_label}`).join(" · ")}</div> : null}
-                    {item.css_kit ? <div className="badge">Grouped item</div> : item.configured_variant ? <div className="badge">Configured item</div> : null}
-                    {employee ? <div className="muted small">Employee: {employee}</div> : null}
-                  </div>
-                </div>;
-              })}
-            </div>
-          </section>
-
-          <section className="card delivery-card basket-totals checkout-summary-card">
+        <aside className="delivery-summary-column">
+          <section className="card delivery-card basket-totals checkout-summary-card delivery-summary-card">
             <h2>Order summary</h2>
+            <p className="muted small">{cart.total_quantity} item{cart.total_quantity === 1 ? "" : "s"}</p>
             <dl>
               <div><dt>Subtotal ex VAT</dt><dd>{money(cart.prices?.subtotal_excluding_tax)}</dd></div>
+              {selectedMethod ? <div><dt>Delivery</dt><dd>{selectedMethodOption ? money(selectedMethodOption.amount) : "Selected"}</dd></div> : null}
               <div className="basket-grand-total"><dt>Grand total</dt><dd>{money(cart.prices?.grand_total)}</dd></div>
             </dl>
-          </section>
 
-          {shippingAddress ? <section className="card delivery-card checkout-summary-card">
-            <h2>Current delivery</h2>
-            <p><strong>{shippingAddress.firstname} {shippingAddress.lastname}</strong></p>
-            <p className="muted">{addressText(shippingAddress)}</p>
-            {selectedMethod ? <p><span className="badge">{selectedMethod.carrier_title || selectedMethod.carrier_code} · {selectedMethod.method_title || selectedMethod.method_code}</span></p> : <p className="notice">Choose a delivery method to complete this step.</p>}
-          </section> : null}
+            {selectedMethod ? <div className="delivery-summary-method">
+              <Truck size={17} aria-hidden="true"/>
+              <span>{selectedMethod.carrier_title || selectedMethod.carrier_code} · {selectedMethod.method_title || selectedMethod.method_code}</span>
+            </div> : <p className="muted small delivery-summary-hint">Choose a delivery address and method to continue.</p>}
 
-          <section className="checkout-next-card">
-            <strong>{selectedMethod ? "Delivery is ready." : "Complete delivery to continue."}</strong>
-            {selectedMethod && canCheckout ? <form action={preparePaymentAction}><button className="button" type="submit">Continue to payment</button></form> : null}
-            {!selectedMethod ? <p className="muted small">Choose an address and delivery method before continuing.</p> : null}
+            {selectedMethod && canCheckout ? <form action={preparePaymentAction} className="delivery-summary-action">
+              <button className="button" type="submit">Continue to payment</button>
+            </form> : null}
           </section>
         </aside>
       </div> : null}
