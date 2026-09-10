@@ -3,6 +3,7 @@ import { SiteHeader } from "@/components/site-header";
 import type { CartMoney } from "@/lib/magento/cart";
 import { getCompanyOrders, type CompanyOrderItem } from "@/lib/magento/orders";
 import { requireCustomerToken } from "@/lib/session";
+import { repeatOrderAction } from "./actions";
 import styles from "./orders.module.css";
 
 export const metadata = { title: "Order history" };
@@ -34,7 +35,7 @@ function itemState(item: CompanyOrderItem) {
 export default async function OrdersPage({
   searchParams,
 }: {
-  searchParams: Promise<{ page?: string }>;
+  searchParams: Promise<{ page?: string; error?: string; notice?: string; warning?: string }>;
 }) {
   const token = await requireCustomerToken();
   const params = await searchParams;
@@ -61,6 +62,10 @@ export default async function OrdersPage({
         </div>
         <Link className="button secondary" href="/account">Back to account</Link>
       </div>
+
+      {params.error ? <p className="error">{params.error}</p> : null}
+      {params.warning ? <p className="error">{params.warning}</p> : null}
+      {params.notice ? <p className="success">{params.notice}</p> : null}
 
       <section className={`card ${styles.intro}`}>
         <div>
@@ -130,6 +135,18 @@ export default async function OrdersPage({
                 <div><dt>VAT</dt><dd>{money(order.total?.total_tax)}</dd></div>
                 <div className="basket-grand-total"><dt>Grand total</dt><dd>{money(order.total?.grand_total)}</dd></div>
               </dl>
+            </section>
+
+            <section className="stack">
+              <div>
+                <h2>Repeat this order</h2>
+                <p className="muted small">Fluid rebuilds only supported grouped-configurable rows against today’s company, Employee, stock and purchase rules. Rows needing intervention are reported instead of silently changed.</p>
+              </div>
+              <form action={repeatOrderAction}>
+                <input type="hidden" name="order_number" value={order.number}/>
+                <input type="hidden" name="page" value={page}/>
+                <button className="button" type="submit">Repeat eligible items</button>
+              </form>
             </section>
           </div>
         </details>)}
