@@ -11,6 +11,7 @@ export function QuantityStepper({
   min = 0,
   max,
   step = 1,
+  firstPositiveValue,
   disabled = false,
   compact = false,
   submitControl,
@@ -22,6 +23,7 @@ export function QuantityStepper({
   min?: number;
   max?: number;
   step?: number | "any";
+  firstPositiveValue?: number;
   disabled?: boolean;
   compact?: boolean;
   submitControl?: {
@@ -36,6 +38,9 @@ export function QuantityStepper({
   const controlLabel = ariaLabel || label;
   const buttonStep = typeof step === "number" && Number.isFinite(step) && step > 0 ? step : 1;
   const numericValue = Number(value);
+  const firstPositive = typeof firstPositiveValue === "number" && Number.isFinite(firstPositiveValue) && firstPositiveValue > 0
+    ? firstPositiveValue
+    : null;
 
   function adjust(direction: -1 | 1) {
     if (disabled) return;
@@ -43,10 +48,21 @@ export function QuantityStepper({
     const current = Number.isFinite(numericValue) ? numericValue : defaultValue || 0;
     const lower = Number.isFinite(min) ? min : 0;
     const upper = typeof max === "number" && Number.isFinite(max) ? max : Number.POSITIVE_INFINITY;
-    const raw = Math.min(upper, Math.max(lower, current + (buttonStep * direction)));
+
+    let raw: number;
+    if (firstPositive !== null && direction === 1 && current <= 0) {
+      raw = firstPositive;
+    } else if (firstPositive !== null && direction === -1 && current <= firstPositive) {
+      raw = 0;
+    } else {
+      raw = current + (buttonStep * direction);
+    }
+
+    raw = Math.min(upper, Math.max(lower, raw));
     const precision = Math.max(
       String(buttonStep).split(".")[1]?.length || 0,
       String(lower).split(".")[1]?.length || 0,
+      String(firstPositive ?? 0).split(".")[1]?.length || 0,
     );
     const next = precision ? Number(raw.toFixed(precision)) : raw;
     setValue(String(next));
