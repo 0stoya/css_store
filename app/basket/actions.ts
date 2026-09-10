@@ -1,6 +1,6 @@
 "use server";
 
-import { redirect } from "next/navigation";
+import { redirect, unstable_rethrow } from "next/navigation";
 import {
   assignCartEmployee,
   assignCartItemEmployee,
@@ -12,6 +12,7 @@ import { getEmployeeOrdering } from "@/lib/magento/employee";
 import { requireCustomerToken } from "@/lib/session";
 
 function message(error: unknown) {
+  unstable_rethrow(error);
   return error instanceof Error ? error.message : "The basket could not be updated.";
 }
 
