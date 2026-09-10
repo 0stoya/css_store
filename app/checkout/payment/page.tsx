@@ -1,4 +1,16 @@
 import Link from "next/link";
+import {
+  ArrowLeft,
+  Check,
+  ChevronDown,
+  MapPin,
+  Phone,
+  ReceiptText,
+  ShieldCheck,
+  ShoppingBag,
+  Truck,
+  WalletCards,
+} from "lucide-react";
 import { CheckoutSteps } from "@/components/checkout-steps";
 import { SiteHeader } from "@/components/site-header";
 import type { CartMoney } from "@/lib/magento/cart";
@@ -20,24 +32,6 @@ function lineEmployee(item: {
   css_kit: { employee_name: string } | null;
 }) {
   return item.css_employee?.employee_name || item.css_kit?.employee_name || null;
-}
-
-function addressText(address: {
-  company?: string | null;
-  street: string[];
-  city: string;
-  region?: { code?: string | null; label?: string | null } | null;
-  postcode: string;
-  country?: { code: string; label: string | null } | null;
-}) {
-  return [
-    address.company,
-    ...address.street,
-    address.city,
-    address.region?.label || address.region?.code,
-    address.postcode,
-    address.country?.label || address.country?.code,
-  ].filter(Boolean).join(", ");
 }
 
 export default async function PaymentPage({
@@ -72,19 +66,23 @@ export default async function PaymentPage({
     && Boolean(shippingAddress && shippingMethod)
     && methods.length > 0;
   const includeEmployee = ordering.usesEmployee && !ordering.multiEmployeeBasket;
+  const submitLabel = usesCreditOrder ? "Submit for approval" : "Place order";
 
   return <>
     <SiteHeader customerName={customerName} companyName={selectedCompany?.name} basketQuantity={cart.total_quantity}/>
-    <main className="shell stack">
+    <main className="shell stack payment-page">
       <CheckoutSteps current="payment" includeEmployee={includeEmployee}/>
 
       <div className="basket-heading checkout-heading">
         <div>
           <p className="eyebrow">Checkout</p>
           <h1>Payment & review</h1>
-          <p className="muted">Choose your payment method, check the order details and submit when you’re ready.</p>
+          <p className="muted">Choose a payment method and confirm your order.</p>
         </div>
-        <Link className="button secondary" href="/checkout/delivery">Back to delivery</Link>
+        <Link className="button secondary payment-back" href="/checkout/delivery">
+          <ArrowLeft size={16} aria-hidden="true"/>
+          <span>Back to delivery</span>
+        </Link>
       </div>
 
       {messages.error ? <p className="error" role="alert">{messages.error}</p> : null}
@@ -92,82 +90,91 @@ export default async function PaymentPage({
 
       {!cart.total_quantity ? <section className="empty card"><h2>Your basket is empty</h2><p><Link className="button" href="/catalogue">Browse products</Link></p></section> : null}
       {cart.total_quantity > 0 && !canCheckout ? <p className="error" role="alert">This company is not currently able to place this order.</p> : null}
-      {cart.total_quantity > 0 && canCheckout && !nativeApprovalAllowed ? <p className="error" role="alert">This order is not currently authorised for submission. Review the purchase status in your basket or contact your account administrator.</p> : null}
-      {cart.total_quantity > 0 && (!shippingAddress || !shippingMethod) ? <section className="notice"><strong>Delivery is not complete.</strong><p className="muted small">Choose a delivery address and delivery method before continuing.</p><p><Link className="button secondary" href="/checkout/delivery">Complete delivery</Link></p></section> : null}
+      {cart.total_quantity > 0 && canCheckout && !nativeApprovalAllowed ? <p className="error" role="alert">This order is not currently authorised for submission. Return to your basket or contact your account administrator.</p> : null}
+      {cart.total_quantity > 0 && (!shippingAddress || !shippingMethod) ? <section className="notice"><strong>Delivery is not complete.</strong><p className="muted small">Choose a delivery address and method before continuing.</p><p><Link className="button secondary" href="/checkout/delivery">Complete delivery</Link></p></section> : null}
 
-      {cart.total_quantity > 0 ? <div className="delivery-layout">
-        <div className="stack">
-          <section className="card delivery-card">
+      {cart.total_quantity > 0 ? <form action={completeCheckoutAction} className="payment-layout">
+        <div className="payment-main-column stack">
+          <section className="card payment-card">
             <div className="checkout-card-intro">
               <h2>Payment method</h2>
               <p>Choose from the payment options available for this order.</p>
             </div>
 
-            {methods.length ? <form action={completeCheckoutAction} className="stack">
-              <div className="shipping-method-list" role="radiogroup" aria-label="Payment method">
-                {methods.map((method) => {
-                  const selected = cart.selected_payment_method?.code === method.code;
-                  return <label className={`shipping-method ${selected ? "selected" : ""}`} key={method.code}>
-                    <div><strong>{method.title}</strong></div>
-                    <input type="radio" name="payment_method" value={method.code} defaultChecked={selected} required disabled={!ready}/>
-                  </label>;
-                })}
-              </div>
+            {methods.length ? <div className="payment-method-list" role="radiogroup" aria-label="Payment method">
+              {methods.map((method) => {
+                const selected = cart.selected_payment_method?.code === method.code;
+                return <label className="payment-method-option" key={method.code}>
+                  <span className="payment-method-icon"><WalletCards size={19} aria-hidden="true"/></span>
+                  <span className="payment-method-copy"><strong>{method.title}</strong></span>
+                  <input type="radio" name="payment_method" value={method.code} defaultChecked={selected} required disabled={!ready}/>
+                  <span className="payment-radio-mark" aria-hidden="true"><Check size={14}/></span>
+                </label>;
+              })}
+            </div> : <p className="error" role="alert">No payment methods are currently available for this order.</p>}
 
-              <div className="order-context-note">
-                <strong>Billing address</strong>
-                <p className="muted small">Your delivery address will also be used as the billing address for this order. Your saved addresses will not be changed.</p>
-              </div>
-
-              {usesCreditOrder ? <div className="order-context-note">
-                <strong>Company approval</strong>
-                <p className="muted small">This order may need approval before it is placed. You’ll see the result immediately after submission.</p>
-              </div> : <div className="order-context-note">
-                <strong>Final check</strong>
-                <p className="muted small">Availability, account permissions and the basket are checked again when you submit the order.</p>
-              </div>}
-
-              <button className="button order-primary-action" type="submit" disabled={!ready}>Submit order</button>
-            </form> : <p className="error" role="alert">No payment methods are currently available for this order.</p>}
+            {shippingAddress ? <div className="payment-context-row">
+              <ReceiptText size={17} aria-hidden="true"/>
+              <div><strong>Billing address</strong><span>Same as your delivery address</span></div>
+            </div> : null}
           </section>
-        </div>
 
-        <aside className="stack">
-          <section className="card delivery-card checkout-summary-card">
-            <h2>Order items</h2>
-            <div className="checkout-line-list">
+          <details className="card payment-items-review">
+            <summary>
+              <span className="payment-items-summary-copy">
+                <ShoppingBag size={19} aria-hidden="true"/>
+                <span><strong>Review order items</strong><small>{cart.total_quantity} item{cart.total_quantity === 1 ? "" : "s"}</small></span>
+              </span>
+              <ChevronDown className="payment-items-chevron" size={18} aria-hidden="true"/>
+            </summary>
+            <div className="payment-item-list">
               {cart.itemsV2.items.map((item) => {
                 const sku = item.configured_variant?.sku || item.product.sku;
                 const employee = lineEmployee(item);
-                return <div className="checkout-line" key={item.uid}>
+                return <div className="payment-item-row" key={item.uid}>
                   <div>
                     <strong>{item.product.name}</strong>
-                    <div className="muted small">{sku} · Qty {item.quantity}</div>
-                    {item.configurable_options?.length ? <div className="muted small">{item.configurable_options.map((option) => `${option.option_label}: ${option.value_label}`).join(" · ")}</div> : null}
-                    {item.css_kit ? <div className="badge">Grouped item</div> : item.configured_variant ? <div className="badge">Configured item</div> : null}
-                    {employee ? <div className="muted small">Employee: {employee}</div> : null}
+                    <span>{sku}</span>
+                    {item.configurable_options?.length ? <span>{item.configurable_options.map((option) => `${option.option_label}: ${option.value_label}`).join(" · ")}</span> : null}
+                    {employee ? <span>Employee: {employee}</span> : null}
                   </div>
+                  <strong className="payment-item-qty">Qty {item.quantity}</strong>
                 </div>;
               })}
             </div>
-          </section>
+          </details>
+        </div>
 
-          <section className="card delivery-card basket-totals checkout-summary-card">
+        <aside className="payment-summary-column">
+          <section className="card payment-summary-card">
             <h2>Order summary</h2>
-            <dl>
-              <div><dt>Subtotal ex VAT</dt><dd>{money(cart.prices?.subtotal_excluding_tax)}</dd></div>
-              <div className="basket-grand-total"><dt>Grand total</dt><dd>{money(cart.prices?.grand_total)}</dd></div>
-            </dl>
-          </section>
+            <p className="muted small">{cart.total_quantity} item{cart.total_quantity === 1 ? "" : "s"}</p>
 
-          {shippingAddress ? <section className="card delivery-card checkout-summary-card">
-            <h2>Delivery</h2>
-            <p><strong>{shippingAddress.firstname} {shippingAddress.lastname}</strong></p>
-            <p className="muted">{addressText(shippingAddress)}</p>
-            {shippingMethod ? <p><span className="badge">{shippingMethod.carrier_title || shippingMethod.carrier_code} · {shippingMethod.method_title || shippingMethod.method_code}</span></p> : <p className="error">No delivery method selected.</p>}
-          </section> : null}
+            <dl className="payment-totals">
+              <div><dt>Subtotal ex VAT</dt><dd>{money(cart.prices?.subtotal_excluding_tax)}</dd></div>
+              {shippingMethod ? <div><dt>Delivery</dt><dd>{money(shippingMethod.amount)}</dd></div> : null}
+              <div className="payment-grand-total"><dt>Grand total</dt><dd>{money(cart.prices?.grand_total)}</dd></div>
+            </dl>
+
+            {shippingAddress ? <div className="payment-delivery-review">
+              <div className="payment-review-heading"><MapPin size={17} aria-hidden="true"/><strong>Delivery</strong></div>
+              <strong>{shippingAddress.firstname} {shippingAddress.lastname}</strong>
+              <span>{shippingAddress.street.filter(Boolean).join(", ")}</span>
+              <span>{shippingAddress.city}</span>
+              <span>{shippingAddress.country?.label || shippingAddress.country?.code} · {shippingAddress.postcode}</span>
+              {shippingAddress.telephone ? <span className="payment-phone"><Phone size={14} aria-hidden="true"/>{shippingAddress.telephone}</span> : null}
+              {shippingMethod ? <span className="payment-shipping-method"><Truck size={15} aria-hidden="true"/>{shippingMethod.carrier_title || shippingMethod.carrier_code} · {shippingMethod.method_title || shippingMethod.method_code}</span> : null}
+            </div> : null}
+
+            {usesCreditOrder ? <div className="payment-approval-note">
+              <ShieldCheck size={17} aria-hidden="true"/>
+              <span>This order may require company approval.</span>
+            </div> : null}
+
+            <button className="button payment-submit" type="submit" disabled={!ready || !methods.length}>{submitLabel}</button>
+          </section>
         </aside>
-      </div> : null}
+      </form> : null}
     </main>
   </>;
 }
