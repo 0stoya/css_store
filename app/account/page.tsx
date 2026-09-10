@@ -57,6 +57,12 @@ export default async function AccountPage({
         </article>
 
         <article className="card">
+          <h2>Credit orders</h2>
+          <p className="muted">View your Fluid credit orders and any company or approval queues your current role is authorised to access.</p>
+          <Link className="button" href="/account/credit-orders">View credit orders</Link>
+        </article>
+
+        <article className="card">
           <h2>Ordering capabilities</h2>
           <p className="muted">Storefront policy: prices {ctx.css_storefront_policy.hide_price ? "hidden" : "visible"}; add to cart {ctx.css_storefront_policy.hide_add_to_cart ? "hidden" : "available"}.</p>
           <form action={logoutAction}><button className="button secondary" type="submit">Sign out</button></form>
