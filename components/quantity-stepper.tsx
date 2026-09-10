@@ -6,6 +6,7 @@ import { useId, useRef } from "react";
 export function QuantityStepper({
   name,
   label = "Quantity",
+  ariaLabel,
   defaultValue,
   min = 0,
   max,
@@ -15,6 +16,7 @@ export function QuantityStepper({
 }: {
   name: string;
   label?: string;
+  ariaLabel?: string;
   defaultValue: number;
   min?: number;
   max?: number;
@@ -24,6 +26,7 @@ export function QuantityStepper({
 }) {
   const id = useId();
   const inputRef = useRef<HTMLInputElement>(null);
+  const controlLabel = ariaLabel || label;
   const buttonStep = typeof step === "number" && Number.isFinite(step) && step > 0 ? step : 1;
 
   function adjust(direction: -1 | 1) {
@@ -48,7 +51,7 @@ export function QuantityStepper({
   return <div className={`quantity-control ${compact ? "compact" : ""}`}>
     <label htmlFor={id}>{label}</label>
     <div className="quantity-stepper">
-      <button type="button" onClick={() => adjust(-1)} disabled={disabled} aria-label={`Decrease ${label.toLowerCase()}`}>
+      <button type="button" onClick={() => adjust(-1)} disabled={disabled} aria-label={`Decrease ${controlLabel.toLowerCase()}`}>
         <Minus size={16} strokeWidth={2.2}/>
       </button>
       <input
@@ -57,6 +60,7 @@ export function QuantityStepper({
         name={name}
         type="number"
         inputMode="decimal"
+        aria-label={ariaLabel}
         defaultValue={defaultValue}
         min={min}
         max={max}
@@ -64,7 +68,7 @@ export function QuantityStepper({
         disabled={disabled}
         required={!disabled}
       />
-      <button type="button" onClick={() => adjust(1)} disabled={disabled} aria-label={`Increase ${label.toLowerCase()}`}>
+      <button type="button" onClick={() => adjust(1)} disabled={disabled} aria-label={`Increase ${controlLabel.toLowerCase()}`}>
         <Plus size={16} strokeWidth={2.2}/>
       </button>
     </div>
