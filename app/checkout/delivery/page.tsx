@@ -1,11 +1,15 @@
 import Link from "next/link";
-import { ArrowLeft, Check, ChevronDown, MapPin, Plus, Truck } from "lucide-react";
+import { ArrowLeft, Check, ChevronDown, MapPin, Phone, Plus, Truck } from "lucide-react";
 import { CheckoutSteps } from "@/components/checkout-steps";
 import { SiteHeader } from "@/components/site-header";
 import type { CartMoney } from "@/lib/magento/cart";
 import { getCustomerContext } from "@/lib/magento/context";
 import { getEmployeeOrdering } from "@/lib/magento/employee";
-import { getDeliveryContext } from "@/lib/magento/shipping";
+import {
+  getDeliveryContext,
+  type CustomerShippingAddress,
+  type ShippingCartAddress,
+} from "@/lib/magento/shipping";
 import { requireCustomerToken } from "@/lib/session";
 import { preparePaymentAction } from "../payment/actions";
 import {
@@ -21,23 +25,24 @@ function money(value: CartMoney | null | undefined) {
   return new Intl.NumberFormat("en-GB", { style: "currency", currency: value.currency }).format(value.value);
 }
 
-function addressText(address: {
-  company?: string | null;
-  street: string[];
-  city: string;
-  region?: { region?: string | null; label?: string | null } | null;
-  postcode: string;
-  country_code?: string;
-  country?: { code: string; label: string | null } | null;
-}) {
-  return [
-    address.company,
-    ...address.street,
-    address.city,
-    address.region?.region || address.region?.label,
-    address.postcode,
-    address.country_code || address.country?.label || address.country?.code,
-  ].filter(Boolean).join(", ");
+function normalise(value: string | null | undefined) {
+  return (value || "").trim().toLowerCase();
+}
+
+function streetKey(street: string[]) {
+  return street.map(normalise).filter(Boolean).join("|");
+}
+
+function isSelectedSavedAddress(saved: CustomerShippingAddress, current: ShippingCartAddress | null) {
+  if (!current) return false;
+  return normalise(saved.firstname) === normalise(current.firstname)
+    && normalise(saved.lastname) === normalise(current.lastname)
+    && normalise(saved.company) === normalise(current.company)
+    && streetKey(saved.street) === streetKey(current.street)
+    && normalise(saved.city) === normalise(current.city)
+    && normalise(saved.postcode) === normalise(current.postcode)
+    && normalise(saved.country_code) === normalise(current.country?.code)
+    && normalise(saved.telephone) === normalise(current.telephone);
 }
 
 export default async function DeliveryPage({
@@ -100,21 +105,51 @@ export default async function DeliveryPage({
               <p>Choose one of your saved addresses.</p>
             </div>
             {delivery.customer.addresses.length ? <div className="address-grid delivery-address-grid">
-              {delivery.customer.addresses.map((address) => <article className="address-card delivery-saved-address" key={address.id}>
-                <div className="delivery-address-heading">
-                  <span className="delivery-address-icon"><MapPin size={18} aria-hidden="true"/></span>
-                  <div>
-                    <strong>{address.firstname} {address.lastname}</strong>
-                    {address.default_shipping ? <span className="badge">Default</span> : null}
+              {delivery.customer.addresses.map((address) => {
+                const selectedAddress = isSelectedSavedAddress(address, shippingAddress);
+                const countryName = delivery.countries.find((country) => country.id === address.country_code)?.full_name_locale || address.country_code;
+                return <article className={`address-card delivery-saved-address ${selectedAddress ? "selected" : ""}`} key={address.id}>
+                  <div className="delivery-address-heading">
+                    <span className="delivery-address-icon"><MapPin size={18} aria-hidden="true"/></span>
+                    <div>
+                      <strong>{address.firstname} {address.lastname}</strong>
+                      {address.default_shipping ? <span className="badge">Default</span> : null}
+                      {address.company ? <small>{address.company}</small> : null}
+                    </div>
                   </div>
-                </div>
-                <p>{addressText(address)}</p>
-                {address.telephone ? <p className="muted small">{address.telephone}</p> : null}
-                <form action={selectSavedShippingAddressAction}>
-                  <input type="hidden" name="customer_address_id" value={address.id}/>
-                  <button className="button secondary" type="submit" disabled={!canCheckout}>Deliver here</button>
-                </form>
-              </article>)}
+
+                  <div className="delivery-address-details">
+                    <div className="delivery-address-detail">
+                      <span>Address</span>
+                      <strong className="delivery-address-lines">{address.street.filter(Boolean).map((line) => <span key={line}>{line}</span>)}</strong>
+                    </div>
+                    <div className="delivery-address-detail">
+                      <span>City</span>
+                      <strong>{[address.city, address.region?.region].filter(Boolean).join(", ")}</strong>
+                    </div>
+                    <div className="delivery-address-detail">
+                      <span>Country</span>
+                      <strong>{countryName}</strong>
+                    </div>
+                    <div className="delivery-address-detail">
+                      <span>Postcode</span>
+                      <strong>{address.postcode}</strong>
+                    </div>
+                  </div>
+
+                  {address.telephone ? <a className="delivery-address-phone" href={`tel:${address.telephone}`}>
+                    <Phone size={16} aria-hidden="true"/>
+                    <span>{address.telephone}</span>
+                  </a> : null}
+
+                  <form action={selectSavedShippingAddressAction}>
+                    <input type="hidden" name="customer_address_id" value={address.id}/>
+                    <button className={`button ${selectedAddress ? "delivery-address-selected-button" : "secondary"}`} type="submit" disabled={selectedAddress || !canCheckout}>
+                      {selectedAddress ? <><Check size={16} aria-hidden="true"/><span>Selected</span></> : "Deliver here"}
+                    </button>
+                  </form>
+                </article>;
+              })}
             </div> : <p className="notice">You do not have a saved delivery address. Enter an address below to continue.</p>}
 
             <details className="delivery-alt-address" open={!delivery.customer.addresses.length}>
