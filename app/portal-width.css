@@ -1,0 +1,12 @@
+/* Wider production workspace for large desktop displays. */
+
+:root {
+  --content: 1480px;
+}
+
+@media (min-width: 1280px) {
+  .account-workspace {
+    grid-template-columns: 272px minmax(0, 1fr);
+    gap: 32px;
+  }
+}
