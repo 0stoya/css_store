@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { SiteHeader } from "@/components/site-header";
 import { getCustomerContext } from "@/lib/magento/context";
@@ -49,7 +50,7 @@ export default async function ProductPage({
   return <>
     <SiteHeader customerName={customerName} companyName={selectedCompany?.name}/>
     <main className="shell">
-      <a className="back-link" href="/catalogue">← Back to products</a>
+      <Link className="back-link" href="/catalogue">← Back to products</Link>
       {status.added === "1" ? <p className="success">Added to basket.</p> : null}
       {status.error ? <p className="error">{status.error}</p> : null}
       <section className="pdp">
