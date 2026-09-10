@@ -1,6 +1,6 @@
 "use server";
 
-import { redirect } from "next/navigation";
+import { redirect, unstable_rethrow } from "next/navigation";
 import {
   addGroupedConfigurableProduct,
   addNativeProduct,
@@ -44,6 +44,7 @@ function validateConfigurableSelection(
 }
 
 function message(error: unknown) {
+  unstable_rethrow(error);
   return error instanceof Error ? error.message : "The product could not be added to the basket.";
 }
 
