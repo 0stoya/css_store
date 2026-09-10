@@ -204,6 +204,12 @@ const CUSTOMER_CART = /* GraphQL */ `
   }
 `;
 
+const CUSTOMER_CART_WRITE = /* GraphQL */ `
+  query StoreCustomerCartWriteContext {
+    customerCart { ${CART_WRITE_FIELDS} }
+  }
+`;
+
 const CUSTOMER_CART_SUMMARY = /* GraphQL */ `
   query StoreCustomerCartSummary {
     customerCart { ${CART_SUMMARY_FIELDS} }
@@ -276,6 +282,11 @@ const ASSIGN_ITEM_EMPLOYEE = /* GraphQL */ `
 
 export async function getCustomerCart(token: string) {
   const data = await magentoGraphQL<{ customerCart: CartSnapshot }>(CUSTOMER_CART, {}, token);
+  return data.customerCart;
+}
+
+export async function getCustomerCartWriteContext(token: string) {
+  const data = await magentoGraphQL<{ customerCart: CartWriteSnapshot }>(CUSTOMER_CART_WRITE, {}, token);
   return data.customerCart;
 }
 
