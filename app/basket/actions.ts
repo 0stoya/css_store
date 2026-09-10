@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import {
   assignCartEmployee,
   assignCartItemEmployee,
-  getCustomerCart,
+  getCustomerCartSummary,
   removeCartItem,
   updateCartItem,
 } from "@/lib/magento/cart";
@@ -40,7 +40,7 @@ export async function updateBasketItemAction(formData: FormData) {
     const quantity = Number(formData.get("quantity"));
     if (!Number.isFinite(quantity) || quantity <= 0) throw new Error("Enter a quantity greater than zero.");
 
-    const cart = await getCustomerCart(token);
+    const cart = await getCustomerCartSummary(token);
     if (!cart.itemsV2.items.some((item) => item.uid === uid)) throw new Error("That basket item is no longer available.");
     await updateCartItem(token, cart.id, uid, quantity);
   } catch (error) {
@@ -56,7 +56,7 @@ export async function removeBasketItemAction(formData: FormData) {
 
   try {
     const uid = itemUid(formData);
-    const cart = await getCustomerCart(token);
+    const cart = await getCustomerCartSummary(token);
     if (!cart.itemsV2.items.some((item) => item.uid === uid)) throw new Error("That basket item is no longer available.");
     await removeCartItem(token, cart.id, uid);
   } catch (error) {
@@ -72,7 +72,7 @@ export async function assignBasketEmployeeAction(formData: FormData) {
 
   try {
     const id = employeeId(formData);
-    const [cart, ordering] = await Promise.all([getCustomerCart(token), getEmployeeOrdering(token)]);
+    const [cart, ordering] = await Promise.all([getCustomerCartSummary(token), getEmployeeOrdering(token)]);
     if (!ordering.usesEmployee) throw new Error("Employee ordering is not enabled for this company.");
     if (ordering.multiEmployeeBasket) throw new Error("This company assigns Employees per basket line.");
     if (!ordering.employees.some((employee) => employee.employee_id === id)) throw new Error("Choose an active Employee from this company.");
@@ -92,7 +92,7 @@ export async function assignBasketItemEmployeeAction(formData: FormData) {
   try {
     const uid = itemUid(formData);
     const id = employeeId(formData);
-    const [cart, ordering] = await Promise.all([getCustomerCart(token), getEmployeeOrdering(token)]);
+    const [cart, ordering] = await Promise.all([getCustomerCartSummary(token), getEmployeeOrdering(token)]);
     if (!ordering.usesEmployee) throw new Error("Employee ordering is not enabled for this company.");
     if (!ordering.multiEmployeeBasket) throw new Error("This company uses one Employee for the whole basket.");
     if (!ordering.employees.some((employee) => employee.employee_id === id)) throw new Error("Choose an active Employee from this company.");
