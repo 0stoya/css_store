@@ -1,4 +1,7 @@
 import Link from "next/link";
+import { ArrowRight, Trash2 } from "lucide-react";
+import { EmployeePicker } from "@/components/employee-picker";
+import { QuantityStepper } from "@/components/quantity-stepper";
 import { SiteHeader } from "@/components/site-header";
 import { getCustomerCart, type CartMoney } from "@/lib/magento/cart";
 import { getCustomerContext } from "@/lib/magento/context";
@@ -21,10 +24,6 @@ function employeeId(item: { css_employee: { employee_id: number | null } | null;
   return item.css_employee?.employee_id ?? item.css_kit?.employee_id ?? null;
 }
 
-function employeeName(item: { css_employee: { employee_name: string } | null; css_kit: { employee_name: string } | null }) {
-  return item.css_employee?.employee_name || item.css_kit?.employee_name || null;
-}
-
 export default async function BasketPage({
   searchParams,
 }: {
@@ -41,9 +40,6 @@ export default async function BasketPage({
   const customerName = `${ctx.customer.firstname} ${ctx.customer.lastname}`.trim();
   const items = cart.itemsV2.items;
   const activeEmployeeIds = new Set(ordering.employees.map((employee) => employee.employee_id));
-  const eligibility = cart.css_purchase_eligibility;
-  const decisions = eligibility?.items || [];
-  const decisionMessages = Array.from(new Set(decisions.map((decision) => decision.reason).filter((reason): reason is string => Boolean(reason))));
   const totalCurrency = cart.prices?.grand_total?.currency || cart.prices?.subtotal_excluding_tax?.currency || "GBP";
   const discountCurrency = cart.css_company_discount.currency || totalCurrency;
   const singleEmployeeCheckout = ordering.usesEmployee && !ordering.multiEmployeeBasket;
@@ -51,7 +47,7 @@ export default async function BasketPage({
 
   return <>
     <SiteHeader customerName={customerName} companyName={selected?.name} basketQuantity={cart.total_quantity}/>
-    <main className="shell">
+    <main className="shell basket-page">
       <div className="basket-heading">
         <div>
           <p className="eyebrow">Your order</p>
@@ -61,22 +57,21 @@ export default async function BasketPage({
         <Link className="button secondary" href="/catalogue">Continue shopping</Link>
       </div>
 
-      {messages.error ? <p className="error" role="alert">{messages.error}</p> : null}
-      {messages.notice ? <p className="success" role="status">{messages.notice}</p> : null}
+      {messages.error ? <p className="error basket-message" role="alert">{messages.error}</p> : null}
+      {messages.notice ? <p className="success basket-message" role="status">{messages.notice}</p> : null}
 
       {!items.length ? <section className="empty card">
         <h2>Your basket is empty</h2>
         <p className="muted">Browse the catalogue to add products to your order.</p>
         <p><Link className="button" href="/catalogue">Browse products</Link></p>
-      </section> : <div className="basket-layout">
+      </section> : <div className="basket-layout basket-production-layout">
         <section className="basket-lines" aria-label="Basket items">
           {items.map((item) => {
             const assignedId = employeeId(item);
-            const assignedName = employeeName(item);
             const effectiveSku = item.configured_variant?.sku || item.product.sku;
-            const activeAssignedId = assignedId !== null && activeEmployeeIds.has(assignedId) ? assignedId : "";
+            const activeAssignedId = assignedId !== null && activeEmployeeIds.has(assignedId) ? assignedId : null;
             const constraints = item.product.css_purchase_constraints;
-            return <article className="card basket-line" key={item.uid}>
+            return <article className="card basket-line basket-production-line" key={item.uid}>
               <div className="basket-line-main">
                 <div className="basket-line-copy">
                   <div className="basket-line-badges">
@@ -84,13 +79,10 @@ export default async function BasketPage({
                     <span className="badge">{item.product.css_stock_info.stock_status || item.product.stock_status || "Stock status unavailable"}</span>
                   </div>
                   <h2>{item.product.name}</h2>
-                  <p className="muted">SKU {effectiveSku}</p>
+                  <p className="muted small">SKU {effectiveSku}</p>
                   {item.configurable_options?.length ? <ul className="basket-options">
                     {item.configurable_options.map((option) => <li key={`${option.option_label}:${option.value_label}`}><strong>{option.option_label}:</strong> {option.value_label}</li>)}
                   </ul> : null}
-                  {item.product.css_stock_info.delivery_message ? <p className="muted small">{item.product.css_stock_info.delivery_message}</p> : null}
-                  {constraints ? <p className="muted small">Quantity: minimum {constraints.minimum_quantity}{constraints.maximum_quantity !== null ? `, maximum ${constraints.maximum_quantity}` : ""}{constraints.increments_enforced ? `, increments of ${constraints.quantity_increment}` : ""}.</p> : null}
-                  {ordering.usesEmployee && ordering.multiEmployeeBasket ? <p className="basket-employee"><strong>Employee:</strong> {assignedName || "Not assigned"}</p> : null}
                 </div>
                 <div className="basket-line-price">
                   <span className="muted">Unit</span>
@@ -100,75 +92,55 @@ export default async function BasketPage({
                 </div>
               </div>
 
-              <div className="basket-line-actions">
+              <div className="basket-line-actions basket-production-actions">
                 <form action={updateBasketItemAction} className="basket-quantity-form">
                   <input type="hidden" name="item_uid" value={item.uid}/>
-                  <label className="field compact-field"><span>Quantity</span><input
+                  <QuantityStepper
                     name="quantity"
-                    type="number"
-                    inputMode="decimal"
+                    defaultValue={item.quantity}
                     min={constraints?.minimum_quantity ?? 0.0001}
                     max={constraints?.maximum_quantity ?? undefined}
                     step={constraints?.increments_enforced ? constraints.quantity_increment : "any"}
-                    defaultValue={item.quantity}
-                    required
-                  /></label>
-                  <button className="button secondary" type="submit">Update</button>
+                    compact
+                  />
+                  <button className="button secondary basket-update-button" type="submit">Update</button>
                 </form>
                 <form action={removeBasketItemAction}>
                   <input type="hidden" name="item_uid" value={item.uid}/>
-                  <button className="button secondary" type="submit">Remove</button>
+                  <button className="button secondary basket-remove-button" type="submit">
+                    <Trash2 size={16} aria-hidden="true"/>
+                    <span>Remove</span>
+                  </button>
                 </form>
               </div>
 
-              {ordering.usesEmployee && ordering.multiEmployeeBasket ? <form action={assignBasketItemEmployeeAction} className="basket-employee-form">
+              {ordering.usesEmployee && ordering.multiEmployeeBasket ? <form action={assignBasketItemEmployeeAction} className="basket-employee-form basket-production-employee">
                 <input type="hidden" name="item_uid" value={item.uid}/>
-                <label className="field"><span>Assign Employee</span><select name="employee_id" required defaultValue={activeAssignedId}>
-                  <option value="" disabled>Choose Employee</option>
-                  {ordering.employees.map((employee) => <option value={employee.employee_id} key={employee.employee_id}>{employee.full_name}{employee.employee_code ? ` · ${employee.employee_code}` : ""}</option>)}
-                </select></label>
-                <button className="button secondary" type="submit">Assign</button>
+                <EmployeePicker employees={ordering.employees} defaultSelectedId={activeAssignedId}/>
+                <button className="button secondary" type="submit">Update Employee</button>
               </form> : null}
             </article>;
           })}
         </section>
 
-        <aside className="basket-sidebar stack">
-          {singleEmployeeCheckout ? <section className="card basket-card">
-            <h2>Employee</h2>
-            <p className="muted">This order needs one Employee. You will choose them before entering delivery details.</p>
-          </section> : null}
-
-          <section className="card basket-card basket-totals">
+        <aside className="basket-sidebar">
+          <section className="card basket-card basket-totals basket-checkout-summary">
             <h2>Order summary</h2>
             <dl>
               <div><dt>Subtotal ex VAT</dt><dd>{money(cart.prices?.subtotal_excluding_tax)}</dd></div>
               {cart.css_company_discount.applied ? <div><dt>{cart.css_company_discount.label || "Company discount"} ({cart.css_company_discount.percent}%)</dt><dd>−{new Intl.NumberFormat("en-GB", { style: "currency", currency: discountCurrency }).format(cart.css_company_discount.amount)}</dd></div> : null}
               <div className="basket-grand-total"><dt>Grand total</dt><dd>{money(cart.prices?.grand_total)}</dd></div>
             </dl>
-          </section>
 
-          {eligibility ? <section className="card basket-card">
-            <h2>Purchase status</h2>
-            <p><span className="badge">{eligibility.approval_status.replaceAll("_", " ")}</span></p>
-            {decisionMessages.length ? <ul className="basket-status-list">{decisionMessages.map((reason) => <li key={reason}>{reason}</li>)}</ul> : <p className="muted">There are no purchase warnings for this basket.</p>}
-          </section> : null}
-
-          {cart.css_company_credit?.has_credit_account ? <section className="card basket-card">
-            <h2>Company credit</h2>
-            <p className="muted">Your available company credit is shown below. Final payment options are confirmed during checkout.</p>
-            <dl>
-              <div><dt>Remaining</dt><dd>{cart.css_company_credit.remaining_amount !== null && cart.css_company_credit.currency ? new Intl.NumberFormat("en-GB", { style: "currency", currency: cart.css_company_credit.currency }).format(cart.css_company_credit.remaining_amount) : "—"}</dd></div>
-              <div><dt>On-account available</dt><dd>{cart.css_company_credit.can_pay_on_account ? "Yes" : "No"}</dd></div>
-            </dl>
-          </section> : null}
-
-          <section className="card basket-card stack basket-checkout-card">
-            <h2>{singleEmployeeCheckout ? "Ready to continue?" : "Ready for delivery?"}</h2>
-            <p className="muted small">{singleEmployeeCheckout
-              ? "Choose the Employee for this order, then continue to delivery."
-              : "Continue to choose a delivery address and one of the available delivery methods."}</p>
-            <Link className="button" href={checkoutHref}>{singleEmployeeCheckout ? "Choose Employee" : "Continue to delivery"}</Link>
+            <div className="basket-checkout-action">
+              <p className="muted small">{singleEmployeeCheckout
+                ? "Choose the Employee for this order before delivery."
+                : "Continue to choose your delivery address and method."}</p>
+              <Link className="button" href={checkoutHref}>
+                <span>{singleEmployeeCheckout ? "Choose Employee" : "Continue to delivery"}</span>
+                <ArrowRight size={18} aria-hidden="true"/>
+              </Link>
+            </div>
           </section>
         </aside>
       </div>}
