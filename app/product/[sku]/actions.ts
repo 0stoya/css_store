@@ -6,7 +6,7 @@ import {
   addNativeProduct,
   assignCartEmployee,
   assignCartItemEmployee,
-  getCustomerCart,
+  getCustomerCartWriteContext,
 } from "@/lib/magento/cart";
 import { getEmployeeOrdering } from "@/lib/magento/employee";
 import { getProduct, type ProductConfiguration } from "@/lib/magento/product";
@@ -54,7 +54,7 @@ export async function addProductToCartAction(formData: FormData) {
     const [product, employees, before] = await Promise.all([
       getProduct(token, sku),
       getEmployeeOrdering(token),
-      getCustomerCart(token),
+      getCustomerCartWriteContext(token),
     ]);
     if (!product) throw new Error("Product could not be found.");
     if (!product.css_stock_info.available) throw new Error(product.css_stock_info.delivery_message || "Product is unavailable.");
