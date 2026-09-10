@@ -182,7 +182,8 @@ export default async function DeliveryPage({
 
           <section className="notice">
             <strong>{selectedMethod ? "Delivery step complete." : "Select an address and delivery method."}</strong>
-            <p className="muted small">Payment and final order placement remain in the next Phase 3 slice.</p>
+            {selectedMethod && canCheckout ? <p><Link className="button" href="/checkout/payment">Continue to payment</Link></p> : null}
+            {!selectedMethod ? <p className="muted small">Payment options are loaded only after Magento has a delivery address and shipping method for the current basket.</p> : null}
           </section>
         </aside>
       </div> : null}
