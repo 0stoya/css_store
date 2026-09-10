@@ -1,5 +1,6 @@
 "use client";
 
+import { ImageOff } from "lucide-react";
 import { useState } from "react";
 
 export function ProductImage({
@@ -13,7 +14,7 @@ export function ProductImage({
 
   if (!src || failed) {
     return <div className="product-image-fallback" role="img" aria-label={`${alt} image unavailable`}>
-      <span className="product-image-fallback-mark" aria-hidden="true"/>
+      <ImageOff size={38} strokeWidth={1.6} aria-hidden="true"/>
       <span>Image unavailable</span>
     </div>;
   }
