@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { unstable_rethrow } from "next/navigation";
 import { getStoreName } from "@/lib/config";
 import { getCustomerCartSummary } from "@/lib/magento/cart";
 import { getCustomerToken } from "@/lib/session";
@@ -18,7 +19,8 @@ export async function SiteHeader({
     try {
       const token = await getCustomerToken();
       if (token) quantity = (await getCustomerCartSummary(token)).total_quantity;
-    } catch {
+    } catch (error) {
+      unstable_rethrow(error);
       quantity = undefined;
     }
   }
