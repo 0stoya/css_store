@@ -63,7 +63,8 @@ export default async function ConfirmationPage({
         </dl> : null}
 
         <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
-          <Link className="button" href="/catalogue">Continue shopping</Link>
+          {isCredit && result.credit ? <Link className="button" href={`/account/credit-orders/${encodeURIComponent(result.credit)}`}>View credit order</Link> : null}
+          <Link className={isCredit ? "button secondary" : "button"} href="/catalogue">Continue shopping</Link>
           {result.order ? <Link className="button secondary" href="/account/orders">View order history</Link> : null}
           <Link className="button secondary" href="/basket">Basket</Link>
           <Link className="button secondary" href="/account">Account</Link>
