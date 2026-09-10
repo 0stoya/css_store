@@ -64,6 +64,9 @@ export default async function DeliveryPage({
     && delivery.css_ordering_capabilities.company_context
     && delivery.css_ordering_capabilities.company_active
     && delivery.css_ordering_capabilities.can_checkout;
+  const defaultCountry = delivery.customer.addresses.find((address) => address.default_shipping)?.country_code
+    || delivery.customer.addresses[0]?.country_code
+    || "GB";
 
   return <>
     <SiteHeader customerName={customerName} companyName={selectedCompany?.name} basketQuantity={cart.total_quantity}/>
@@ -115,7 +118,9 @@ export default async function DeliveryPage({
               <label className="field"><span>Town / city</span><input name="city" required/></label>
               <label className="field"><span>County / region</span><input name="region"/></label>
               <label className="field"><span>Postcode</span><input name="postcode" required/></label>
-              <label className="field"><span>Country code</span><input name="country_code" defaultValue="GB" maxLength={2} pattern="[A-Za-z]{2}" required/></label>
+              <label className="field"><span>Country</span><select name="country_code" defaultValue={defaultCountry} required>
+                {delivery.countries.map((country) => <option value={country.id} key={country.id}>{country.full_name_locale || country.id}</option>)}
+              </select></label>
               <label className="field delivery-span-2"><span>Telephone</span><input name="telephone" type="tel" required/></label>
               <div className="delivery-span-2"><button className="button" type="submit" disabled={!canCheckout}>Use this address</button></div>
             </form>
