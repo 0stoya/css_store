@@ -1,3 +1,4 @@
+import { ChevronDown, ChevronRight, ShoppingBasket, UserRound } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { unstable_rethrow } from "next/navigation";
@@ -45,7 +46,10 @@ export async function SiteHeader({
       </Link>
       <nav aria-label="Store navigation" className="store-nav">
         {customerName ? <details className="products-mega">
-          <summary>Products</summary>
+          <summary>
+            <span>Products</span>
+            <ChevronDown className="products-mega-chevron" size={15} strokeWidth={2.25} aria-hidden="true"/>
+          </summary>
           <div className="mega-menu">
             <div className="mega-menu-heading">
               <div>
@@ -64,13 +68,19 @@ export async function SiteHeader({
                   <strong>{category.name}</strong>
                   <small>{category.product_count} product{category.product_count === 1 ? "" : "s"}</small>
                 </span>
-                <span aria-hidden="true">›</span>
+                <ChevronRight size={17} strokeWidth={2.2} aria-hidden="true"/>
               </Link>)}
             </div>
           </div>
         </details> : <Link href="/catalogue">Products</Link>}
-        {customerName ? <Link href="/basket">Basket{typeof quantity === "number" && quantity > 0 ? ` (${quantity})` : ""}</Link> : null}
-        {customerName ? <Link href="/account">Account</Link> : <Link href="/login">Sign in</Link>}
+        {customerName ? <Link className="store-nav-link" href="/basket">
+          <ShoppingBasket size={16} strokeWidth={2.1} aria-hidden="true"/>
+          <span>Basket{typeof quantity === "number" && quantity > 0 ? ` (${quantity})` : ""}</span>
+        </Link> : null}
+        {customerName ? <Link className="store-nav-link" href="/account">
+          <UserRound size={16} strokeWidth={2.1} aria-hidden="true"/>
+          <span>Account</span>
+        </Link> : <Link href="/login">Sign in</Link>}
       </nav>
       {customerName ? <div className="identity">
         <strong title={customerName}>{customerName}</strong>
