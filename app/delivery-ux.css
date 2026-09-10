@@ -27,14 +27,24 @@
 
 .delivery-address-grid {
   margin-top: 18px;
+  grid-template-columns: 1fr;
 }
 
 .delivery-saved-address {
+  width: 100%;
   min-height: 0;
   padding: 18px;
   display: grid;
-  gap: 12px;
+  gap: 14px;
   align-content: start;
+  border: 1px solid var(--line);
+  transition: border-color .16s ease, box-shadow .16s ease, background-color .16s ease;
+}
+
+.delivery-saved-address.selected {
+  border-color: #65b981;
+  background: #fbfffc;
+  box-shadow: 0 0 0 1px rgb(42 138 78 / 10%);
 }
 
 .delivery-address-heading {
@@ -45,10 +55,22 @@
 
 .delivery-address-heading > div {
   min-width: 0;
+  flex: 1 1 auto;
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 6px 8px;
+}
+
+.delivery-address-heading strong {
+  color: var(--ink-strong);
+  font-size: .95rem;
+}
+
+.delivery-address-heading small {
+  flex-basis: 100%;
+  color: var(--muted);
+  font-size: .76rem;
 }
 
 .delivery-address-icon,
@@ -63,12 +85,87 @@
   color: var(--blue);
 }
 
-.delivery-saved-address > p {
-  margin: 0;
+.delivery-saved-address.selected .delivery-address-icon {
+  background: #edf8f1;
+  color: var(--success);
+}
+
+.delivery-address-details {
+  display: grid;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+
+.delivery-address-detail {
+  min-width: 0;
+  padding: 9px 0;
+  display: grid;
+  grid-template-columns: 96px minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.delivery-address-detail + .delivery-address-detail {
+  border-top: 1px solid #edf1f4;
+}
+
+.delivery-address-detail > span {
+  color: var(--muted);
+  font-size: .76rem;
+  line-height: 1.45;
+}
+
+.delivery-address-detail > strong {
+  min-width: 0;
+  color: var(--ink-strong);
+  font-size: .82rem;
+  font-weight: 650;
+  line-height: 1.45;
+}
+
+.delivery-address-lines {
+  display: grid;
+  gap: 2px;
+}
+
+.delivery-address-phone {
+  width: max-content;
+  max-width: 100%;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted-strong);
+  font-size: .8rem;
+  text-decoration: none;
+}
+
+.delivery-address-phone svg {
+  flex: 0 0 auto;
+  color: var(--blue);
+}
+
+.delivery-address-phone:hover {
+  color: var(--blue);
+  text-decoration: underline;
 }
 
 .delivery-saved-address form {
-  margin-top: 2px;
+  margin-top: 0;
+}
+
+.delivery-address-selected-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border-color: #bddbc8;
+  background: #edf8f1;
+  color: var(--success);
+}
+
+.delivery-address-selected-button:disabled {
+  opacity: 1;
+  cursor: default;
 }
 
 .delivery-alt-address {
@@ -195,6 +292,47 @@
 
 .delivery-summary-card dl {
   margin-top: 18px;
+  display: grid;
+  gap: 0;
+}
+
+.delivery-summary-card dl > div {
+  min-height: 42px;
+  padding: 10px 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 18px;
+  align-items: center;
+}
+
+.delivery-summary-card dl > div + div {
+  border-top: 1px solid #edf1f4;
+}
+
+.delivery-summary-card dt {
+  color: var(--muted-strong);
+  line-height: 1.35;
+}
+
+.delivery-summary-card dd {
+  margin: 0;
+  color: var(--ink-strong);
+  font-weight: 800;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.delivery-summary-card .basket-grand-total {
+  margin-top: 3px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+
+.delivery-summary-card .basket-grand-total dt,
+.delivery-summary-card .basket-grand-total dd {
+  color: var(--ink-strong);
+  font-size: 1rem;
+  font-weight: 850;
 }
 
 .delivery-summary-method {
@@ -265,6 +403,11 @@
   .delivery-address-heading > div {
     display: grid;
     gap: 5px;
+  }
+
+  .delivery-address-detail {
+    grid-template-columns: 1fr;
+    gap: 3px;
   }
 
   .delivery-method-option {
