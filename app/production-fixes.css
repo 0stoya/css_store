@@ -228,8 +228,8 @@ body:has(.login-page) .site-footer { display: none; }
 }
 
 .footer-accreditations-wrap {
-  background: #fff;
-  border-bottom: 1px solid rgb(255 255 255 / 12%);
+  background: #06477f;
+  border-bottom: 1px solid rgb(255 255 255 / 16%);
 }
 
 .footer-accreditations,
@@ -239,25 +239,29 @@ body:has(.login-page) .site-footer { display: none; }
 }
 
 .footer-accreditations {
-  min-height: 112px;
+  min-height: 118px;
   padding: 22px 0;
   display: grid;
   grid-template-columns: repeat(6, minmax(0, 1fr));
   align-items: center;
-  gap: 26px;
+  gap: 20px;
 }
 
 .footer-accreditation {
   min-width: 0;
-  height: 66px;
+  height: 72px;
+  padding: 8px 12px;
   display: grid;
   place-items: center;
+  border: 1px solid rgb(255 255 255 / 12%);
+  border-radius: 12px;
+  background: #07518f;
 }
 
 .footer-accreditation img {
   display: block;
   max-width: 100%;
-  max-height: 64px;
+  max-height: 58px;
   width: auto;
   height: auto;
   object-fit: contain;
@@ -278,8 +282,7 @@ body:has(.login-page) .site-footer { display: none; }
   letter-spacing: -.01em;
 }
 
-.footer-column nav,
-.footer-socials {
+.footer-column nav {
   display: grid;
   gap: 9px;
 }
@@ -309,32 +312,41 @@ body:has(.login-page) .site-footer { display: none; }
 }
 
 .footer-socials {
-  grid-template-columns: repeat(2, max-content);
-  gap: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px;
 }
 
 .footer-socials a {
-  min-height: 38px;
-  padding: 0 12px;
+  width: 42px;
+  height: 42px;
+  min-height: 42px;
+  padding: 0;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid rgb(255 255 255 / 28%);
-  border-radius: 999px;
-  background: rgb(255 255 255 / 7%);
+  border: 1px solid rgb(255 255 255 / 30%);
+  border-radius: 50%;
+  background: rgb(255 255 255 / 8%);
+  color: #fff;
+  transition: background-color .16s ease, border-color .16s ease, transform .16s ease;
 }
 
 .footer-socials a:hover {
-  background: rgb(255 255 255 / 13%);
+  border-color: rgb(255 255 255 / 55%);
+  background: rgb(255 255 255 / 15%);
   text-decoration: none;
+  transform: translateY(-1px);
 }
+
+.footer-socials svg { display: block; }
 
 .footer-bottom {
   margin-top: 38px;
   padding-top: 22px;
   display: flex;
-  align-items: end;
-  justify-content: space-between;
+  align-items: flex-start;
+  justify-content: flex-start;
   gap: 28px;
   border-top: 1px solid rgb(255 255 255 / 20%);
   color: rgb(255 255 255 / 74%);
@@ -370,15 +382,10 @@ body:has(.login-page) .site-footer { display: none; }
 
   .footer-accreditations {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 18px 24px;
+    gap: 14px;
   }
 
   .footer-grid { gap: 32px; }
-
-  .footer-bottom {
-    align-items: flex-start;
-    flex-direction: column;
-  }
 }
 
 @media (max-width: 560px) {
@@ -394,6 +401,5 @@ body:has(.login-page) .site-footer { display: none; }
 
   .product-media { height: 280px; }
   .footer-grid { grid-template-columns: 1fr; }
-  .footer-socials { grid-template-columns: repeat(2, 1fr); }
-  .footer-socials a { width: 100%; }
+  .footer-socials { gap: 10px; }
 }
