@@ -15,6 +15,10 @@ function paymentRedirect(kind: "error" | "notice", value: string): never {
   redirect(`/checkout/payment?${kind}=${encodeURIComponent(value)}`);
 }
 
+function deliveryRedirect(value: string): never {
+  redirect(`/checkout/delivery?error=${encodeURIComponent(value)}`);
+}
+
 function message(error: unknown) {
   unstable_rethrow(error);
   return error instanceof Error ? error.message : "The order could not be submitted.";
@@ -45,6 +49,20 @@ function confirmationUrl(params: Record<string, string | number | boolean | null
   return `/checkout/confirmation?${search.toString()}`;
 }
 
+export async function preparePaymentAction() {
+  const token = await requireCustomerToken();
+
+  try {
+    const context = await getCheckoutContext(token);
+    const cart = assertCheckoutReady(context);
+    await setBillingSameAsShipping(token, cart.id);
+  } catch (error) {
+    deliveryRedirect(message(error));
+  }
+
+  redirect("/checkout/payment");
+}
+
 export async function completeCheckoutAction(formData: FormData) {
   const token = await requireCustomerToken();
   const paymentCode = String(formData.get("payment_method") || "").trim();
@@ -56,8 +74,8 @@ export async function completeCheckoutAction(formData: FormData) {
     const paymentMethod = initialCart.available_payment_methods.find((method) => method.code === paymentCode);
     if (!paymentMethod) throw new Error("That payment method is no longer available for this basket.");
 
-    // Phase 3 uses the selected delivery address as billing. This is cart-only and does not
-    // mutate the customer's saved Magento address book.
+    // Keep billing aligned with the selected delivery address immediately before payment.
+    // This is cart-only and does not mutate the customer's saved Magento address book.
     await setBillingSameAsShipping(token, initialCart.id);
     await setCheckoutPaymentMethod(token, initialCart.id, paymentMethod.code);
 
@@ -84,6 +102,13 @@ export async function completeCheckoutAction(formData: FormData) {
         placed: result.order_placed,
         order: result.order_number,
       }));
+    }
+
+    // Native Magento order placement is only valid when Fluid explicitly says this company
+    // quote is ALLOWED. Missing/approval-required state fails closed instead of bypassing
+    // the company credit-order workflow.
+    if (cart.css_purchase_eligibility?.approval_status !== "ALLOWED") {
+      throw new Error("Fluid has not authorised this company basket for native order placement.");
     }
 
     const order = await placeCheckoutOrder(token, cart.id);
