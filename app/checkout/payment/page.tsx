@@ -74,34 +74,33 @@ export default async function PaymentPage({
     <main className="shell stack">
       <div className="basket-heading">
         <div>
-          <p className="eyebrow">Checkout · payment & review</p>
+          <p className="eyebrow">Checkout · Payment & review</p>
           <h1>Review and submit</h1>
-          <p className="muted">Payment methods below come directly from Magento for this authenticated company basket.</p>
+          <p className="muted">Choose an available payment method, check your order details and submit when you are ready.</p>
         </div>
         <Link className="button secondary" href="/checkout/delivery">Back to delivery</Link>
       </div>
 
-      {messages.error ? <p className="error">{messages.error}</p> : null}
-      {messages.notice ? <p className="success">{messages.notice}</p> : null}
+      {messages.error ? <p className="error" role="alert">{messages.error}</p> : null}
+      {messages.notice ? <p className="success" role="status">{messages.notice}</p> : null}
 
       {!cart.total_quantity ? <section className="empty card"><h2>Your basket is empty</h2><p><Link className="button" href="/catalogue">Browse products</Link></p></section> : null}
-      {cart.total_quantity > 0 && !canCheckout ? <p className="error">This company is not currently allowed to place this order.</p> : null}
-      {cart.total_quantity > 0 && canCheckout && !nativeApprovalAllowed ? <p className="error">Fluid has not authorised this company basket for native order placement, and the credit-order submission path is not currently available.</p> : null}
-      {cart.total_quantity > 0 && (!shippingAddress || !shippingMethod) ? <section className="notice"><strong>Delivery is not complete.</strong><p className="muted small">Choose a delivery address and backend-provided shipping method before payment.</p><p><Link className="button secondary" href="/checkout/delivery">Complete delivery</Link></p></section> : null}
+      {cart.total_quantity > 0 && !canCheckout ? <p className="error" role="alert">This company is not currently able to place this order.</p> : null}
+      {cart.total_quantity > 0 && canCheckout && !nativeApprovalAllowed ? <p className="error" role="alert">This order is not currently authorised for submission. Review the purchase status in your basket or contact your account administrator.</p> : null}
+      {cart.total_quantity > 0 && (!shippingAddress || !shippingMethod) ? <section className="notice"><strong>Delivery is not complete.</strong><p className="muted small">Choose a delivery address and delivery method before continuing.</p><p><Link className="button secondary" href="/checkout/delivery">Complete delivery</Link></p></section> : null}
 
       {cart.total_quantity > 0 ? <div className="delivery-layout">
         <div className="stack">
           <section className="card delivery-card">
             <h2>Payment method</h2>
-            <p className="muted">Only methods Magento currently exposes for this cart can be selected.</p>
+            <p className="muted">Choose from the payment options currently available for this order.</p>
             {methods.length ? <form action={completeCheckoutAction} className="stack">
-              <div className="shipping-method-list">
+              <div className="shipping-method-list" role="radiogroup" aria-label="Payment method">
                 {methods.map((method) => {
                   const selected = cart.selected_payment_method?.code === method.code;
                   return <label className={`shipping-method ${selected ? "selected" : ""}`} key={method.code}>
                     <div>
                       <strong>{method.title}</strong>
-                      <div className="muted small">{method.code}</div>
                     </div>
                     <input type="radio" name="payment_method" value={method.code} defaultChecked={selected} required disabled={!ready}/>
                   </label>;
@@ -110,27 +109,25 @@ export default async function PaymentPage({
 
               <div className="notice">
                 <strong>Billing address</strong>
-                <p className="muted small">The selected delivery address will also be used as the billing address for this checkout. Saved customer addresses are not modified.</p>
+                <p className="muted small">Your selected delivery address will also be used as the billing address for this order. Your saved addresses will not be changed.</p>
               </div>
 
               {usesCreditOrder ? <div className="notice">
-                <strong>Fluid company credit workflow</strong>
-                <p className="muted small">Fluid will make the authoritative approval decision after submission. {capabilities.can_auto_approve_credit_order ? "This user may be eligible for automatic approval, but the backend still decides the result." : "The order may be held for approval according to the company workflow."}</p>
-                {cart.css_purchase_eligibility?.approval_status ? <p className="muted small">Current backend cart approval state: {cart.css_purchase_eligibility.approval_status}</p> : null}
+                <strong>Company credit order</strong>
+                <p className="muted small">Your order may require approval before it is placed. The result will be shown as soon as you submit it.</p>
               </div> : <div className="notice">
-                <strong>Native Magento checkout</strong>
-                <p className="muted small">This order will be submitted through Magento&apos;s standard placeOrder mutation only when Fluid&apos;s current cart approval state is ALLOWED.</p>
+                <strong>Order submission</strong>
+                <p className="muted small">Your order will be checked again when you submit it to make sure the basket and account are still valid.</p>
               </div>}
 
               <button className="button" type="submit" disabled={!ready}>Submit order</button>
-              <p className="muted small">The cart and company capabilities are re-checked on the server immediately before order submission.</p>
-            </form> : <p className="error">Magento has not returned an available payment method for this basket.</p>}
+            </form> : <p className="error" role="alert">No payment methods are currently available for this order.</p>}
           </section>
         </div>
 
         <aside className="stack">
           <section className="card delivery-card">
-            <h2>Final basket review</h2>
+            <h2>Order items</h2>
             <div className="checkout-line-list">
               {cart.itemsV2.items.map((item) => {
                 const sku = item.configured_variant?.sku || item.product.sku;
@@ -140,7 +137,7 @@ export default async function PaymentPage({
                     <strong>{item.product.name}</strong>
                     <div className="muted small">{sku} · Qty {item.quantity}</div>
                     {item.configurable_options?.length ? <div className="muted small">{item.configurable_options.map((option) => `${option.option_label}: ${option.value_label}`).join(" · ")}</div> : null}
-                    {item.css_kit ? <div className="badge">Grouped/configurable item</div> : item.configured_variant ? <div className="badge">Configurable item</div> : null}
+                    {item.css_kit ? <div className="badge">Grouped item</div> : item.configured_variant ? <div className="badge">Configured item</div> : null}
                     {employee ? <div className="muted small">Employee: {employee}</div> : null}
                   </div>
                 </div>;
