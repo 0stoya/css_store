@@ -3,6 +3,7 @@ import { Building2, ShoppingBasket, ShoppingBag } from "lucide-react";
 import { AccountSidebar } from "@/components/account-sidebar";
 import { SiteHeader } from "@/components/site-header";
 import { getCustomerContext } from "@/lib/magento/context";
+import { canUseCreditOrderScope } from "@/lib/magento/credit-orders";
 import { requireCustomerToken } from "@/lib/session";
 
 export const metadata = { title: "Account" };
@@ -13,7 +14,10 @@ export default async function AccountPage({
   searchParams: Promise<{ error?: string; notice?: string }>;
 }) {
   const token = await requireCustomerToken();
-  const ctx = await getCustomerContext(token);
+  const [ctx, canApprove] = await Promise.all([
+    getCustomerContext(token),
+    canUseCreditOrderScope(token, "APPROVAL"),
+  ]);
   const selected = ctx.css_company_context.companies.find((company) => company.selected) || null;
   const name = `${ctx.customer.firstname} ${ctx.customer.lastname}`.trim();
   const messages = await searchParams;
@@ -26,6 +30,7 @@ export default async function AccountPage({
         email={ctx.customer.email}
         companies={ctx.css_company_context.companies}
         active="overview"
+        showApprovals={canApprove}
       />
 
       <section className="account-workspace-content stack">
