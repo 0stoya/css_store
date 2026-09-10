@@ -1,4 +1,6 @@
-/* Shared Lucide treatment for portal controls. */
+/* Shared Lucide treatment for portal controls.
+   Use this for generic interface actions: quantity steppers, disclosure controls,
+   navigation affordances, status actions and compact buttons. */
 
 .site-header nav .store-nav-link {
   display: inline-flex;
@@ -24,8 +26,6 @@
   color: #a8bdcc;
 }
 
-/* Shared primitives for quantity steppers, description disclosure controls,
-   navigation affordances and compact icon actions. */
 .icon-inline {
   display: inline-flex;
   align-items: center;
