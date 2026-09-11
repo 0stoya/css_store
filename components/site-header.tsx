@@ -1,6 +1,7 @@
 import { Search, ShoppingBasket, UserRound } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
+import { CatalogueSearch } from "@/components/catalogue-search";
 import { ProductMegaMenu } from "@/components/product-mega-menu";
 import { getStoreName } from "@/lib/config";
 import { getMenuCategories, type MenuCategory } from "@/lib/magento/menu-categories";
@@ -8,7 +9,7 @@ import { getCustomerToken } from "@/lib/session";
 
 export async function SiteHeader({
   customerName,
-  companyName,
+  companyName: _companyName,
   basketQuantity,
 }: {
   customerName?: string;
@@ -38,7 +39,7 @@ export async function SiteHeader({
         {customerName ? <Link className="store-nav-link store-nav-all-products" href="/catalogue">All products</Link> : null}
         {customerName ? <ProductMegaMenu categories={categories}/> : <Link href="/catalogue">Products</Link>}
         {customerName ? <Link
-          className="store-nav-link store-nav-search"
+          className="store-nav-link store-nav-search-mobile"
           href="/catalogue?focus=search#catalogue-search"
           aria-label="Search products"
           title="Search products"
@@ -54,10 +55,9 @@ export async function SiteHeader({
           <span>Account</span>
         </Link> : <Link href="/login">Sign in</Link>}
       </nav>
-      {customerName ? <div className="identity">
-        <strong title={customerName}>{customerName}</strong>
-        <span title={companyName || "No company selected"}>{companyName || "No company selected"}</span>
-      </div> : null}
+      {customerName ? <div className="header-product-search">
+        <CatalogueSearch variant="header" placeholder="Search products"/>
+      </div> : <span/>}
     </header>
     <span id="main-content-start" className="content-anchor" tabIndex={-1}/>
   </>;
