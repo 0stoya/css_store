@@ -145,14 +145,13 @@ export default async function CreditOrdersPage({
             </div>
 
             <div className={styles.orderMeta}>
-              <span className={`${styles.statusBadge} ${styles.statusBadgePrimary}`}>{readableCreditOrderStatus(order.status)}</span>
               {order.created_at ? <span className={styles.metaItem}><Clock3 size={14} aria-hidden="true"/>{formatCreditOrderDateTime(order.created_at)}</span> : null}
               {order.order_number ? <span className={styles.softBadge}>Sales order {order.order_number}</span> : null}
               {order.auto_approved ? <span className={styles.softBadge}>Auto approved</span> : null}
             </div>
 
             {actions.length ? <div className={styles.actionBadges}>
-              {actions.map((action) => <span className={styles.actionBadge} key={action}>{action}</span>)}
+              {actions.map((action) => <span className={styles.softBadge} key={action}>{action}</span>)}
             </div> : null}
           </div>
           <Link className={styles.detailsLink} href={`/account/credit-orders/${encodeURIComponent(order.number)}${isApprovalQueue ? "?from=approvals" : ""}`}>
