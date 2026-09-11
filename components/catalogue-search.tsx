@@ -13,18 +13,21 @@ export function CatalogueSearch({
   categoryUid,
   placeholder = "Search products by name or SKU",
   autoFocus = false,
+  variant = "default",
 }: {
   defaultValue?: string;
   action?: string;
   categoryUid?: string;
   placeholder?: string;
   autoFocus?: boolean;
+  variant?: "default" | "header";
 }) {
   const router = useRouter();
   const rootRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const listId = `catalogue-suggestions-${useId().replace(/:/g, "")}`;
-  const inputId = "catalogue-search";
+  const reactId = useId().replace(/:/g, "");
+  const inputId = `catalogue-search-${reactId}`;
+  const listId = `catalogue-suggestions-${reactId}`;
   const [value, setValue] = useState(defaultValue);
   const [suggestions, setSuggestions] = useState<StoreProductSuggestion[]>([]);
   const [open, setOpen] = useState(false);
@@ -33,6 +36,7 @@ export function CatalogueSearch({
 
   const cleanValue = value.trim();
   const hasSearchableValue = cleanValue.length >= 2;
+  const isHeader = variant === "header";
 
   useEffect(() => {
     if (!hasSearchableValue) {
@@ -136,9 +140,9 @@ export function CatalogueSearch({
 
   const showPanel = open && hasSearchableValue;
 
-  return <div className="catalogue-search-autocomplete" ref={rootRef}>
+  return <div className={`catalogue-search-autocomplete${isHeader ? " catalogue-search-header" : ""}`} ref={rootRef}>
     <form className="catalogue-search-form" role="search" onSubmit={submitSearch}>
-      <Search className="catalogue-search-icon" size={21} strokeWidth={2} aria-hidden="true"/>
+      {!isHeader ? <Search className="catalogue-search-icon" size={21} strokeWidth={2} aria-hidden="true"/> : null}
       <label className="sr-only" htmlFor={inputId}>Search products</label>
       <input
         id={inputId}
@@ -169,7 +173,7 @@ export function CatalogueSearch({
       {value ? <button className="catalogue-search-clear" type="button" onClick={clearSearch} aria-label="Clear search">
         <X size={18} strokeWidth={2}/>
       </button> : null}
-      <button className="catalogue-search-submit" type="submit">
+      <button className="catalogue-search-submit" type="submit" aria-label={isHeader ? "Search products" : undefined}>
         <Search size={17} strokeWidth={2.2} aria-hidden="true"/>
         <span>Search</span>
       </button>
