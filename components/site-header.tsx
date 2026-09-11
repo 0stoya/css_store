@@ -20,20 +20,25 @@ export async function SiteHeader({
   let categories: StoreCategory[] = [];
 
   if (customerName) {
-    try {
-      const token = await getCustomerToken();
-      if (token) {
-        const [summary, menuCategories] = await Promise.all([
-          quantity === undefined ? getCustomerCartSummary(token) : Promise.resolve(null),
-          getCategories(token),
-        ]);
-        if (summary) quantity = summary.total_quantity;
-        categories = menuCategories;
+    const token = await getCustomerToken();
+    if (token) {
+      const [summaryResult, categoriesResult] = await Promise.allSettled([
+        quantity === undefined ? getCustomerCartSummary(token) : Promise.resolve(null),
+        getCategories(token),
+      ]);
+
+      if (summaryResult.status === "fulfilled") {
+        if (summaryResult.value) quantity = summaryResult.value.total_quantity;
+      } else {
+        unstable_rethrow(summaryResult.reason);
+        quantity = undefined;
       }
-    } catch (error) {
-      unstable_rethrow(error);
-      quantity = undefined;
-      categories = [];
+
+      if (categoriesResult.status === "fulfilled") {
+        categories = categoriesResult.value;
+      } else {
+        unstable_rethrow(categoriesResult.reason);
+      }
     }
   }
 
