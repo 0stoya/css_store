@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { CatalogueSearch } from "@/components/catalogue-search";
 import { ProductCard } from "@/components/product-card";
 import { SiteHeader } from "@/components/site-header";
 import { getProducts } from "@/lib/magento/catalogue";
@@ -33,21 +34,14 @@ export default async function CataloguePage({
 
   return <>
     <SiteHeader customerName={name} companyName={selected?.name}/>
-    <main className="shell">
-      <header className="portal-page-header">
-        <div className="portal-page-heading">
+    <main className="shell catalogue-page">
+      <header className="catalogue-hero">
+        <div className="catalogue-hero-heading">
           <p className="eyebrow">Catalogue</p>
           <h1>Products</h1>
-          <p className="muted">
-            Browse products available to {selected?.name || "your company"}. Your prices and availability are shown automatically.
-          </p>
           {searchTerm ? <p className="catalogue-result-note">{products.total_count} result{products.total_count === 1 ? "" : "s"} for “{searchTerm}”.</p> : null}
         </div>
-        <form className="catalogue-search" role="search">
-          <label className="sr-only" htmlFor="catalogue-search">Search products</label>
-          <input id="catalogue-search" name="q" type="search" defaultValue={q} placeholder="Search by product name or SKU"/>
-          <button className="button secondary" type="submit">Search</button>
-        </form>
+        <CatalogueSearch defaultValue={q}/>
       </header>
 
       <div className="portal-section-heading catalogue-products-heading">
