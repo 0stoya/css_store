@@ -1,11 +1,18 @@
 import { ChevronDown, ChevronRight, ShoppingBasket, UserRound } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import { unstable_rethrow } from "next/navigation";
 import { getStoreName } from "@/lib/config";
-import { getCustomerCartSummary } from "@/lib/magento/cart";
-import { getCategories, type StoreCategory } from "@/lib/magento/catalogue";
+import { getMenuCategories, type MenuCategory } from "@/lib/magento/menu-categories";
 import { getCustomerToken } from "@/lib/session";
+
+function categoryHref(category: Pick<MenuCategory, "uid" | "url_key">) {
+  return `/catalogue/category/${encodeURIComponent(category.url_key || category.uid)}`;
+}
+
+function ProductCount({ count }: { count: number }) {
+  if (count <= 0) return null;
+  return <small>{count} product{count === 1 ? "" : "s"}</small>;
+}
 
 export async function SiteHeader({
   customerName,
@@ -16,23 +23,14 @@ export async function SiteHeader({
   companyName?: string | null;
   basketQuantity?: number;
 }) {
-  let quantity = basketQuantity;
-  let categories: StoreCategory[] = [];
+  const quantity = basketQuantity;
+  let categories: MenuCategory[] = [];
 
   if (customerName) {
     try {
       const token = await getCustomerToken();
-      if (token) {
-        const [summary, menuCategories] = await Promise.all([
-          quantity === undefined ? getCustomerCartSummary(token) : Promise.resolve(null),
-          getCategories(token),
-        ]);
-        if (summary) quantity = summary.total_quantity;
-        categories = menuCategories;
-      }
-    } catch (error) {
-      unstable_rethrow(error);
-      quantity = undefined;
+      if (token) categories = await getMenuCategories(token);
+    } catch {
       categories = [];
     }
   }
@@ -45,6 +43,7 @@ export async function SiteHeader({
         <span className="sr-only">{getStoreName()}</span>
       </Link>
       <nav aria-label="Store navigation" className="store-nav">
+        {customerName ? <Link className="store-nav-link store-nav-all-products" href="/catalogue">All products</Link> : null}
         {customerName ? <details className="products-mega">
           <summary>
             <span>Products</span>
@@ -53,24 +52,34 @@ export async function SiteHeader({
           <div className="mega-menu">
             <div className="mega-menu-heading">
               <div>
-                <strong>Shop products</strong>
-                <span>Browse all products or choose a category.</span>
+                <strong>Shop by category</strong>
+                <span>Browse categories and subcategories available in the store menu.</span>
               </div>
-              <Link href="/catalogue">View all products</Link>
             </div>
-            <div className="mega-menu-grid">
-              {categories.map((category) => <Link
-                className="mega-menu-category"
-                href={`/catalogue/category/${encodeURIComponent(category.url_key || category.uid)}`}
-                key={category.uid}
-              >
-                <span>
-                  <strong>{category.name}</strong>
-                  <small>{category.product_count} product{category.product_count === 1 ? "" : "s"}</small>
-                </span>
-                <ChevronRight size={17} strokeWidth={2.2} aria-hidden="true"/>
-              </Link>)}
-            </div>
+            {categories.length ? <div className="mega-menu-grid">
+              {categories.map((category) => <section className="mega-menu-category-group" key={category.uid}>
+                <Link className="mega-menu-category" href={categoryHref(category)}>
+                  <span>
+                    <strong>{category.name}</strong>
+                    <ProductCount count={category.product_count}/>
+                  </span>
+                  <ChevronRight size={17} strokeWidth={2.2} aria-hidden="true"/>
+                </Link>
+                {category.children.length ? <ul className="mega-menu-children">
+                  {category.children.map((child) => <li key={child.uid}>
+                    <Link className="mega-menu-child" href={categoryHref(child)}>
+                      <span>{child.name}</span>
+                      {child.children.length ? <ChevronRight size={14} strokeWidth={2.1} aria-hidden="true"/> : null}
+                    </Link>
+                    {child.children.length ? <ul className="mega-menu-grandchildren">
+                      {child.children.map((grandchild) => <li key={grandchild.uid}>
+                        <Link className="mega-menu-grandchild" href={categoryHref(grandchild)}>{grandchild.name}</Link>
+                      </li>)}
+                    </ul> : null}
+                  </li>)}
+                </ul> : null}
+              </section>)}
+            </div> : <p className="mega-menu-empty">No product categories are currently available in the store menu.</p>}
           </div>
         </details> : <Link href="/catalogue">Products</Link>}
         {customerName ? <Link className="store-nav-link" href="/basket">

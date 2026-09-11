@@ -4,6 +4,7 @@ import "./globals.css";
 import "./accessibility.css";
 import "./portal-ux.css";
 import "./production-fixes.css";
+import "./mega-menu.css";
 import "./icon-system.css";
 import "./pdp.css";
 import "./pdp-simplified.css";
