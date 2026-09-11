@@ -54,6 +54,7 @@ export function ProductMegaMenu({ categories }: { categories: MenuCategory[] }) 
   const rootRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const suppressTriggerFocusRef = useRef(false);
 
   const activeRoot = categories.find((category) => category.uid === activeRootUid) || null;
   const activeChild = activeRoot?.children.find((child) => child.uid === activeChildUid) || null;
@@ -75,7 +76,10 @@ export function ProductMegaMenu({ categories }: { categories: MenuCategory[] }) 
     setOpen(false);
     setActiveRootUid(null);
     setActiveChildUid(null);
-    if (restoreFocus) triggerRef.current?.focus();
+    if (restoreFocus) {
+      suppressTriggerFocusRef.current = true;
+      triggerRef.current?.focus();
+    }
   }
 
   function scheduleClose() {
@@ -122,7 +126,6 @@ export function ProductMegaMenu({ categories }: { categories: MenuCategory[] }) 
     ref={rootRef}
     onMouseEnter={openMenu}
     onMouseLeave={scheduleClose}
-    onFocusCapture={openMenu}
     onBlurCapture={(event) => {
       if (!event.currentTarget.contains(event.relatedTarget as Node | null)) scheduleClose();
     }}
@@ -132,6 +135,13 @@ export function ProductMegaMenu({ categories }: { categories: MenuCategory[] }) 
       type="button"
       aria-expanded={open}
       aria-controls="products-mega-menu"
+      onFocus={() => {
+        if (suppressTriggerFocusRef.current) {
+          suppressTriggerFocusRef.current = false;
+          return;
+        }
+        openMenu();
+      }}
       onClick={() => open ? closeMenu() : openMenu()}
       ref={triggerRef}
     >
