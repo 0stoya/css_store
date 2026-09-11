@@ -56,7 +56,7 @@ export function CatalogueSearch({
           setActiveIndex(-1);
           setOpen(true);
         }
-      } catch (error) {
+      } catch {
         if (!controller.signal.aborted) {
           setSuggestions([]);
           setActiveIndex(-1);
