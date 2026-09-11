@@ -9,6 +9,7 @@ import {
   type CreditOrderScope,
 } from "@/lib/magento/credit-orders";
 import { requireCustomerToken } from "@/lib/session";
+import { formatCreditOrderDateTime, readableCreditOrderStatus } from "./presentation";
 import styles from "./credit-orders.module.css";
 
 export const metadata = { title: "Credit orders" };
@@ -34,19 +35,12 @@ function money(value: number) {
   return new Intl.NumberFormat("en-GB", { style: "currency", currency: "GBP" }).format(value);
 }
 
-function readableStatus(value: string) {
-  return value
-    .replace(/_/g, " ")
-    .replace(/\b\w/g, (letter) => letter.toUpperCase());
-}
-
 function actionSummary(order: CreditOrder) {
   const actions: string[] = [];
-  if (order.actions.can_approve) actions.push("Approval available");
-  if (order.actions.can_reject) actions.push("Rejection available");
-  if (order.actions.can_cancel) actions.push("Cancellation available");
+  if (order.actions.can_approve || order.actions.can_reject) actions.push("Decision required");
+  if (order.actions.can_cancel) actions.push("Can cancel");
   if (order.actions.can_place_order && !order.actions.requires_payment_details) actions.push("Ready to place");
-  if (order.actions.requires_payment_details) actions.push("Payment details required");
+  if (order.actions.requires_payment_details) actions.push("Payment required");
   return actions;
 }
 
@@ -102,8 +96,8 @@ export default async function CreditOrdersPage({
       <h1>{isApprovalQueue ? "Order approvals" : "Credit orders"}</h1>
       <p className="muted">
         {isApprovalQueue
-          ? "Review credit orders waiting for an approval decision."
-          : "Track credit orders and complete any actions available to you."}
+          ? "Review credit orders that are waiting for your decision."
+          : "Track credit orders from approval through to sales order."}
       </p>
     </header>
 
@@ -145,20 +139,19 @@ export default async function CreditOrdersPage({
             <div className={styles.orderTitleRow}>
               <div>
                 <p className={styles.orderNumber}>Credit order {order.number}</p>
-                <h2>{readableStatus(order.status)}</h2>
+                <h2>{readableCreditOrderStatus(order.status)}</h2>
               </div>
               <span className={styles.amount}>{money(order.grand_total)}</span>
             </div>
 
             <div className={styles.orderMeta}>
-              <span className="badge">{readableStatus(order.status)}</span>
-              {order.created_at ? <span className={styles.metaItem}><Clock3 size={14} aria-hidden="true"/>Created {order.created_at}</span> : null}
-              {order.order_number ? <span className="badge">Order {order.order_number}</span> : null}
-              {order.auto_approved ? <span className="badge">Automatically approved</span> : null}
+              {order.created_at ? <span className={styles.metaItem}><Clock3 size={14} aria-hidden="true"/>{formatCreditOrderDateTime(order.created_at)}</span> : null}
+              {order.order_number ? <span className={styles.softBadge}>Sales order {order.order_number}</span> : null}
+              {order.auto_approved ? <span className={styles.softBadge}>Auto approved</span> : null}
             </div>
 
             {actions.length ? <div className={styles.actionBadges}>
-              {actions.map((action) => <span className="badge" key={action}>{action}</span>)}
+              {actions.map((action) => <span className={styles.softBadge} key={action}>{action}</span>)}
             </div> : null}
           </div>
           <Link className={styles.detailsLink} href={`/account/credit-orders/${encodeURIComponent(order.number)}${isApprovalQueue ? "?from=approvals" : ""}`}>
