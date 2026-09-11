@@ -40,7 +40,7 @@ export async function SiteHeader({
         {customerName ? <ProductMegaMenu categories={categories}/> : <Link href="/catalogue">Products</Link>}
         {customerName ? <Link
           className="store-nav-link store-nav-search-mobile"
-          href="/catalogue?focus=search#catalogue-search"
+          href="/catalogue?focus=search"
           aria-label="Search products"
           title="Search products"
         >
