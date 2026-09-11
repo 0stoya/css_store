@@ -1,8 +1,7 @@
 import Link from "next/link";
-import { AccountSidebar } from "@/components/account-sidebar";
-import { SiteHeader } from "@/components/site-header";
+import { CalendarDays, ChevronDown, RotateCcw, ShoppingCart } from "lucide-react";
+import { CataloguePagination } from "@/components/catalogue-pagination";
 import type { CartMoney } from "@/lib/magento/cart";
-import { canUseCreditOrderScope } from "@/lib/magento/credit-orders";
 import { getCompanyOrders, type CompanyOrderItem } from "@/lib/magento/orders";
 import { requireCustomerToken } from "@/lib/session";
 import { repeatOrderAction } from "./actions";
@@ -42,143 +41,126 @@ export default async function OrdersPage({
   const token = await requireCustomerToken();
   const params = await searchParams;
   const requestedPage = positivePage(params.page);
-  const [data, canApprove] = await Promise.all([
-    getCompanyOrders(token, requestedPage, PAGE_SIZE),
-    canUseCreditOrderScope(token, "APPROVAL"),
-  ]);
+  const data = await getCompanyOrders(token, requestedPage, PAGE_SIZE);
   const orders = data.css_company_orders;
   const page = orders.page_info.current_page || requestedPage;
   const selectedCompany = data.css_company_context.companies.find((company) => company.selected) || null;
-  const customerName = `${data.customer.firstname} ${data.customer.lastname}`.trim();
   const companyScope = data.css_ordering_capabilities.can_view_company_orders;
 
-  return <>
-    <SiteHeader customerName={customerName} companyName={selectedCompany?.name}/>
-    <main className="shell account-workspace">
-      <AccountSidebar
-        name={customerName}
-        email={data.customer.email}
-        companies={data.css_company_context.companies}
-        active="orders"
-        showApprovals={canApprove}
-      />
+  return <section className="account-workspace-content stack">
+    <header className="account-workspace-heading">
+      <p className="eyebrow">Account</p>
+      <h1>Order history</h1>
+      <p className="muted">
+        {companyScope
+          ? `Orders available to you across ${selectedCompany?.name || "the selected company"}.`
+          : `Your orders for ${selectedCompany?.name || "the selected company"}.`}
+      </p>
+    </header>
 
-      <section className="account-workspace-content stack">
-        <header className="account-workspace-heading">
-          <p className="eyebrow">Account</p>
-          <h1>Order history</h1>
-          <p className="muted">
-            {companyScope
-              ? `Orders available to you across ${selectedCompany?.name || "the selected company"}.`
-              : `Your orders for ${selectedCompany?.name || "the selected company"}.`}
-          </p>
-        </header>
+    {params.error ? <p className="error" role="alert">{params.error}</p> : null}
+    {params.warning ? <p className="error" role="alert">{params.warning}</p> : null}
+    {params.notice ? <p className="success" role="status">{params.notice}</p> : null}
 
-        {params.error ? <p className="error" role="alert">{params.error}</p> : null}
-        {params.warning ? <p className="error" role="alert">{params.warning}</p> : null}
-        {params.notice ? <p className="success" role="status">{params.notice}</p> : null}
+    <div className={styles.toolbar}>
+      <div>
+        <strong>{orders.total_count} {orders.total_count === 1 ? "order" : "orders"}</strong>
+        <span>{selectedCompany?.name || "Current company"}</span>
+      </div>
+      <span className="badge">{companyScope ? "Company orders" : "My orders"}</span>
+    </div>
 
-        <section className={`card ${styles.intro}`}>
-          <div>
-            <strong>{orders.total_count} {orders.total_count === 1 ? "order" : "orders"}</strong>
-            <p className="muted small">Showing the orders available to your account for the current company.</p>
+    {!orders.items.length ? <section className="empty card">
+      <h2>No orders yet</h2>
+      <p className="muted">There are no orders available for this company yet.</p>
+      <p><Link className="button" href="/catalogue">Browse products</Link></p>
+    </section> : <div className={styles.list}>
+      {orders.items.map((order) => <details className={`card ${styles.card}`} key={order.number}>
+        <summary className={styles.summary}>
+          <div className={styles.summaryPrimary}>
+            <span className={styles.orderNumber}>Order {order.number}</span>
+            <span className={styles.orderDate}><CalendarDays size={15} aria-hidden="true"/>{order.order_date}</span>
           </div>
-          <span className="badge">{companyScope ? "Company orders" : "My orders"}</span>
-        </section>
+          <div className={styles.summaryMeta}>
+            <span className="badge">{order.status}</span>
+            <strong>{money(order.total?.grand_total)}</strong>
+            <span className={styles.viewLabel}>Details</span>
+            <ChevronDown className={styles.summaryChevron} size={18} aria-hidden="true"/>
+          </div>
+        </summary>
 
-        {!orders.items.length ? <section className="empty card">
-          <h2>No orders yet</h2>
-          <p className="muted">There are no orders available for this company yet.</p>
-          <p><Link className="button" href="/catalogue">Browse products</Link></p>
-        </section> : <div className={styles.list}>
-          {orders.items.map((order) => <details className={`card ${styles.card}`} key={order.number}>
-            <summary className={styles.summary}>
-              <div>
-                <span className="eyebrow">Order {order.number}</span>
-                <strong>{order.order_date}</strong>
-              </div>
-              <div className={styles.summaryMeta}>
-                <span className="badge">{order.status}</span>
-                <strong>{money(order.total?.grand_total)}</strong>
-                <span className="muted small">View details</span>
-              </div>
-            </summary>
+        <div className={`${styles.detail} stack`}>
+          <section>
+            <div className={styles.sectionHeading}>
+              <h2>Items</h2>
+              <span className="muted small">{order.items?.length || 0} line{(order.items?.length || 0) === 1 ? "" : "s"}</span>
+            </div>
+            <div className={styles.itemList}>
+              {(order.items || []).map((item) => {
+                const options = itemOptions(item);
+                const state = itemState(item);
+                return <article className={styles.itemRow} key={item.id}>
+                  <div className={styles.itemCopy}>
+                    <div className={styles.itemTitle}>
+                      <strong>{item.product_name || item.product_sku}</strong>
+                      {options.length ? <span className="badge">Configured item</span> : item.product_type === "grouped" ? <span className="badge">Grouped item</span> : null}
+                    </div>
+                    <div className="muted small">SKU {item.product_sku}</div>
+                    {options.length ? <ul className="basket-options">
+                      {options.map((option, index) => <li key={`${item.id}-${option.label}-${index}`}><strong>{option.label}:</strong> {option.value}</li>)}
+                    </ul> : null}
+                    {item.css_employee ? <div className={styles.employee}>
+                      <span className="badge">Employee</span>
+                      <span>{item.css_employee.employee_name}{item.css_employee.employee_code ? ` · ${item.css_employee.employee_code}` : ""}</span>
+                    </div> : null}
+                    {state ? <div className="muted small">{state}</div> : null}
+                  </div>
+                  <dl className={styles.itemMoney}>
+                    <div><dt>Quantity</dt><dd>{item.quantity_ordered}</dd></div>
+                    <div><dt>Unit price</dt><dd>{money(item.product_sale_price)}</dd></div>
+                    <div><dt>Row total</dt><dd>{money(item.prices?.row_total)}</dd></div>
+                  </dl>
+                </article>;
+              })}
+            </div>
+          </section>
 
-            <div className={`${styles.detail} stack`}>
-              <section>
-                <h2>Items</h2>
-                <div className={styles.itemList}>
-                  {(order.items || []).map((item) => {
-                    const options = itemOptions(item);
-                    const state = itemState(item);
-                    return <article className={styles.itemRow} key={item.id}>
-                      <div className={styles.itemCopy}>
-                        <div className={styles.itemTitle}>
-                          <strong>{item.product_name || item.product_sku}</strong>
-                          {options.length ? <span className="badge">Configured item</span> : item.product_type === "grouped" ? <span className="badge">Grouped item</span> : null}
-                        </div>
-                        <div className="muted small">SKU {item.product_sku}</div>
-                        {options.length ? <ul className="basket-options">
-                          {options.map((option, index) => <li key={`${item.id}-${option.label}-${index}`}><strong>{option.label}:</strong> {option.value}</li>)}
-                        </ul> : null}
-                        {item.css_employee ? <div className={styles.employee}>
-                          <span className="badge">Employee</span>
-                          <span>{item.css_employee.employee_name}{item.css_employee.employee_code ? ` · ${item.css_employee.employee_code}` : ""}</span>
-                        </div> : null}
-                        {state ? <div className="muted small">{state}</div> : null}
-                      </div>
-                      <dl className={styles.itemMoney}>
-                        <div><dt>Quantity</dt><dd>{item.quantity_ordered}</dd></div>
-                        <div><dt>Unit price</dt><dd>{money(item.product_sale_price)}</dd></div>
-                        <div><dt>Row total</dt><dd>{money(item.prices?.row_total)}</dd></div>
-                      </dl>
-                    </article>;
-                  })}
-                </div>
-              </section>
-
-              <section className={styles.totalCard}>
-                <h2>Order totals</h2>
-                <dl>
-                  <div><dt>Subtotal ex VAT</dt><dd>{money(order.total?.subtotal_excl_tax)}</dd></div>
-                  {(order.total?.discounts || []).map((discount, index) => <div key={`${order.number}-discount-${index}`}><dt>{discount.label || "Discount"}</dt><dd>{money(discount.amount)}</dd></div>)}
-                  <div><dt>Delivery</dt><dd>{money(order.total?.total_shipping)}</dd></div>
-                  <div><dt>VAT</dt><dd>{money(order.total?.total_tax)}</dd></div>
-                  <div className="basket-grand-total"><dt>Grand total</dt><dd>{money(order.total?.grand_total)}</dd></div>
-                </dl>
-              </section>
-
-              <section className="stack">
-                <div>
-                  <h2>Order again</h2>
-                  <p className="muted small">We’ll add any eligible items using today’s availability and purchasing rules. If something needs your attention, we’ll show it before anything is changed.</p>
-                </div>
+          <div className={styles.detailFooter}>
+            <section className={styles.orderActionsCard}>
+              <h2>Order actions</h2>
+              <div className={styles.orderActionButtons}>
                 <form action={repeatOrderAction}>
                   <input type="hidden" name="order_number" value={order.number}/>
                   <input type="hidden" name="page" value={page}/>
-                  <button className="button" type="submit">Repeat eligible items</button>
+                  <button className="button" type="submit"><ShoppingCart size={16} aria-hidden="true"/>Repeat eligible items</button>
                 </form>
-              </section>
+                <Link className="button secondary" href={`/account/returns?order=${encodeURIComponent(order.number)}`}>
+                  <RotateCcw size={16} aria-hidden="true"/>Request a return
+                </Link>
+              </div>
+              <p className="muted small">Repeat ordering always uses today’s availability and purchasing rules.</p>
+            </section>
 
-              <section className="stack">
-                <div>
-                  <h2>Need to return something?</h2>
-                  <p className="muted small">Start a return request with this order number already filled in.</p>
-                </div>
-                <div>
-                  <Link className="button secondary" href={`/account/returns?order=${encodeURIComponent(order.number)}`}>Request a return</Link>
-                </div>
-              </section>
-            </div>
-          </details>)}
-        </div>}
+            <section className={styles.totalCard}>
+              <h2>Order totals</h2>
+              <dl>
+                <div><dt>Subtotal ex VAT</dt><dd>{money(order.total?.subtotal_excl_tax)}</dd></div>
+                {(order.total?.discounts || []).map((discount, index) => <div key={`${order.number}-discount-${index}`}><dt>{discount.label || "Discount"}</dt><dd>{money(discount.amount)}</dd></div>)}
+                <div><dt>Delivery</dt><dd>{money(order.total?.total_shipping)}</dd></div>
+                <div><dt>VAT</dt><dd>{money(order.total?.total_tax)}</dd></div>
+                <div className="basket-grand-total"><dt>Grand total</dt><dd>{money(order.total?.grand_total)}</dd></div>
+              </dl>
+            </section>
+          </div>
+        </div>
+      </details>)}
+    </div>}
 
-        {orders.page_info.total_pages > 1 ? <nav className="pagination" aria-label="Order history pages">
-          {page > 1 ? <Link className="button secondary" href={`/account/orders?page=${page - 1}`}>Previous</Link> : <span/>}
-          <span className="muted">Page {page} of {orders.page_info.total_pages}</span>
-          {page < orders.page_info.total_pages ? <Link className="button secondary" href={`/account/orders?page=${page + 1}`}>Next</Link> : <span/>}
-        </nav> : null}
-      </section>
-    </main>
-  </>;
+    <CataloguePagination
+      currentPage={page}
+      totalPages={orders.page_info.total_pages}
+      href={(targetPage) => `/account/orders${targetPage > 1 ? `?page=${targetPage}` : ""}`}
+      label="Order history pages"
+    />
+  </section>;
 }

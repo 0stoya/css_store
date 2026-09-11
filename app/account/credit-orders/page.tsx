@@ -1,6 +1,6 @@
 import Link from "next/link";
-import { AccountSidebar } from "@/components/account-sidebar";
-import { SiteHeader } from "@/components/site-header";
+import { ArrowRight, CircleCheckBig, Clock3, FileText, WalletCards } from "lucide-react";
+import { CataloguePagination } from "@/components/catalogue-pagination";
 import { getCustomerContext } from "@/lib/magento/context";
 import {
   canUseCreditOrderScope,
@@ -76,119 +76,103 @@ export default async function CreditOrdersPage({
     ? requested
     : SCOPES.find((scope) => allowedScopes.has(scope.value))?.value || null;
   const selectedCompany = ctx.css_company_context.companies.find((company) => company.selected) || null;
-  const customerName = `${ctx.customer.firstname} ${ctx.customer.lastname}`.trim();
-  const sidebarActive = activeScope === "APPROVAL" ? "approvals" : "credit-orders";
 
   if (!activeScope) {
-    return <>
-      <SiteHeader customerName={customerName} companyName={selectedCompany?.name}/>
-      <main className="shell account-workspace">
-        <AccountSidebar
-          name={customerName}
-          email={ctx.customer.email}
-          companies={ctx.css_company_context.companies}
-          active="credit-orders"
-          showApprovals={approvalAllowed}
-        />
-        <section className="account-workspace-content stack">
-          <header className="account-workspace-heading">
-            <p className="eyebrow">Account</p>
-            <h1>Credit orders</h1>
-          </header>
-          <section className="card empty">
-            <h2>Credit orders aren’t available for this account</h2>
-            <p className="muted">Your current account does not have access to a credit-order queue.</p>
-          </section>
-        </section>
-      </main>
-    </>;
+    return <section className="account-workspace-content stack">
+      <header className="account-workspace-heading">
+        <p className="eyebrow">Account</p>
+        <h1>Credit orders</h1>
+      </header>
+      <section className="card empty">
+        <h2>Credit orders aren’t available for this account</h2>
+        <p className="muted">Your current account does not have access to a credit-order queue.</p>
+      </section>
+    </section>;
   }
 
   const data = await getCreditOrders(token, activeScope, page, PAGE_SIZE);
   const result = data.css_credit_orders;
   const currentPage = result.page_info.current_page || page;
   const isApprovalQueue = activeScope === "APPROVAL";
+  const activeScopeLabel = SCOPES.find((scope) => scope.value === activeScope)?.label || "Credit orders";
 
-  return <>
-    <SiteHeader customerName={customerName} companyName={selectedCompany?.name}/>
-    <main className="shell account-workspace">
-      <AccountSidebar
-        name={customerName}
-        email={ctx.customer.email}
-        companies={ctx.css_company_context.companies}
-        active={sidebarActive}
-        showApprovals={approvalAllowed}
-      />
+  return <section className="account-workspace-content stack">
+    <header className="account-workspace-heading">
+      <p className="eyebrow">Account</p>
+      <h1>{isApprovalQueue ? "Order approvals" : "Credit orders"}</h1>
+      <p className="muted">
+        {isApprovalQueue
+          ? "Review credit orders waiting for an approval decision."
+          : "Track credit orders and complete any actions available to you."}
+      </p>
+    </header>
 
-      <section className="account-workspace-content stack">
-        <header className="account-workspace-heading">
-          <p className="eyebrow">Account</p>
-          <h1>{isApprovalQueue ? "Order approvals" : "Credit orders"}</h1>
-          <p className="muted">
-            {isApprovalQueue
-              ? "Review credit orders waiting for an approval decision."
-              : "Track credit orders and complete any actions available to you."}
-          </p>
-        </header>
+    {params.error ? <p className="error" role="alert">{params.error}</p> : null}
+    {requested !== activeScope ? <p className="notice" role="status">That view isn’t available to your account, so we’ve shown the closest available view instead.</p> : null}
 
-        {params.error ? <p className="error" role="alert">{params.error}</p> : null}
-        {requested !== activeScope ? <p className="notice" role="status">That view isn’t available to your account, so we’ve shown the closest available view instead.</p> : null}
+    {!isApprovalQueue ? <nav className={styles.scopeBar} aria-label="Credit-order views">
+      {SCOPES.filter((scope) => scope.value !== "APPROVAL" && allowedScopes.has(scope.value)).map((scope) => {
+        const active = scope.value === activeScope;
+        return <Link
+          className={`${styles.scopeLink} ${active ? styles.scopeLinkActive : ""}`}
+          href={`/account/credit-orders?scope=${scope.value}`}
+          key={scope.value}
+          aria-current={active ? "page" : undefined}
+          prefetch
+        >{scope.label}</Link>;
+      })}
+    </nav> : null}
 
-        {!isApprovalQueue ? <nav className={styles.scopeBar} aria-label="Credit-order views">
-          {SCOPES.filter((scope) => scope.value !== "APPROVAL" && allowedScopes.has(scope.value)).map((scope) => {
-            const active = scope.value === activeScope;
-            return <Link
-              className={`${styles.scopeLink} ${active ? styles.scopeLinkActive : ""}`}
-              href={`/account/credit-orders?scope=${scope.value}`}
-              key={scope.value}
-              aria-current={active ? "page" : undefined}
-            >{scope.label}</Link>;
-          })}
-        </nav> : null}
-
-        <section className="card basket-card">
+    <div className={styles.listToolbar}>
+      <div className={styles.listToolbarCopy}>
+        <span className={styles.listToolbarIcon}>{isApprovalQueue ? <CircleCheckBig size={18} aria-hidden="true"/> : <WalletCards size={18} aria-hidden="true"/>}</span>
+        <div>
           <strong>{result.total_count} {result.total_count === 1 ? (isApprovalQueue ? "order awaiting review" : "credit order") : (isApprovalQueue ? "orders awaiting review" : "credit orders")}</strong>
-          <p className="muted small">{isApprovalQueue ? "Approval queue" : SCOPES.find((scope) => scope.value === activeScope)?.label} · {selectedCompany?.name || "Current company"}</p>
-        </section>
+          <span>{activeScopeLabel} · {selectedCompany?.name || "Current company"}</span>
+        </div>
+      </div>
+    </div>
 
-        {!result.items.length ? <section className="card empty">
-          <h2>{isApprovalQueue ? "No approvals waiting" : "No credit orders here"}</h2>
-          <p className="muted">{isApprovalQueue ? "There are no credit orders waiting for your approval right now." : "There are no credit orders in this view right now."}</p>
-        </section> : <div className={styles.list}>
-          {result.items.map((order) => {
-            const actions = actionSummary(order);
-            return <article className={`card ${styles.orderCard}`} key={order.number}>
+    {!result.items.length ? <section className="card empty">
+      <h2>{isApprovalQueue ? "No approvals waiting" : "No credit orders here"}</h2>
+      <p className="muted">{isApprovalQueue ? "There are no credit orders waiting for your approval right now." : "There are no credit orders in this view right now."}</p>
+    </section> : <div className={styles.list}>
+      {result.items.map((order) => {
+        const actions = actionSummary(order);
+        return <article className={`card ${styles.orderCard}`} key={order.number}>
+          <div className={styles.orderIcon}><FileText size={19} aria-hidden="true"/></div>
+          <div className={styles.orderContent}>
+            <div className={styles.orderTitleRow}>
               <div>
-                <p className="eyebrow">Credit order {order.number}</p>
+                <p className={styles.orderNumber}>Credit order {order.number}</p>
                 <h2>{readableStatus(order.status)}</h2>
-                <div className={styles.orderMeta}>
-                  <span className="badge">{readableStatus(order.status)}</span>
-                  {order.created_at ? <span className="muted small">Created {order.created_at}</span> : null}
-                  {order.order_number ? <span className="badge">Order {order.order_number}</span> : null}
-                  {order.auto_approved ? <span className="badge">Automatically approved</span> : null}
-                </div>
-                {actions.length ? <div className={styles.actionBadges}>
-                  {actions.map((action) => <span className="badge" key={action}>{action}</span>)}
-                </div> : null}
               </div>
-              <div className={styles.orderActions}>
-                <span className={styles.amount}>{money(order.grand_total)}</span>
-                <Link className="button" href={`/account/credit-orders/${encodeURIComponent(order.number)}${isApprovalQueue ? "?from=approvals" : ""}`}>View details</Link>
-              </div>
-            </article>;
-          })}
-        </div>}
+              <span className={styles.amount}>{money(order.grand_total)}</span>
+            </div>
 
-        {result.page_info.total_pages > 1 ? <nav className="pagination" aria-label="Credit-order pages">
-          {currentPage > 1
-            ? <Link className="button secondary" href={`/account/credit-orders?scope=${activeScope}&page=${currentPage - 1}`}>Previous</Link>
-            : <span/>}
-          <span className="muted">Page {currentPage} of {result.page_info.total_pages}</span>
-          {currentPage < result.page_info.total_pages
-            ? <Link className="button secondary" href={`/account/credit-orders?scope=${activeScope}&page=${currentPage + 1}`}>Next</Link>
-            : <span/>}
-        </nav> : null}
-      </section>
-    </main>
-  </>;
+            <div className={styles.orderMeta}>
+              <span className="badge">{readableStatus(order.status)}</span>
+              {order.created_at ? <span className={styles.metaItem}><Clock3 size={14} aria-hidden="true"/>Created {order.created_at}</span> : null}
+              {order.order_number ? <span className="badge">Order {order.order_number}</span> : null}
+              {order.auto_approved ? <span className="badge">Automatically approved</span> : null}
+            </div>
+
+            {actions.length ? <div className={styles.actionBadges}>
+              {actions.map((action) => <span className="badge" key={action}>{action}</span>)}
+            </div> : null}
+          </div>
+          <Link className={styles.detailsLink} href={`/account/credit-orders/${encodeURIComponent(order.number)}${isApprovalQueue ? "?from=approvals" : ""}`}>
+            <span>View details</span><ArrowRight size={17} aria-hidden="true"/>
+          </Link>
+        </article>;
+      })}
+    </div>}
+
+    <CataloguePagination
+      currentPage={currentPage}
+      totalPages={result.page_info.total_pages}
+      href={(targetPage) => `/account/credit-orders?scope=${activeScope}${targetPage > 1 ? `&page=${targetPage}` : ""}`}
+      label="Credit-order pages"
+    />
+  </section>;
 }
