@@ -1,6 +1,6 @@
 # Production deployment
 
-Target URL: `https://shop.csscdn.co.uk/`
+Target URL: `https://store.csscdn.co.uk/`
 
 Runtime allocation:
 
@@ -18,7 +18,7 @@ sudo ss -ltnp | grep ':3068 ' || true
 
 ## 1. DNS
 
-Point `shop.csscdn.co.uk` at the production server before requesting the certificate.
+Point `store.csscdn.co.uk` at the production server before enabling the final HTTPS vhost.
 
 ## 2. Application checkout and environment
 
@@ -74,28 +74,28 @@ curl -I http://127.0.0.1:3068/login
 
 If PM2 is not already configured to return after a reboot, run `pm2 startup` as the deploy user and execute the command PM2 prints, then run `pm2 save` again.
 
-## 4. Obtain the first certificate
+## 4. Certificate / bootstrap vhost
 
 The repository contains an HTTP-only bootstrap vhost at:
 
 ```text
-deploy/nginx/shop.csscdn.co.uk.bootstrap.conf
+deploy/nginx/store.csscdn.co.uk.bootstrap.conf
 ```
 
-Install it temporarily:
+Install it temporarily if HTTPS is not already enabled:
 
 ```bash
 sudo mkdir -p /var/www/css-acme
-sudo cp deploy/nginx/shop.csscdn.co.uk.bootstrap.conf /etc/nginx/sites-available/shop.csscdn.co.uk
-sudo ln -sfn /etc/nginx/sites-available/shop.csscdn.co.uk /etc/nginx/sites-enabled/shop.csscdn.co.uk
+sudo cp deploy/nginx/store.csscdn.co.uk.bootstrap.conf /etc/nginx/sites-available/store.csscdn.co.uk
+sudo ln -sfn /etc/nginx/sites-available/store.csscdn.co.uk /etc/nginx/sites-enabled/store.csscdn.co.uk
 sudo nginx -t
 sudo systemctl reload nginx
 ```
 
-Then request the certificate with the same webroot pattern used by the other CSS hosts:
+For the current production host, Certbot already reports an existing valid certificate at `/etc/letsencrypt/live/store.csscdn.co.uk/`, so do not force a renewal just for this deployment. If a certificate ever needs to be issued on a new host, use:
 
 ```bash
-sudo certbot certonly --webroot -w /var/www/css-acme -d shop.csscdn.co.uk
+sudo certbot certonly --webroot -w /var/www/css-acme -d store.csscdn.co.uk
 ```
 
 ## 5. Enable the production HTTPS vhost
@@ -103,11 +103,12 @@ sudo certbot certonly --webroot -w /var/www/css-acme -d shop.csscdn.co.uk
 Replace the bootstrap site with:
 
 ```text
-deploy/nginx/shop.csscdn.co.uk.conf
+deploy/nginx/store.csscdn.co.uk.conf
 ```
 
 ```bash
-sudo cp deploy/nginx/shop.csscdn.co.uk.conf /etc/nginx/sites-available/shop.csscdn.co.uk
+sudo cp deploy/nginx/store.csscdn.co.uk.conf /etc/nginx/sites-available/store.csscdn.co.uk
+sudo ln -sfn /etc/nginx/sites-available/store.csscdn.co.uk /etc/nginx/sites-enabled/store.csscdn.co.uk
 sudo nginx -t
 sudo systemctl reload nginx
 ```
@@ -115,7 +116,7 @@ sudo systemctl reload nginx
 Validate:
 
 ```bash
-curl -I https://shop.csscdn.co.uk/login
+curl -I https://store.csscdn.co.uk/login
 ```
 
 ## Routine deploy
@@ -136,5 +137,5 @@ Then check:
 ```bash
 pm2 status css-store
 curl -I http://127.0.0.1:3068/login
-curl -I https://shop.csscdn.co.uk/login
+curl -I https://store.csscdn.co.uk/login
 ```
