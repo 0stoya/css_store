@@ -12,16 +12,19 @@ export function CatalogueSearch({
   action = "/catalogue",
   categoryUid,
   placeholder = "Search products by name or SKU",
+  autoFocus = false,
 }: {
   defaultValue?: string;
   action?: string;
   categoryUid?: string;
   placeholder?: string;
+  autoFocus?: boolean;
 }) {
   const router = useRouter();
   const rootRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const listId = `catalogue-suggestions-${useId().replace(/:/g, "")}`;
+  const inputId = "catalogue-search";
   const [value, setValue] = useState(defaultValue);
   const [suggestions, setSuggestions] = useState<StoreProductSuggestion[]>([]);
   const [open, setOpen] = useState(false);
@@ -136,9 +139,9 @@ export function CatalogueSearch({
   return <div className="catalogue-search-autocomplete" ref={rootRef}>
     <form className="catalogue-search-form" role="search" onSubmit={submitSearch}>
       <Search className="catalogue-search-icon" size={21} strokeWidth={2} aria-hidden="true"/>
-      <label className="sr-only" htmlFor={listId}>Search products</label>
+      <label className="sr-only" htmlFor={inputId}>Search products</label>
       <input
-        id={listId}
+        id={inputId}
         ref={inputRef}
         className="catalogue-search-input"
         type="search"
@@ -146,6 +149,7 @@ export function CatalogueSearch({
         value={value}
         placeholder={placeholder}
         autoComplete="off"
+        autoFocus={autoFocus}
         role="combobox"
         aria-autocomplete="list"
         aria-expanded={showPanel}

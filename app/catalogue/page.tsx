@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { CataloguePagination } from "@/components/catalogue-pagination";
 import { CatalogueSearch } from "@/components/catalogue-search";
 import { ProductCard } from "@/components/product-card";
 import { SiteHeader } from "@/components/site-header";
@@ -19,10 +20,10 @@ function pageHref(page: number, q: string) {
 export default async function CataloguePage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; page?: string }>;
+  searchParams: Promise<{ q?: string; page?: string; focus?: string }>;
 }) {
   const token = await requireCustomerToken();
-  const { q = "", page: rawPage = "1" } = await searchParams;
+  const { q = "", page: rawPage = "1", focus = "" } = await searchParams;
   const page = Math.max(1, Math.trunc(Number(rawPage) || 1));
   const searchTerm = q.trim();
   const [ctx, products] = await Promise.all([
@@ -41,7 +42,7 @@ export default async function CataloguePage({
           <h1>Products</h1>
           {searchTerm ? <p className="catalogue-result-note">{products.total_count} result{products.total_count === 1 ? "" : "s"} for “{searchTerm}”.</p> : null}
         </div>
-        <CatalogueSearch defaultValue={q}/>
+        <CatalogueSearch defaultValue={q} autoFocus={focus === "search"}/>
       </header>
 
       <div className="portal-section-heading catalogue-products-heading">
@@ -57,11 +58,12 @@ export default async function CataloguePage({
       </section>
       {!products.items.length ? <div className="empty card"><h2>No products found</h2><p className="muted">Try a different search term or choose a category from the Products menu.</p>{searchTerm ? <p><Link className="button secondary" href="/catalogue">View all products</Link></p> : null}</div> : null}
 
-      {products.page_info.total_pages > 1 ? <nav className="pagination" aria-label="Catalogue pages">
-        {products.page_info.current_page > 1 ? <Link className="button secondary" href={pageHref(products.page_info.current_page - 1, q)}>Previous</Link> : <span/>}
-        <span>Page {products.page_info.current_page} of {products.page_info.total_pages}</span>
-        {products.page_info.current_page < products.page_info.total_pages ? <Link className="button secondary" href={pageHref(products.page_info.current_page + 1, q)}>Next</Link> : <span/>}
-      </nav> : null}
+      <CataloguePagination
+        currentPage={products.page_info.current_page}
+        totalPages={products.page_info.total_pages}
+        href={(targetPage) => pageHref(targetPage, q)}
+        label="Catalogue pages"
+      />
     </main>
   </>;
 }

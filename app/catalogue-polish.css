@@ -84,7 +84,7 @@ input.catalogue-search-input:focus-visible {
   font-size: .8rem;
 }
 
-/* Category pages should feel lighter than the main catalogue landing page. */
+/* Category pages stay deliberately simple: breadcrumb, title, count, products. */
 .catalogue-category-page {
   padding-top: 28px;
 }
@@ -99,50 +99,121 @@ input.catalogue-search-input:focus-visible {
   font-weight: 700;
 }
 
-.catalogue-category-hero {
+.catalogue-category-header {
   margin-bottom: 22px;
-  padding-bottom: 22px;
-  align-items: center;
+  padding-bottom: 20px;
   border-bottom: 1px solid var(--line);
 }
 
-.catalogue-category-hero .catalogue-hero-heading h1 {
+.catalogue-category-header h1 {
+  margin: 0;
   font-size: clamp(2.15rem, 4vw, 3.1rem);
   line-height: 1.04;
 }
 
-.catalogue-category-count {
+.catalogue-category-header p {
   margin: 7px 0 0;
   color: var(--muted);
   font-size: .9rem;
 }
 
-.catalogue-category-hero .catalogue-search-autocomplete {
-  width: min(700px, 100%);
+/* Header search is a lightweight shortcut to the full catalogue search. */
+.site-header nav a.store-nav-search {
+  width: 42px;
+  min-width: 42px;
+  padding: 0;
+  justify-content: center;
 }
 
-.catalogue-category-search-actions {
-  margin: -6px 0 18px;
+.site-header nav a.store-nav-search svg {
+  width: 17px;
+  height: 17px;
+}
+
+/* Numbered pagination for catalogue and category browsing. */
+.catalogue-pagination {
+  margin-top: 34px;
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+}
+
+.catalogue-pagination-pages {
   display: flex;
-  justify-content: flex-end;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 6px;
 }
 
-.catalogue-category-search-actions .button {
+.catalogue-pagination-numbers {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.catalogue-pagination-control,
+.catalogue-pagination-page {
   min-height: 40px;
-  padding-inline: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: #fff;
+  color: var(--muted-strong);
+  text-decoration: none;
   font-size: .82rem;
+  font-weight: 800;
+  transition: border-color .16s ease, background-color .16s ease, color .16s ease, transform .16s ease;
+}
+
+.catalogue-pagination-control {
+  gap: 5px;
+  padding: 0 12px;
+}
+
+.catalogue-pagination-page {
+  width: 40px;
+  padding: 0;
+}
+
+.catalogue-pagination-control:not(.is-disabled):hover,
+.catalogue-pagination-page:hover {
+  border-color: #9eb6c8;
+  background: var(--soft-blue);
+  color: var(--blue);
+  transform: translateY(-1px);
+}
+
+.catalogue-pagination-page.is-current {
+  border-color: var(--blue);
+  background: var(--blue);
+  color: #fff;
+  box-shadow: 0 5px 12px rgb(0 96 184 / 14%);
+}
+
+.catalogue-pagination-control.is-disabled {
+  opacity: .42;
+}
+
+.catalogue-pagination-ellipsis {
+  width: 28px;
+  color: var(--muted);
+  text-align: center;
+}
+
+.catalogue-pagination > p {
+  margin: 0;
+  color: var(--muted);
+  font-size: .76rem;
 }
 
 @media (max-width: 980px) {
-  .catalogue-hero .catalogue-search-autocomplete,
-  .catalogue-category-hero .catalogue-search-autocomplete {
+  .catalogue-hero .catalogue-search-autocomplete {
     width: 100%;
     max-width: 720px;
     justify-self: start;
-  }
-
-  .catalogue-category-hero {
-    gap: 16px;
   }
 }
 
@@ -164,7 +235,35 @@ input.catalogue-search-input:focus-visible {
     padding-top: 22px;
   }
 
-  .catalogue-category-hero .catalogue-hero-heading h1 {
+  .catalogue-category-header h1 {
     font-size: 2.2rem;
+  }
+
+  .site-header nav a.store-nav-search {
+    width: 38px;
+    min-width: 38px;
+  }
+
+  .catalogue-pagination {
+    margin-top: 28px;
+  }
+
+  .catalogue-pagination-control {
+    width: 40px;
+    padding: 0;
+  }
+
+  .catalogue-pagination-control span {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+  }
+
+  .catalogue-pagination-page {
+    width: 38px;
+    min-height: 38px;
   }
 }
