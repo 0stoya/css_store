@@ -4,6 +4,7 @@ import { ProductCard } from "@/components/product-card";
 import { SiteHeader } from "@/components/site-header";
 import { getCategories, getProducts } from "@/lib/magento/catalogue";
 import { getCustomerContext } from "@/lib/magento/context";
+import { getMenuCategories, type MenuCategory } from "@/lib/magento/menu-categories";
 import { requireCustomerToken } from "@/lib/session";
 
 function pageHref(key: string, page: number, q: string) {
@@ -13,6 +14,15 @@ function pageHref(key: string, page: number, q: string) {
   const query = params.toString();
   const base = `/catalogue/category/${encodeURIComponent(key)}`;
   return query ? `${base}?${query}` : base;
+}
+
+function findMenuCategory(categories: MenuCategory[], key: string): MenuCategory | null {
+  for (const category of categories) {
+    if (category.url_key === key || category.uid === key) return category;
+    const childMatch = findMenuCategory(category.children, key);
+    if (childMatch) return childMatch;
+  }
+  return null;
 }
 
 export default async function CategoryPage({
@@ -27,8 +37,13 @@ export default async function CategoryPage({
   const key = decodeURIComponent(rawKey);
   const page = Math.max(1, Math.trunc(Number(rawPage) || 1));
   const searchTerm = q.trim();
-  const [ctx, categories] = await Promise.all([getCustomerContext(token), getCategories(token)]);
-  const category = categories.find((item) => item.url_key === key || item.uid === key);
+  const [ctx, categories, menuCategories] = await Promise.all([
+    getCustomerContext(token),
+    getCategories(token),
+    getMenuCategories(token),
+  ]);
+  const category = categories.find((item) => item.url_key === key || item.uid === key)
+    || findMenuCategory(menuCategories, key);
   if (!category) notFound();
 
   const products = await getProducts(token, searchTerm, page, 24, category.uid);
