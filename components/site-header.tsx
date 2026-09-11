@@ -53,32 +53,46 @@ export async function SiteHeader({
             <div className="mega-menu-heading">
               <div>
                 <strong>Shop by category</strong>
-                <span>Browse categories and subcategories available in the store menu.</span>
+                <span>Hover a category to browse deeper levels.</span>
               </div>
             </div>
-            {categories.length ? <div className="mega-menu-grid">
-              {categories.map((category) => <section className="mega-menu-category-group" key={category.uid}>
-                <Link className="mega-menu-category" href={categoryHref(category)}>
-                  <span>
-                    <strong>{category.name}</strong>
-                    <ProductCount count={category.product_count}/>
-                  </span>
-                  <ChevronRight size={17} strokeWidth={2.2} aria-hidden="true"/>
-                </Link>
-                {category.children.length ? <ul className="mega-menu-children">
-                  {category.children.map((child) => <li key={child.uid}>
-                    <Link className="mega-menu-child" href={categoryHref(child)}>
-                      <span>{child.name}</span>
-                      {child.children.length ? <ChevronRight size={14} strokeWidth={2.1} aria-hidden="true"/> : null}
-                    </Link>
-                    {child.children.length ? <ul className="mega-menu-grandchildren">
-                      {child.children.map((grandchild) => <li key={grandchild.uid}>
-                        <Link className="mega-menu-grandchild" href={categoryHref(grandchild)}>{grandchild.name}</Link>
+            {categories.length ? <div className="mega-menu-cascade">
+              <ul className="mega-menu-level mega-menu-level-root">
+                {categories.map((category) => <li className="mega-menu-node mega-menu-node-root" key={category.uid}>
+                  <Link className="mega-menu-entry mega-menu-entry-root" href={categoryHref(category)}>
+                    <span>
+                      <strong>{category.name}</strong>
+                      <ProductCount count={category.product_count}/>
+                    </span>
+                    {category.children.length ? <ChevronRight size={17} strokeWidth={2.2} aria-hidden="true"/> : null}
+                  </Link>
+                  {category.children.length ? <div className="mega-menu-level-panel mega-menu-level-panel-child">
+                    <ul className="mega-menu-level mega-menu-level-child">
+                      {category.children.map((child) => <li className="mega-menu-node mega-menu-node-child" key={child.uid}>
+                        <Link className="mega-menu-entry mega-menu-entry-child" href={categoryHref(child)}>
+                          <span>
+                            <strong>{child.name}</strong>
+                            <ProductCount count={child.product_count}/>
+                          </span>
+                          {child.children.length ? <ChevronRight size={16} strokeWidth={2.1} aria-hidden="true"/> : null}
+                        </Link>
+                        {child.children.length ? <div className="mega-menu-level-panel mega-menu-level-panel-grandchild">
+                          <ul className="mega-menu-level mega-menu-level-grandchild">
+                            {child.children.map((grandchild) => <li className="mega-menu-node" key={grandchild.uid}>
+                              <Link className="mega-menu-entry mega-menu-entry-grandchild" href={categoryHref(grandchild)}>
+                                <span>
+                                  <strong>{grandchild.name}</strong>
+                                  <ProductCount count={grandchild.product_count}/>
+                                </span>
+                              </Link>
+                            </li>)}
+                          </ul>
+                        </div> : null}
                       </li>)}
-                    </ul> : null}
-                  </li>)}
-                </ul> : null}
-              </section>)}
+                    </ul>
+                  </div> : null}
+                </li>)}
+              </ul>
             </div> : <p className="mega-menu-empty">No product categories are currently available in the store menu.</p>}
           </div>
         </details> : <Link href="/catalogue">Products</Link>}
