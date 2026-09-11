@@ -84,6 +84,39 @@ input.catalogue-search-input:focus-visible {
   font-size: .8rem;
 }
 
+/* Catalogue listing relies on the global header search, so keep the page heading compact. */
+.catalogue-page-heading {
+  margin-bottom: 24px;
+  padding-bottom: 20px;
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 20px;
+  border-bottom: 1px solid var(--line);
+}
+
+.catalogue-page-heading h1 {
+  margin: 0;
+  font-size: clamp(2.35rem, 4.5vw, 3.55rem);
+  line-height: 1.03;
+}
+
+.catalogue-page-heading .eyebrow {
+  margin-bottom: 7px;
+}
+
+.catalogue-page-heading-meta {
+  margin: 7px 0 0;
+  color: var(--muted);
+  font-size: .9rem;
+}
+
+.catalogue-page-heading .button {
+  min-height: 40px;
+  padding-inline: 14px;
+  font-size: .82rem;
+}
+
 /* Category pages stay deliberately simple: breadcrumb, title, count, products. */
 .catalogue-category-page {
   padding-top: 28px;
@@ -115,19 +148,6 @@ input.catalogue-search-input:focus-visible {
   margin: 7px 0 0;
   color: var(--muted);
   font-size: .9rem;
-}
-
-/* Header search is a lightweight shortcut to the full catalogue search. */
-.site-header nav a.store-nav-search {
-  width: 42px;
-  min-width: 42px;
-  padding: 0;
-  justify-content: center;
-}
-
-.site-header nav a.store-nav-search svg {
-  width: 17px;
-  height: 17px;
 }
 
 /* Numbered pagination for catalogue and category browsing. */
@@ -231,17 +251,21 @@ input.catalogue-search-input:focus-visible {
     display: none;
   }
 
+  .catalogue-page-heading {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .catalogue-page-heading h1 {
+    font-size: 2.35rem;
+  }
+
   .catalogue-category-page {
     padding-top: 22px;
   }
 
   .catalogue-category-header h1 {
     font-size: 2.2rem;
-  }
-
-  .site-header nav a.store-nav-search {
-    width: 38px;
-    min-width: 38px;
   }
 
   .catalogue-pagination {
