@@ -4,6 +4,7 @@ import Link from "next/link";
 import { CatalogueSearch } from "@/components/catalogue-search";
 import { ProductMegaMenu } from "@/components/product-mega-menu";
 import { getStoreName } from "@/lib/config";
+import { getCustomerCartSummary } from "@/lib/magento/cart";
 import { getMenuCategories, type MenuCategory } from "@/lib/magento/menu-categories";
 import { getCustomerToken } from "@/lib/session";
 
@@ -16,15 +17,20 @@ export async function SiteHeader({
   companyName?: string | null;
   basketQuantity?: number;
 }) {
-  const quantity = basketQuantity;
+  let quantity = basketQuantity;
   let categories: MenuCategory[] = [];
 
   if (customerName) {
-    try {
-      const token = await getCustomerToken();
-      if (token) categories = await getMenuCategories(token);
-    } catch {
-      categories = [];
+    const token = await getCustomerToken();
+
+    if (token) {
+      const [menuResult, cartResult] = await Promise.allSettled([
+        getMenuCategories(token),
+        quantity === undefined ? getCustomerCartSummary(token) : Promise.resolve(null),
+      ]);
+
+      if (menuResult.status === "fulfilled") categories = menuResult.value;
+      if (cartResult.status === "fulfilled" && cartResult.value) quantity = cartResult.value.total_quantity;
     }
   }
 
