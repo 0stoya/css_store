@@ -56,6 +56,13 @@ export type StoreProductResult = {
   items: StoreProduct[];
 };
 
+export type StoreProductSuggestion = {
+  uid: string;
+  sku: string;
+  name: string;
+  small_image: { url: string; label: string | null } | null;
+};
+
 const STORE_ROOT = /* GraphQL */ `
   query StoreRootCategoryId {
     storeConfig { root_category_id }
@@ -113,6 +120,15 @@ const PRODUCT_SELECTION = /* GraphQL */ `
   }
 `;
 
+const SUGGESTION_SELECTION = /* GraphQL */ `
+  items {
+    uid
+    sku
+    name
+    small_image { url label }
+  }
+`;
+
 const BROWSE_PRODUCTS = /* GraphQL */ `
   query StoreProductsBrowse($filter: ProductAttributeFilterInput!, $page: Int!, $pageSize: Int!) {
     products(filter: $filter, currentPage: $page, pageSize: $pageSize, sort: { name: ASC }) {
@@ -138,6 +154,26 @@ const FILTERED_SEARCH_PRODUCTS = /* GraphQL */ `
   ) {
     products(search: $search, filter: $filter, currentPage: $page, pageSize: $pageSize) {
       ${PRODUCT_SELECTION}
+    }
+  }
+`;
+
+const SEARCH_SUGGESTIONS = /* GraphQL */ `
+  query StoreProductSuggestions($search: String!, $pageSize: Int!) {
+    products(search: $search, currentPage: 1, pageSize: $pageSize) {
+      ${SUGGESTION_SELECTION}
+    }
+  }
+`;
+
+const FILTERED_SEARCH_SUGGESTIONS = /* GraphQL */ `
+  query StoreCategoryProductSuggestions(
+    $search: String!
+    $filter: ProductAttributeFilterInput!
+    $pageSize: Int!
+  ) {
+    products(search: $search, filter: $filter, currentPage: 1, pageSize: $pageSize) {
+      ${SUGGESTION_SELECTION}
     }
   }
 `;
@@ -184,6 +220,32 @@ export async function getCategories(token: string): Promise<StoreCategory[]> {
       product_count: item.product_count || 0,
     }))
     .sort((a, b) => a.position - b.position || a.name.localeCompare(b.name));
+}
+
+export async function getProductSuggestions(
+  token: string,
+  search: string,
+  categoryUid = "",
+  pageSize = 6,
+): Promise<StoreProductSuggestion[]> {
+  const cleanSearch = search.trim();
+  const cleanCategory = categoryUid.trim();
+  if (cleanSearch.length < 2) return [];
+
+  const safePageSize = Math.max(1, Math.min(8, Math.trunc(pageSize)));
+  const query = cleanCategory ? FILTERED_SEARCH_SUGGESTIONS : SEARCH_SUGGESTIONS;
+  const variables: Record<string, unknown> = {
+    search: cleanSearch,
+    pageSize: safePageSize,
+  };
+
+  if (cleanCategory) variables.filter = { category_uid: { eq: cleanCategory } };
+
+  const data = await magentoGraphQL<{
+    products: { items: StoreProductSuggestion[] };
+  }>(query, variables, token);
+
+  return data.products.items;
 }
 
 export async function getProducts(
