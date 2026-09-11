@@ -1,4 +1,7 @@
+"use client";
+
 import Link from "next/link";
+import { usePathname, useSearchParams } from "next/navigation";
 import {
   Building2,
   CheckCircle2,
@@ -26,7 +29,6 @@ type AccountSidebarProps = {
   name: string;
   email: string;
   companies: SidebarCompany[];
-  active: AccountSection;
   showApprovals?: boolean;
 };
 
@@ -41,6 +43,17 @@ const operationalLinks: Array<{
   { section: "credit-orders", href: "/account/credit-orders", label: "Credit orders", Icon: ClipboardCheck },
   { section: "returns", href: "/account/returns", label: "Returns", Icon: RotateCcw },
 ];
+
+function currentSection(pathname: string, scope: string | null, from: string | null): AccountSection {
+  if (pathname.startsWith("/account/orders")) return "orders";
+  if (pathname.startsWith("/account/repeat-orders")) return "repeat-orders";
+  if (pathname.startsWith("/account/returns")) return "returns";
+  if (pathname.startsWith("/account/credit-orders")) {
+    if (scope?.toUpperCase() === "APPROVAL" || from === "approvals") return "approvals";
+    return "credit-orders";
+  }
+  return "overview";
+}
 
 function SidebarLink({
   section,
@@ -60,6 +73,7 @@ function SidebarLink({
     className={`account-sidebar-link ${isActive ? "active" : ""}`}
     href={href}
     aria-current={isActive ? "page" : undefined}
+    prefetch
   >
     <Icon size={18} aria-hidden="true"/>
     <span>{label}</span>
@@ -70,9 +84,11 @@ export function AccountSidebar({
   name,
   email,
   companies,
-  active,
   showApprovals = false,
 }: AccountSidebarProps) {
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const active = currentSection(pathname, searchParams.get("scope"), searchParams.get("from"));
   const activeCompanies = companies.filter((company) => company.active !== false);
   const selected = activeCompanies.find((company) => company.selected) || null;
 
