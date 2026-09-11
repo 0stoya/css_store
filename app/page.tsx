@@ -1,32 +1,97 @@
 import Link from "next/link";
+import { ChevronRight } from "lucide-react";
+import { CataloguePagination } from "@/components/catalogue-pagination";
+import { CatalogueSearch } from "@/components/catalogue-search";
+import { ProductCard } from "@/components/product-card";
 import { SiteHeader } from "@/components/site-header";
+import { getProducts } from "@/lib/magento/catalogue";
 import { getCustomerContext } from "@/lib/magento/context";
+import { getMenuCategories } from "@/lib/magento/menu-categories";
 import { requireCustomerToken } from "@/lib/session";
 
-export default async function HomePage() {
+function pageHref(page: number, q: string) {
+  const params = new URLSearchParams();
+  if (q) params.set("q", q);
+  if (page > 1) params.set("page", String(page));
+  const query = params.toString();
+  return query ? `/?${query}` : "/";
+}
+
+export default async function HomePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ q?: string; page?: string; focus?: string }>;
+}) {
   const token = await requireCustomerToken();
-  const ctx = await getCustomerContext(token);
-  const selected = ctx.css_company_context.companies.find((c) => c.selected) || null;
+  const { q = "", page: rawPage = "1", focus = "" } = await searchParams;
+  const page = Math.max(1, Math.trunc(Number(rawPage) || 1));
+  const searchTerm = q.trim();
+
+  const [ctx, products, menuCategories] = await Promise.all([
+    getCustomerContext(token),
+    getProducts(token, searchTerm, page),
+    getMenuCategories(token),
+  ]);
+
+  const selected = ctx.css_company_context.companies.find((company) => company.selected) || null;
   const name = `${ctx.customer.firstname} ${ctx.customer.lastname}`.trim();
+  const featuredCategories = menuCategories.slice(0, 8);
 
   return <>
     <SiteHeader customerName={name} companyName={selected?.name}/>
-    <main className="shell">
-      <section className="hero">
-        <div className="panel hero-main">
-          <p className="eyebrow">Business purchasing</p>
-          <h1>Safety supplies, ready for your business.</h1>
-          <p className="muted">Browse your approved product range with your company pricing, stock availability and ordering rules already applied.</p>
-          <p><Link className="button" href="/catalogue">Browse products</Link></p>
+    <main className="shell catalogue-page home-catalogue-page">
+      <header className="home-catalogue-intro">
+        <div className="home-catalogue-heading">
+          <p className="eyebrow">Order supplies</p>
+          <h1>{searchTerm ? "Search products" : "Find what you need"}</h1>
         </div>
-        <aside className="panel hero-side">
-          <span className="badge">Ordering for</span>
-          <h2>{selected?.name || "No company selected"}</h2>
-          <p className="muted">{ctx.css_ordering_capabilities.company_context
-            ? "Your company account is ready to use."
-            : "Choose a company from your account before placing an order."}</p>
-          <Link className="button secondary" href="/account">Account & company</Link>
-        </aside>
+        <CatalogueSearch action="/" defaultValue={q} autoFocus={focus === "search"}/>
+      </header>
+
+      {featuredCategories.length ? <section className="home-category-section" aria-labelledby="home-category-heading">
+        <div className="home-section-heading">
+          <h2 id="home-category-heading">Shop by category</h2>
+          <Link href="/catalogue">View all products</Link>
+        </div>
+        <div className="home-category-grid">
+          {featuredCategories.map((category) => <Link
+            className="home-category-link"
+            href={`/catalogue/category/${encodeURIComponent(category.url_key || category.uid)}`}
+            key={category.uid}
+          >
+            <span>
+              <strong>{category.name}</strong>
+              {category.product_count > 0 ? <small>{category.product_count} product{category.product_count === 1 ? "" : "s"}</small> : null}
+            </span>
+            <ChevronRight size={17} strokeWidth={2.1} aria-hidden="true"/>
+          </Link>)}
+        </div>
+      </section> : null}
+
+      <section className="home-products-section" aria-labelledby="home-products-heading">
+        <div className="portal-section-heading catalogue-products-heading home-products-heading">
+          <div>
+            <h2 id="home-products-heading">{searchTerm ? "Search results" : "Products"}</h2>
+            <p>{products.total_count} product{products.total_count === 1 ? "" : "s"}</p>
+          </div>
+          {searchTerm ? <Link className="button secondary" href="/">Clear search</Link> : null}
+        </div>
+
+        <div className="product-grid" aria-label={searchTerm ? `Search results for ${searchTerm}` : "Products"}>
+          {products.items.map((product) => <ProductCard product={product} hidePrice={ctx.css_storefront_policy.hide_price} key={product.uid}/>)}
+        </div>
+        {!products.items.length ? <div className="empty card">
+          <h2>No products found</h2>
+          <p className="muted">Try a different product name or SKU.</p>
+          {searchTerm ? <p><Link className="button secondary" href="/">View all products</Link></p> : null}
+        </div> : null}
+
+        <CataloguePagination
+          currentPage={products.page_info.current_page}
+          totalPages={products.page_info.total_pages}
+          href={(targetPage) => pageHref(targetPage, q)}
+          label="Product pages"
+        />
       </section>
     </main>
   </>;
