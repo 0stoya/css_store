@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 import { CataloguePagination } from "@/components/catalogue-pagination";
-import { CatalogueSearch } from "@/components/catalogue-search";
 import { ProductCard } from "@/components/product-card";
 import { SiteHeader } from "@/components/site-header";
 import { getProducts } from "@/lib/magento/catalogue";
@@ -20,10 +19,10 @@ function pageHref(page: number, q: string) {
 export default async function HomePage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; page?: string; focus?: string }>;
+  searchParams: Promise<{ q?: string; page?: string }>;
 }) {
   const token = await requireCustomerToken();
-  const { q = "", page: rawPage = "1", focus = "" } = await searchParams;
+  const { q = "", page: rawPage = "1" } = await searchParams;
   const page = Math.max(1, Math.trunc(Number(rawPage) || 1));
   const searchTerm = q.trim();
 
@@ -40,17 +39,9 @@ export default async function HomePage({
   return <>
     <SiteHeader customerName={name} companyName={selected?.name}/>
     <main className="shell catalogue-page home-catalogue-page">
-      <header className="home-catalogue-intro">
-        <div className="home-catalogue-heading">
-          <p className="eyebrow">Order supplies</p>
-          <h1>{searchTerm ? "Search products" : "Find what you need"}</h1>
-        </div>
-        <CatalogueSearch action="/" defaultValue={q} autoFocus={focus === "search"}/>
-      </header>
-
       {!searchTerm && featuredCategories.length ? <section className="home-category-section" aria-labelledby="home-category-heading">
         <div className="home-section-heading">
-          <h2 id="home-category-heading">Shop by category</h2>
+          <h1 id="home-category-heading">Shop by category</h1>
           <Link href="/catalogue">View all products</Link>
         </div>
         <div className="home-category-grid">
@@ -72,7 +63,9 @@ export default async function HomePage({
         <div className="portal-section-heading catalogue-products-heading home-products-heading">
           <div>
             <h2 id="home-products-heading">{searchTerm ? "Search results" : "Products"}</h2>
-            <p>{products.total_count} product{products.total_count === 1 ? "" : "s"}</p>
+            <p>{searchTerm
+              ? `${products.total_count} result${products.total_count === 1 ? "" : "s"} for “${searchTerm}”`
+              : `${products.total_count} product${products.total_count === 1 ? "" : "s"}`}</p>
           </div>
           {searchTerm ? <Link className="button secondary" href="/">Clear search</Link> : null}
         </div>
@@ -82,7 +75,7 @@ export default async function HomePage({
         </div>
         {!products.items.length ? <div className="empty card">
           <h2>No products found</h2>
-          <p className="muted">Try a different product name or SKU.</p>
+          <p className="muted">Try a different product name or SKU from the search in the header.</p>
           {searchTerm ? <p><Link className="button secondary" href="/">View all products</Link></p> : null}
         </div> : null}
 
