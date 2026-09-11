@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { CatalogueSearch } from "@/components/catalogue-search";
 import { ProductCard } from "@/components/product-card";
 import { SiteHeader } from "@/components/site-header";
 import { getCategories, getProducts } from "@/lib/magento/catalogue";
@@ -50,34 +51,35 @@ export default async function CategoryPage({
   const selected = ctx.css_company_context.companies.find((company) => company.selected) || null;
   const name = `${ctx.customer.firstname} ${ctx.customer.lastname}`.trim();
   const routeKey = category.url_key || category.uid;
+  const categoryPath = `/catalogue/category/${encodeURIComponent(routeKey)}`;
 
   return <>
     <SiteHeader customerName={name} companyName={selected?.name}/>
-    <main className="shell">
+    <main className="shell catalogue-page">
       <nav className="pdp-breadcrumb" aria-label="Breadcrumb">
         <Link href="/catalogue">Products</Link><span aria-hidden="true">/</span><span>{category.name}</span>
       </nav>
 
-      <header className="portal-page-header">
-        <div className="portal-page-heading">
+      <header className="catalogue-hero catalogue-category-hero">
+        <div className="catalogue-hero-heading">
           <p className="eyebrow">Category</p>
           <h1>{category.name}</h1>
-          <p className="muted">Products in this range available to {selected?.name || "your company"}.</p>
           {searchTerm ? <p className="catalogue-result-note">{products.total_count} result{products.total_count === 1 ? "" : "s"} for “{searchTerm}”.</p> : null}
         </div>
-        <form className="catalogue-search" role="search">
-          <label className="sr-only" htmlFor="category-search">Search {category.name}</label>
-          <input id="category-search" name="q" type="search" defaultValue={q} placeholder={`Search ${category.name}`}/>
-          <button className="button secondary" type="submit">Search</button>
-        </form>
+        <CatalogueSearch
+          action={categoryPath}
+          categoryUid={category.uid}
+          defaultValue={q}
+          placeholder={`Search ${category.name} by name or SKU`}
+        />
       </header>
 
-      <div className="portal-section-heading">
+      <div className="portal-section-heading catalogue-products-heading">
         <div>
           <h2>{searchTerm ? "Search results" : category.name}</h2>
           <p>{products.total_count} product{products.total_count === 1 ? "" : "s"}</p>
         </div>
-        {searchTerm ? <Link className="button secondary" href={`/catalogue/category/${encodeURIComponent(routeKey)}`}>Clear search</Link> : null}
+        {searchTerm ? <Link className="button secondary" href={categoryPath}>Clear search</Link> : null}
       </div>
 
       <section className="product-grid" aria-label={`${category.name} products`}>
