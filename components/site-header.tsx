@@ -1,4 +1,4 @@
-import { ShoppingBasket, UserRound } from "lucide-react";
+import { Search, ShoppingBasket, UserRound } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { ProductMegaMenu } from "@/components/product-mega-menu";
@@ -37,6 +37,14 @@ export async function SiteHeader({
       <nav aria-label="Store navigation" className="store-nav">
         {customerName ? <Link className="store-nav-link store-nav-all-products" href="/catalogue">All products</Link> : null}
         {customerName ? <ProductMegaMenu categories={categories}/> : <Link href="/catalogue">Products</Link>}
+        {customerName ? <Link
+          className="store-nav-link store-nav-search"
+          href="/catalogue?focus=search#catalogue-search"
+          aria-label="Search products"
+          title="Search products"
+        >
+          <Search size={17} strokeWidth={2.1} aria-hidden="true"/>
+        </Link> : null}
         {customerName ? <Link className="store-nav-link" href="/basket">
           <ShoppingBasket size={16} strokeWidth={2.1} aria-hidden="true"/>
           <span>Basket{typeof quantity === "number" && quantity > 0 ? ` (${quantity})` : ""}</span>
