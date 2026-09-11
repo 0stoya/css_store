@@ -1,5 +1,6 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { redirect, unstable_rethrow } from "next/navigation";
 import { clearCustomerToken, getCustomerToken, requireCustomerToken } from "@/lib/session";
 import { revokeCustomerToken } from "@/lib/magento/auth";
@@ -36,5 +37,7 @@ export async function selectCompanyAction(formData: FormData) {
     unstable_rethrow(error);
     redirect("/account?error=Company%20selection%20failed.");
   }
+
+  revalidatePath("/account", "layout");
   redirect("/account?notice=Company%20updated.");
 }
