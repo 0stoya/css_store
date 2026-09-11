@@ -17,6 +17,7 @@ import "./account-sidebar.css";
 import "./portal-width.css";
 import "./catalogue-ux.css";
 import "./catalogue-polish.css";
+import "./header-search.css";
 import { SiteFooter } from "@/components/site-footer";
 import { getStoreName } from "@/lib/config";
 
