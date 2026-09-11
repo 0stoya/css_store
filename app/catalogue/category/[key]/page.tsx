@@ -55,16 +55,19 @@ export default async function CategoryPage({
 
   return <>
     <SiteHeader customerName={name} companyName={selected?.name}/>
-    <main className="shell catalogue-page">
-      <nav className="pdp-breadcrumb" aria-label="Breadcrumb">
+    <main className="shell catalogue-page catalogue-category-page">
+      <nav className="pdp-breadcrumb catalogue-category-breadcrumb" aria-label="Breadcrumb">
         <Link href="/catalogue">Products</Link><span aria-hidden="true">/</span><span>{category.name}</span>
       </nav>
 
       <header className="catalogue-hero catalogue-category-hero">
         <div className="catalogue-hero-heading">
-          <p className="eyebrow">Category</p>
           <h1>{category.name}</h1>
-          {searchTerm ? <p className="catalogue-result-note">{products.total_count} result{products.total_count === 1 ? "" : "s"} for “{searchTerm}”.</p> : null}
+          <p className="catalogue-category-count">
+            {searchTerm
+              ? `${products.total_count} result${products.total_count === 1 ? "" : "s"} for “${searchTerm}”`
+              : `${products.total_count} product${products.total_count === 1 ? "" : "s"}`}
+          </p>
         </div>
         <CatalogueSearch
           action={categoryPath}
@@ -74,13 +77,9 @@ export default async function CategoryPage({
         />
       </header>
 
-      <div className="portal-section-heading catalogue-products-heading">
-        <div>
-          <h2>{searchTerm ? "Search results" : category.name}</h2>
-          <p>{products.total_count} product{products.total_count === 1 ? "" : "s"}</p>
-        </div>
-        {searchTerm ? <Link className="button secondary" href={categoryPath}>Clear search</Link> : null}
-      </div>
+      {searchTerm ? <div className="catalogue-category-search-actions">
+        <Link className="button secondary" href={categoryPath}>Clear search</Link>
+      </div> : null}
 
       <section className="product-grid" aria-label={`${category.name} products`}>
         {products.items.map((product) => <ProductCard product={product} hidePrice={ctx.css_storefront_policy.hide_price} key={product.uid}/>)}
