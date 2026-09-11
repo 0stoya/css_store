@@ -1,9 +1,7 @@
 import { ChevronDown, ChevronRight, ShoppingBasket, UserRound } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import { unstable_rethrow } from "next/navigation";
 import { getStoreName } from "@/lib/config";
-import { getCustomerCartSummary } from "@/lib/magento/cart";
 import { getCategories, type StoreCategory } from "@/lib/magento/catalogue";
 import { getCustomerToken } from "@/lib/session";
 
@@ -16,29 +14,15 @@ export async function SiteHeader({
   companyName?: string | null;
   basketQuantity?: number;
 }) {
-  let quantity = basketQuantity;
+  const quantity = basketQuantity;
   let categories: StoreCategory[] = [];
 
   if (customerName) {
-    const token = await getCustomerToken();
-    if (token) {
-      const [summaryResult, categoriesResult] = await Promise.allSettled([
-        quantity === undefined ? getCustomerCartSummary(token) : Promise.resolve(null),
-        getCategories(token),
-      ]);
-
-      if (summaryResult.status === "fulfilled") {
-        if (summaryResult.value) quantity = summaryResult.value.total_quantity;
-      } else {
-        unstable_rethrow(summaryResult.reason);
-        quantity = undefined;
-      }
-
-      if (categoriesResult.status === "fulfilled") {
-        categories = categoriesResult.value;
-      } else {
-        unstable_rethrow(categoriesResult.reason);
-      }
+    try {
+      const token = await getCustomerToken();
+      if (token) categories = await getCategories(token);
+    } catch {
+      categories = [];
     }
   }
 
