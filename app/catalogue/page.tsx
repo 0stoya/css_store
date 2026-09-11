@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { CataloguePagination } from "@/components/catalogue-pagination";
-import { CatalogueSearch } from "@/components/catalogue-search";
 import { ProductCard } from "@/components/product-card";
 import { SiteHeader } from "@/components/site-header";
 import { getProducts } from "@/lib/magento/catalogue";
@@ -20,10 +19,10 @@ function pageHref(page: number, q: string) {
 export default async function CataloguePage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; page?: string; focus?: string }>;
+  searchParams: Promise<{ q?: string; page?: string }>;
 }) {
   const token = await requireCustomerToken();
-  const { q = "", page: rawPage = "1", focus = "" } = await searchParams;
+  const { q = "", page: rawPage = "1" } = await searchParams;
   const page = Math.max(1, Math.trunc(Number(rawPage) || 1));
   const searchTerm = q.trim();
   const [ctx, products] = await Promise.all([
@@ -36,27 +35,23 @@ export default async function CataloguePage({
   return <>
     <SiteHeader customerName={name} companyName={selected?.name}/>
     <main className="shell catalogue-page">
-      <header className="catalogue-hero">
-        <div className="catalogue-hero-heading">
-          <p className="eyebrow">Catalogue</p>
-          <h1>Products</h1>
-          {searchTerm ? <p className="catalogue-result-note">{products.total_count} result{products.total_count === 1 ? "" : "s"} for “{searchTerm}”.</p> : null}
-        </div>
-        <CatalogueSearch defaultValue={q} autoFocus={focus === "search"}/>
-      </header>
-
-      <div className="portal-section-heading catalogue-products-heading">
+      <header className="catalogue-page-heading">
         <div>
-          <h2>{searchTerm ? "Search results" : "All products"}</h2>
-          <p>{products.total_count} product{products.total_count === 1 ? "" : "s"}</p>
+          <p className="eyebrow">Catalogue</p>
+          <h1>{searchTerm ? "Search results" : "Products"}</h1>
+          <p className="catalogue-page-heading-meta">
+            {searchTerm
+              ? `${products.total_count} result${products.total_count === 1 ? "" : "s"} for “${searchTerm}”`
+              : `${products.total_count} product${products.total_count === 1 ? "" : "s"}`}
+          </p>
         </div>
         {searchTerm ? <Link className="button secondary" href="/catalogue">Clear search</Link> : null}
-      </div>
+      </header>
 
       <section className="product-grid" aria-label={searchTerm ? `Search results for ${searchTerm}` : "Products"}>
         {products.items.map((product) => <ProductCard product={product} hidePrice={ctx.css_storefront_policy.hide_price} key={product.uid}/>)}
       </section>
-      {!products.items.length ? <div className="empty card"><h2>No products found</h2><p className="muted">Try a different search term or choose a category from the Products menu.</p>{searchTerm ? <p><Link className="button secondary" href="/catalogue">View all products</Link></p> : null}</div> : null}
+      {!products.items.length ? <div className="empty card"><h2>No products found</h2><p className="muted">Try a different product name or SKU from the search in the header.</p>{searchTerm ? <p><Link className="button secondary" href="/catalogue">View all products</Link></p> : null}</div> : null}
 
       <CataloguePagination
         currentPage={products.page_info.current_page}
