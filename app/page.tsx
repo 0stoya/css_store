@@ -30,7 +30,7 @@ export default async function HomePage({
   const [ctx, products, menuCategories] = await Promise.all([
     getCustomerContext(token),
     getProducts(token, searchTerm, page),
-    getMenuCategories(token),
+    getMenuCategories(token).catch(() => []),
   ]);
 
   const selected = ctx.css_company_context.companies.find((company) => company.selected) || null;
@@ -48,7 +48,7 @@ export default async function HomePage({
         <CatalogueSearch action="/" defaultValue={q} autoFocus={focus === "search"}/>
       </header>
 
-      {featuredCategories.length ? <section className="home-category-section" aria-labelledby="home-category-heading">
+      {!searchTerm && featuredCategories.length ? <section className="home-category-section" aria-labelledby="home-category-heading">
         <div className="home-section-heading">
           <h2 id="home-category-heading">Shop by category</h2>
           <Link href="/catalogue">View all products</Link>
