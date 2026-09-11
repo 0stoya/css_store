@@ -1,14 +1,13 @@
 export default function CreditOrdersLoading() {
-  return <main className="shell stack">
-    <div className="basket-heading">
-      <div>
-        <p className="eyebrow">Customer account · credit orders</p>
-        <h1>Loading credit orders…</h1>
-        <p className="muted">Checking the current Fluid company scope and lifecycle queues.</p>
-      </div>
-    </div>
+  return <section className="account-workspace-content stack" aria-busy="true" aria-live="polite">
+    <header className="account-workspace-heading">
+      <p className="eyebrow">Account</p>
+      <h1>Credit orders</h1>
+      <p className="muted">Loading credit orders…</p>
+    </header>
     <section className="card basket-card">
-      <p className="muted">Loading authorised credit-order data…</p>
+      <strong>Loading authorised credit-order data…</strong>
+      <p className="muted small">Checking the current company scope and available actions.</p>
     </section>
-  </main>;
+  </section>;
 }
