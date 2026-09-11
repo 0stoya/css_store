@@ -86,11 +86,13 @@ export type CartSnapshot = {
     subtotal_excluding_tax: CartMoney | null;
     grand_total: CartMoney | null;
   } | null;
-  css_purchase_eligibility: {
+  // These fields are intentionally optional. The customer-facing basket no longer
+  // resolves them; checkout uses its dedicated query for purchase/credit decisions.
+  css_purchase_eligibility?: {
     approval_status: string;
     items: CartPurchaseDecision[];
   } | null;
-  css_company_credit: {
+  css_company_credit?: {
     company_id: number;
     credit_id: number | null;
     has_credit_account: boolean;
@@ -140,6 +142,10 @@ const CART_SUMMARY_FIELDS = /* GraphQL */ `
   itemsV2 { items { uid } }
 `;
 
+// Keep the basket read query deliberately narrow. Purchase eligibility and company
+// credit are checkout concerns and have dedicated checkout resolvers. Asking the
+// basket to resolve those fields makes an otherwise healthy cart dependent on
+// unrelated custom resolvers and can turn a resolver exception into a blank basket.
 const CART_FIELDS = /* GraphQL */ `
   id
   total_quantity
@@ -175,32 +181,6 @@ const CART_FIELDS = /* GraphQL */ `
   prices {
     subtotal_excluding_tax { value currency }
     grand_total { value currency }
-  }
-  css_purchase_eligibility {
-    approval_status
-    items {
-      logical_product_id
-      has_active_restriction
-      allowed_quantity
-      purchased_quantity
-      remaining_quantity
-      requested_quantity
-      status
-      reason
-    }
-  }
-  css_company_credit {
-    company_id
-    credit_id
-    has_credit_account
-    credit_limit
-    used_amount
-    remaining_amount
-    currency
-    allow_over_limit
-    cart_grand_total_in_credit_currency
-    credit_sufficient_for_cart
-    can_pay_on_account
   }
   css_company_discount { applied label percent amount base_amount currency base_currency }
 `;
