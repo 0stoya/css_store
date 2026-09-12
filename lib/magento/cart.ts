@@ -52,6 +52,7 @@ export type CartItemSnapshot = {
   uid: string;
   quantity: number;
   product: {
+    allowance_product_id: number | null;
     sku: string;
     name: string;
     stock_status: string | null;
@@ -148,6 +149,7 @@ const CART_FIELDS = /* GraphQL */ `
       uid
       quantity
       product {
+        allowance_product_id: id
         sku
         name
         stock_status
