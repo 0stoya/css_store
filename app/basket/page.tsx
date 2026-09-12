@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ArrowRight, Trash2 } from "lucide-react";
 import { EmployeePicker } from "@/components/employee-picker";
 import { QuantityStepper } from "@/components/quantity-stepper";
+import { PurchaseAllowanceSummary } from "@/components/purchase-allowance-summary";
 import { SiteHeader } from "@/components/site-header";
 import { getCustomerCart, type CartMoney } from "@/lib/magento/cart";
 import { getCustomerContext } from "@/lib/magento/context";
@@ -66,6 +67,7 @@ export default async function BasketPage({
         <p><Link className="button" href="/catalogue">Browse products</Link></p>
       </section> : <div className="basket-layout basket-production-layout">
         <section className="basket-lines" aria-label="Basket items">
+          <PurchaseAllowanceSummary eligibility={cart.css_purchase_eligibility} items={items} />
           {items.map((item) => {
             const assignedId = employeeId(item);
             const effectiveSku = item.configured_variant?.sku || item.product.sku;

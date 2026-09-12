@@ -6,11 +6,12 @@ import {
   MapPin,
   Phone,
   ReceiptText,
-  ShieldCheck,
   ShoppingBag,
   Truck,
   WalletCards,
 } from "lucide-react";
+import { PurchaseAllowanceSummary } from "@/components/purchase-allowance-summary";
+import { checkoutSubmitLabel } from "@/lib/purchase-allowance";
 import { CheckoutSteps } from "@/components/checkout-steps";
 import { SiteHeader } from "@/components/site-header";
 import type { CartMoney } from "@/lib/magento/cart";
@@ -66,7 +67,7 @@ export default async function PaymentPage({
     && Boolean(shippingAddress && shippingMethod)
     && methods.length > 0;
   const includeEmployee = ordering.usesEmployee && !ordering.multiEmployeeBasket;
-  const submitLabel = usesCreditOrder ? "Submit for approval" : "Place order";
+  const submitLabel = checkoutSubmitLabel(usesCreditOrder, cart.css_purchase_eligibility?.approval_status);
 
   return <>
     <SiteHeader customerName={customerName} companyName={selectedCompany?.name} basketQuantity={cart.total_quantity}/>
@@ -119,6 +120,8 @@ export default async function PaymentPage({
             </div> : null}
           </section>
 
+          <PurchaseAllowanceSummary eligibility={cart.css_purchase_eligibility} items={cart.itemsV2.items} />
+
           <details className="card payment-items-review">
             <summary>
               <span className="payment-items-summary-copy">
@@ -164,11 +167,6 @@ export default async function PaymentPage({
               <span>{shippingAddress.country?.label || shippingAddress.country?.code} · {shippingAddress.postcode}</span>
               {shippingAddress.telephone ? <span className="payment-phone"><Phone size={14} aria-hidden="true"/>{shippingAddress.telephone}</span> : null}
               {shippingMethod ? <span className="payment-shipping-method"><Truck size={15} aria-hidden="true"/>{shippingMethod.carrier_title || shippingMethod.carrier_code} · {shippingMethod.method_title || shippingMethod.method_code}</span> : null}
-            </div> : null}
-
-            {usesCreditOrder ? <div className="payment-approval-note">
-              <ShieldCheck size={17} aria-hidden="true"/>
-              <span>This order may require company approval.</span>
             </div> : null}
 
             <button className="button payment-submit" type="submit" disabled={!ready || !methods.length}>{submitLabel}</button>

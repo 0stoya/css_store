@@ -1,5 +1,6 @@
 import { magentoGraphQL } from "@/lib/magento/client";
 import type { CartEmployeeAssignment, CartKitMetadata, CartMoney } from "@/lib/magento/cart";
+import type { PurchaseAllowanceEligibility } from "@/lib/purchase-allowance";
 import type { SelectedShippingMethod } from "@/lib/magento/shipping";
 
 export type CheckoutPaymentMethod = {
@@ -10,7 +11,7 @@ export type CheckoutPaymentMethod = {
 export type CheckoutCartItem = {
   uid: string;
   quantity: number;
-  product: { sku: string; name: string };
+  product: { allowance_product_id: number | null; sku: string; name: string };
   configured_variant?: { sku: string; name: string } | null;
   configurable_options?: Array<{ option_label: string; value_label: string }> | null;
   css_kit: CartKitMetadata | null;
@@ -46,9 +47,7 @@ export type CheckoutContext = {
       subtotal_excluding_tax: CartMoney | null;
       grand_total: CartMoney | null;
     } | null;
-    css_purchase_eligibility: {
-      approval_status: string;
-    } | null;
+    css_purchase_eligibility: PurchaseAllowanceEligibility | null;
   };
   css_ordering_capabilities: {
     authenticated: boolean;
@@ -83,7 +82,7 @@ const CHECKOUT_CONTEXT = /* GraphQL */ `
         items {
           uid
           quantity
-          product { sku name }
+          product { allowance_product_id: id sku name }
           ... on ConfigurableCartItem {
             configured_variant { sku name }
             configurable_options { option_label value_label }
@@ -116,7 +115,19 @@ const CHECKOUT_CONTEXT = /* GraphQL */ `
         subtotal_excluding_tax { value currency }
         grand_total { value currency }
       }
-      css_purchase_eligibility { approval_status }
+      css_purchase_eligibility {
+        approval_status
+        items {
+          logical_product_id
+          has_active_restriction
+          allowed_quantity
+          purchased_quantity
+          remaining_quantity
+          requested_quantity
+          status
+          reason
+        }
+      }
     }
     css_ordering_capabilities {
       authenticated
