@@ -47,9 +47,9 @@ export function SiteFooter() {
   return <footer className="site-footer">
     <div className="footer-accreditations-wrap" aria-label="Accreditations and certifications">
       <div className="footer-accreditations">
-        {accreditationImages.map((image) => <div className="footer-accreditation" key={image.src}>
+        {accreditationImages.map((image) => <figure className="footer-accreditation" key={image.src}>
           <img src={image.src} alt={image.alt} loading="lazy"/>
-        </div>)}
+        </figure>)}
       </div>
     </div>
 
