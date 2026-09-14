@@ -42,6 +42,7 @@ At minimum configure the real values for:
 MAGENTO_GRAPHQL_URL=https://<magento-host>/graphql
 MAGENTO_BASE_URL=https://<magento-host>
 MAGENTO_STORE_CODE=default
+CSS_ADMIN_URL=https://admin.csscdn.co.uk
 NEXT_PUBLIC_STORE_NAME=Chelmsford Safety Supplies
 ```
 

@@ -55,6 +55,31 @@ Rules:
 
 Do not build a parallel username/password store or local customer identity table.
 
+### Company Portal app switching
+
+Authenticated company customers may open `css_admin` Company Portal through
+the Store **Manage** action and return through Portal **Shop** without another
+credential prompt.
+
+This is an authorization-code-style server flow:
+
+1. the destination stores a random state and PKCE verifier in short-lived,
+   host-only HttpOnly cookies;
+2. the source creates a 60-second Fluid ticket using its current customer token;
+3. the browser carries only the random one-use code and state;
+4. the destination exchanges the code and verifier server-side;
+5. Fluid consumes the code atomically and issues a fresh customer token;
+6. the destination verifies `customer` and `css_company_context` before setting
+   its normal session cookie.
+
+The ticket is target-bound (`STORE` or `PORTAL`) and only its SHA-256 hash is
+stored. Callback origins are fixed by `CSS_ADMIN_URL` / `CSS_STORE_URL`; no
+request-controlled return URL is accepted. Magento admin tokens are never
+eligible for this flow, and the Portal callback always enters `/portal`, not
+the Staff/Admin surface.
+
+Do not replace this with a `.csscdn.co.uk` parent-domain bearer cookie.
+
 ## Company context
 
 A Magento customer can belong to zero, one or multiple Fluid companies.
