@@ -1,9 +1,9 @@
-import { Search, ShoppingBasket, UserRound } from "lucide-react";
+import { Search, Settings, ShoppingBasket, UserRound } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { CatalogueSearch } from "@/components/catalogue-search";
 import { ProductMegaMenu } from "@/components/product-mega-menu";
-import { getStoreName } from "@/lib/config";
+import { getAdminPortalUrl, getStoreName } from "@/lib/config";
 import { getCustomerCartSummary } from "@/lib/magento/cart";
 import { getMenuCategories, type MenuCategory } from "@/lib/magento/menu-categories";
 import { getCustomerToken } from "@/lib/session";
@@ -56,6 +56,10 @@ export async function SiteHeader({
           <ShoppingBasket size={16} strokeWidth={2.1} aria-hidden="true"/>
           <span>Basket{typeof quantity === "number" && quantity > 0 ? ` (${quantity})` : ""}</span>
         </Link> : null}
+        {customerName ? <a className="store-nav-link" href={`${getAdminPortalUrl()}/api/auth/sso/start`}>
+          <Settings size={16} strokeWidth={2.1} aria-hidden="true"/>
+          <span>Manage</span>
+        </a> : null}
         {customerName ? <Link className="store-nav-link" href="/account">
           <UserRound size={16} strokeWidth={2.1} aria-hidden="true"/>
           <span>Account</span>

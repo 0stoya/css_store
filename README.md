@@ -15,6 +15,7 @@ Storefront Phase 1 is merged:
 - `css_ordering_capabilities` and `css_storefront_policy` consumption;
 - authenticated Magento catalogue search/listing with company-context pricing and stock;
 - responsive customer/account/store shell.
+- secure **Manage** / **Shop** switching with `css_admin` through Fluid one-use customer tickets.
 
 The next implementation block is **Phase 2: categories + PDP + grouped/configurable selection + purchase-control messaging + Employee-aware add-to-cart**.
 
@@ -36,6 +37,9 @@ yarn dev
 ```
 
 Required environment variable: `MAGENTO_GRAPHQL_URL`.
+
+`CSS_ADMIN_URL` is also required for the Company Portal app switch. Production
+uses `https://admin.csscdn.co.uk`.
 
 Validation:
 
