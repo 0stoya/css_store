@@ -262,7 +262,12 @@ export async function getProducts(
 
   let query = BROWSE_PRODUCTS;
   let variables: Record<string, unknown> = {
-    filter: cleanCategory ? { category_uid: { eq: cleanCategory } } : { price: { from: "0" } },
+    filter: cleanCategory
+      ? { category_uid: { eq: cleanCategory } }
+      // Magento 2.4.7-p10 with Fluid customer catalogue restrictions can return
+      // an empty result for price { from: "0" }. The upper bound keeps this as
+      // an effectively unfiltered browse while still including zero-price items.
+      : { price: { to: "999999999" } },
     page: safePage,
     pageSize: safePageSize,
   };
