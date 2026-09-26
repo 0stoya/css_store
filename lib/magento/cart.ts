@@ -1,4 +1,4 @@
-import { basketImageNeedsFallback, getGroupedParentImageMap } from "@/lib/magento/cart-images";
+import { basketImageNeedsFallback, getGroupedParentPresentationMap } from "@/lib/magento/cart-images";
 import { MagentoGraphQLError, magentoGraphQL } from "@/lib/magento/client";
 
 export type CartMoney = {
@@ -76,6 +76,7 @@ export type CartItemSnapshot = {
   } | null;
   configured_variant?: { sku: string; name: string } | null;
   configurable_options?: Array<{ option_label: string; value_label: string }> | null;
+  display_parent_sku?: string | null;
   css_kit: CartKitMetadata | null;
   css_employee: CartEmployeeAssignment | null;
 };
@@ -299,8 +300,8 @@ export async function getCustomerCart(token: string) {
 
   if (!needsFallback) return cart;
 
-  const groupedImages = await getGroupedParentImageMap(token);
-  if (!groupedImages.size) return cart;
+  const groupedParents = await getGroupedParentPresentationMap(token);
+  if (!groupedParents.size) return cart;
 
   return {
     ...cart,
@@ -309,15 +310,16 @@ export async function getCustomerCart(token: string) {
       items: cart.itemsV2.items.map((item) => {
         if (!basketImageNeedsFallback(item.product.small_image)) return item;
 
-        const fallback = groupedImages.get(item.configured_variant?.sku || "")
-          || groupedImages.get(item.product.sku);
+        const fallback = groupedParents.get(item.configured_variant?.sku || "")
+          || groupedParents.get(item.product.sku);
         if (!fallback) return item;
 
         return {
           ...item,
+          display_parent_sku: fallback.parent_sku,
           product: {
             ...item.product,
-            small_image: fallback,
+            small_image: fallback.image,
           },
         };
       }),
