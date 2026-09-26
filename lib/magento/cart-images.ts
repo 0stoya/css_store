@@ -58,10 +58,15 @@ function usableImage(image: BasketProductImage | null | undefined) {
   return !/\/placeholder(?:\/|_|\.)/i.test(url);
 }
 
-export async function getGroupedParentImageMap(
+export type BasketParentPresentation = {
+  parent_sku: string;
+  image: BasketProductImage;
+};
+
+export async function getGroupedParentPresentationMap(
   token: string,
-): Promise<Map<string, BasketProductImage>> {
-  const images = new Map<string, BasketProductImage>();
+): Promise<Map<string, BasketParentPresentation>> {
+  const presentations = new Map<string, BasketParentPresentation>();
   const pageSize = 100;
   let page = 1;
   let totalPages = 1;
@@ -82,10 +87,14 @@ export async function getGroupedParentImageMap(
         if (parent.__typename !== "GroupedProduct" && parent.__typename !== "CssGroupedConfigurableProduct") continue;
 
         for (const item of parent.items || []) {
-          images.set(item.product.sku, parent.small_image as BasketProductImage);
+          const presentation = {
+            parent_sku: parent.sku,
+            image: parent.small_image as BasketProductImage,
+          };
+          presentations.set(item.product.sku, presentation);
 
           for (const variant of item.product.variants || []) {
-            images.set(variant.product.sku, parent.small_image as BasketProductImage);
+            presentations.set(variant.product.sku, presentation);
           }
         }
       }
@@ -98,7 +107,7 @@ export async function getGroupedParentImageMap(
     return new Map();
   }
 
-  return images;
+  return presentations;
 }
 
 export function basketImageNeedsFallback(
