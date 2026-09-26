@@ -1,5 +1,6 @@
 import { getMagentoConfig } from "@/lib/config";
 import { magentoGraphQL } from "@/lib/magento/client";
+import { getProductBadgeValues } from "@/lib/magento/product-badges";
 import type { ProductBadgeValues } from "@/lib/product-badges";
 
 export type PurchaseAllowance = {
@@ -97,13 +98,6 @@ const PRODUCT_SELECTION = /* GraphQL */ `
     name
     url_key
     stock_status
-    ppe_certified
-    express_delivery
-    fast_delivery
-    made_to_order
-    company_logo
-    embroidered
-    printed
     small_image { url label }
     price_range {
       minimum_price {
@@ -294,5 +288,17 @@ export async function getProducts(
   }
 
   const data = await magentoGraphQL<{ products: StoreProductResult }>(query, variables, token);
-  return data.products;
+  const result = data.products;
+  const badges = await getProductBadgeValues(
+    token,
+    result.items.map((product) => product.sku),
+  );
+
+  return {
+    ...result,
+    items: result.items.map((product) => ({
+      ...product,
+      ...(badges.get(product.sku) || {}),
+    })),
+  };
 }
