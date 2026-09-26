@@ -67,7 +67,7 @@ export async function getGroupedParentPresentationMap(
   token: string,
 ): Promise<Map<string, BasketParentPresentation>> {
   const presentations = new Map<string, BasketParentPresentation>();
-  const pageSize = 100;
+  const pageSize = 48;
   let page = 1;
   let totalPages = 1;
 
