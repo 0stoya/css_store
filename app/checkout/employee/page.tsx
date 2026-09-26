@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, ArrowRight } from "lucide-react";
 import { CheckoutSteps } from "@/components/checkout-steps";
 import { EmployeePicker } from "@/components/employee-picker";
 import { SiteHeader } from "@/components/site-header";
@@ -84,7 +84,10 @@ export default async function CheckoutEmployeePage({
               label="Employee"
               defaultSelectedId={typeof currentEmployeeId === "number" ? currentEmployeeId : null}
             />
-            <button className="button checkout-employee-submit" type="submit">Continue to delivery</button>
+            <button className="button checkout-employee-submit checkout-forward" type="submit">
+              <span>Continue to delivery</span>
+              <ArrowRight size={17} aria-hidden="true"/>
+            </button>
           </form> : <p className="error" role="alert">No active Employees are available for this company. Please contact your account administrator before continuing.</p>}
         </section>
 
