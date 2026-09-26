@@ -1,0 +1,83 @@
+/* Product feature chips sourced from Magento yes/no product attributes. */
+
+.product-badges {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.product-badge {
+  min-height: 30px;
+  padding: 5px 9px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid #d2dfe8;
+  border-radius: 999px;
+  background: #f8fbfd;
+  color: #34536b;
+  font-size: .75rem;
+  font-weight: 800;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.product-badge > svg {
+  flex: 0 0 auto;
+  color: var(--blue);
+}
+
+.product-badge-ppe_certified {
+  border-color: #c8dfd2;
+  background: #f4faf6;
+  color: #285a3b;
+}
+
+.product-badge-ppe_certified > svg {
+  color: var(--success);
+}
+
+.product-badge-express_delivery {
+  border-color: #d2dcf3;
+  background: #f5f8ff;
+  color: #31548a;
+}
+
+.product-badge-made_to_order {
+  border-color: #e3d7bd;
+  background: #fdfaf2;
+  color: #725a27;
+}
+
+.product-badges.compact {
+  min-height: 24px;
+  gap: 5px;
+}
+
+.product-badges.compact .product-badge {
+  min-height: 24px;
+  padding: 4px 7px;
+  gap: 4px;
+  font-size: .66rem;
+}
+
+.product-title + .product-badges.compact {
+  margin-top: -2px;
+}
+
+.pdp-info > .product-badges {
+  margin: -3px 0 12px;
+}
+
+@media (max-width: 560px) {
+  .product-badges {
+    gap: 6px;
+  }
+
+  .product-badge {
+    min-height: 28px;
+    padding-inline: 8px;
+    font-size: .72rem;
+  }
+}

@@ -1,5 +1,6 @@
 import { getMagentoConfig } from "@/lib/config";
 import { magentoGraphQL } from "@/lib/magento/client";
+import type { ProductCustomAttributes } from "@/lib/product-badges";
 
 export type PurchaseAllowance = {
   logical_product_id: number;
@@ -38,6 +39,7 @@ export type StoreProduct = {
   name: string;
   url_key: string | null;
   stock_status: string | null;
+  custom_attributesV2: ProductCustomAttributes;
   small_image: { url: string; label: string | null } | null;
   price_range: {
     minimum_price: {
@@ -96,6 +98,15 @@ const PRODUCT_SELECTION = /* GraphQL */ `
     name
     url_key
     stock_status
+    custom_attributesV2(filters: { used_in_product_listing: true }) {
+      items {
+        code
+        ... on AttributeValue { value }
+        ... on AttributeSelectedOptions {
+          selected_options { label value }
+        }
+      }
+    }
     small_image { url label }
     price_range {
       minimum_price {
