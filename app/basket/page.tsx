@@ -44,8 +44,7 @@ export default async function BasketPage({
   const activeEmployeeIds = new Set(ordering.employees.map((employee) => employee.employee_id));
   const totalCurrency = cart.prices?.grand_total?.currency || cart.prices?.subtotal_excluding_tax?.currency || "GBP";
   const discountCurrency = cart.css_company_discount.currency || totalCurrency;
-  const singleEmployeeCheckout = ordering.usesEmployee && !ordering.multiEmployeeBasket;
-  const checkoutHref = singleEmployeeCheckout ? "/checkout/employee" : "/checkout/delivery";
+  const checkoutHref = "/checkout/delivery";
 
   return <>
     <SiteHeader customerName={customerName} companyName={selected?.name} basketQuantity={cart.total_quantity}/>
@@ -159,11 +158,9 @@ export default async function BasketPage({
             </dl>
 
             <div className="basket-checkout-action">
-              <p className="muted small">{singleEmployeeCheckout
-                ? "Choose the Employee for this order before delivery."
-                : "Continue to choose your delivery address and method."}</p>
+              <p className="muted small">Choose order details and delivery, then review and submit.</p>
               <Link className="button" href={checkoutHref}>
-                <span>{singleEmployeeCheckout ? "Choose Employee" : "Continue to delivery"}</span>
+                <span>Continue to checkout</span>
                 <ArrowRight size={18} aria-hidden="true"/>
               </Link>
             </div>
