@@ -112,7 +112,7 @@ const PRODUCT = /* GraphQL */ `
         name
         url_key
         stock_status
-        custom_attributesV2 {
+        custom_attributesV2(filters: { is_visible_on_front: true }) {
           items {
             code
             ... on AttributeValue { value }
