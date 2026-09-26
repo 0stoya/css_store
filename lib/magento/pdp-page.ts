@@ -1,5 +1,6 @@
 import { magentoGraphQL } from "@/lib/magento/client";
 import { getActiveEmployees, type EmployeeOrdering } from "@/lib/magento/employee";
+import { getRepeatOrderLists } from "@/lib/magento/repeat-orders";
 import type { ProductConfiguration } from "@/lib/magento/product";
 
 type PdpProduct = Omit<ProductConfiguration, "uid" | "url_key" | "stock_status">;
@@ -25,10 +26,6 @@ type PdpPageQuery = {
     uses_employee: boolean;
     multi_employee_basket: boolean;
   };
-  css_repeat_order_lists: Array<{
-    list_id: number;
-    name: string;
-  }>;
   products: {
     items: PdpProduct[];
   };
@@ -99,10 +96,6 @@ const PDP_PAGE = /* GraphQL */ `
     css_company_employee_configuration {
       uses_employee
       multi_employee_basket
-    }
-    css_repeat_order_lists {
-      list_id
-      name
     }
     products(
       filter: { sku: { eq: $sku } }
@@ -191,12 +184,17 @@ export async function getPdpPageContext(
   );
 
   const configuration = data.css_company_employee_configuration;
-  const employees = configuration.uses_employee && configuration.multi_employee_basket
-    ? await getActiveEmployees(token)
-    : [];
-
   const selectedCompany = data.css_company_context.companies.find((company) => company.selected) || null;
   const product = data.products.items.find((item) => item?.sku === sku) || null;
+
+  const [employees, repeatListData] = await Promise.all([
+    configuration.uses_employee && configuration.multi_employee_basket
+      ? getActiveEmployees(token)
+      : Promise.resolve([]),
+    product?.__typename === "CssGroupedConfigurableProduct"
+      ? getRepeatOrderLists(token)
+      : Promise.resolve({ css_repeat_order_lists: [] }),
+  ]);
 
   return {
     customerName: `${data.customer.firstname} ${data.customer.lastname}`.trim(),
@@ -216,7 +214,7 @@ export async function getPdpPageContext(
       multiEmployeeBasket: configuration.multi_employee_basket,
       employees,
     },
-    repeatLists: data.css_repeat_order_lists,
+    repeatLists: repeatListData.css_repeat_order_lists.map((list) => ({ list_id: list.list_id, name: list.name })),
     product,
   };
 }
