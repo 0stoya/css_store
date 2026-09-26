@@ -10,6 +10,7 @@ import "./pdp.css";
 import "./pdp-simplified.css";
 import "./pdp-runtime-tuning.css";
 import "./configurable-product.css";
+import "./product-badges.css";
 import "./basket-ux.css";
 import "./delivery-ux.css";
 import "./payment-ux.css";
