@@ -1,5 +1,6 @@
 import { magentoGraphQL } from "@/lib/magento/client";
 import type { PurchaseAllowance, PurchaseConstraints, StockInfo } from "@/lib/magento/catalogue";
+import type { ProductCustomAttributes } from "@/lib/product-badges";
 
 export type ConfigurableOption = {
   uid: string;
@@ -41,6 +42,7 @@ export type ProductConfiguration = {
   name: string;
   url_key: string | null;
   stock_status: string | null;
+  custom_attributesV2: ProductCustomAttributes;
   description: { html: string } | null;
   media_gallery: Array<{ url: string; label: string | null; position: number | null }> | null;
   price_range: ProductPriceRange | null;
@@ -110,6 +112,15 @@ const PRODUCT = /* GraphQL */ `
         name
         url_key
         stock_status
+        custom_attributesV2 {
+          items {
+            code
+            ... on AttributeValue { value }
+            ... on AttributeSelectedOptions {
+              selected_options { label value }
+            }
+          }
+        }
         description { html }
         media_gallery { url label position }
         price_range {
