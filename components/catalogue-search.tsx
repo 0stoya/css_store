@@ -198,7 +198,7 @@ export function CatalogueSearch({
           onClick={() => setOpen(false)}
         >
           <span className="catalogue-suggestion-image">
-            <ProductImage src={suggestion.small_image?.url} alt={suggestion.small_image?.label || suggestion.name}/>
+            <ProductImage src={suggestion.small_image?.url} alt={suggestion.small_image?.label || suggestion.name} sizes="50px"/>
           </span>
           <span className="catalogue-suggestion-copy">
             <strong>{suggestion.name}</strong>

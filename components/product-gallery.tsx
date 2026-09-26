@@ -1,6 +1,7 @@
 "use client";
 
 import { ChevronLeft, ChevronRight, ImageOff } from "lucide-react";
+import Image from "next/image";
 import { useState } from "react";
 
 export type ProductGalleryImage = {
@@ -31,9 +32,14 @@ export function ProductGallery({
 
   return <div className="pdp-gallery-shell">
     <div className="pdp-gallery-main" role="group" aria-label={`${productName} product images`}>
-      {active && !failed ? <img
+      {active && !failed ? <Image
         src={active.url}
         alt={active.label || productName}
+        width={1200}
+        height={1200}
+        sizes="(max-width: 980px) 100vw, 50vw"
+        quality={82}
+        priority={activeIndex === 0}
         onError={() => markFailed(activeIndex)}
       /> : <div className="pdp-gallery-fallback" role="img" aria-label={`${productName} image unavailable`}>
         <ImageOff size={42} strokeWidth={1.5}/>
@@ -62,7 +68,15 @@ export function ProductGallery({
           aria-label={`View product image ${index + 1}`}
           aria-pressed={index === activeIndex}
         >
-          {!thumbFailed ? <img src={image.url} alt="" onError={() => markFailed(index)}/> : <ImageOff size={20} aria-hidden="true"/>}
+          {!thumbFailed ? <Image
+            src={image.url}
+            alt=""
+            width={96}
+            height={96}
+            sizes="72px"
+            quality={68}
+            onError={() => markFailed(index)}
+          /> : <ImageOff size={20} aria-hidden="true"/>}
         </button>;
       })}
     </div> : null}

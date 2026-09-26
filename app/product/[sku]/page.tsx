@@ -12,14 +12,11 @@ import {
 import { ConfigurableProductControls } from "@/components/configurable-product-controls";
 import { EmployeePicker } from "@/components/employee-picker";
 import { GroupedQuantityControl } from "@/components/grouped-quantity-control";
-import { ProductBadges } from "@/components/product-badges";
+import { DeferredProductBadges } from "@/components/deferred-product-badges";
 import { ProductGallery } from "@/components/product-gallery";
 import { QuantityStepper } from "@/components/quantity-stepper";
 import { SiteHeader } from "@/components/site-header";
-import { getCustomerContext } from "@/lib/magento/context";
-import { getEmployeeOrdering } from "@/lib/magento/employee";
-import { getProduct } from "@/lib/magento/product";
-import { getRepeatOrderLists } from "@/lib/magento/repeat-orders";
+import { getPdpPageContext } from "@/lib/magento/pdp-page";
 import { requireCustomerToken } from "@/lib/session";
 import { addProductToCartAction, saveProductToRepeatListAction } from "./actions";
 import { addGroupedChildToCartAction } from "./grouped-actions";
@@ -40,28 +37,21 @@ export default async function ProductPage({
   const token = await requireCustomerToken();
   const [{ sku: rawSku }, status] = await Promise.all([params, searchParams]);
   const sku = decodeURIComponent(rawSku);
-  const [product, ctx, employeeOrdering, repeatListsData] = await Promise.all([
-    getProduct(token, sku),
-    getCustomerContext(token),
-    getEmployeeOrdering(token),
-    getRepeatOrderLists(token),
-  ]);
+  const pdp = await getPdpPageContext(token, sku);
+  const { product, selectedCompany, customerName, employeeOrdering, repeatLists, storefrontPolicy } = pdp;
   if (!product) notFound();
 
-  const selectedCompany = ctx.css_company_context.companies.find((company) => company.selected) || null;
-  const customerName = `${ctx.customer.firstname} ${ctx.customer.lastname}`.trim();
   const price = product.price_range?.minimum_price;
   const allowance = product.css_purchase_allowance;
   const allowanceBlocked = Boolean(allowance?.has_active_restriction && allowance.remaining_quantity <= 0);
   const grouped = product.__typename === "CssGroupedConfigurableProduct" || product.__typename === "GroupedProduct";
   const configurable = product.__typename === "ConfigurableProduct";
   const supported = ["SimpleProduct", "ConfigurableProduct", "CssGroupedConfigurableProduct", "GroupedProduct"].includes(product.__typename);
-  const canAdd = !ctx.css_storefront_policy.hide_add_to_cart && product.css_stock_info.available && !allowanceBlocked && supported;
+  const canAdd = !storefrontPolicy.hideAddToCart && product.css_stock_info.available && !allowanceBlocked && supported;
   const gallery = (product.media_gallery || []).filter((image) => Boolean(image.url)).sort((a, b) => (a.position || 0) - (b.position || 0));
-  const repeatLists = repeatListsData.css_repeat_order_lists;
   const stockLabel = product.css_stock_info.stock_status || (product.css_stock_info.available ? "Available" : "Unavailable");
   const productTypeLabel = grouped ? "Product set" : "Product";
-  const addLabel = ctx.css_storefront_policy.add_to_cart_label || "Add to basket";
+  const addLabel = storefrontPolicy.addToCartLabel || "Add to basket";
   const groupedItems = (product.items || [])
     .map((item, originalIndex) => ({ item, originalIndex }))
     .sort((a, b) => (a.item.position || 0) - (b.item.position || 0));
@@ -94,13 +84,13 @@ export default async function ProductPage({
         <div className="pdp-info">
           {!configurable ? <p className="eyebrow">{productTypeLabel}</p> : null}
           <h1>{product.name}</h1>
-          <ProductBadges values={product}/>
+          <DeferredProductBadges sku={product.sku} initialValues={product}/>
           <div className="pdp-meta-row">
             <span className="pdp-sku">SKU {product.sku}</span>
             <span className={`product-stock ${product.css_stock_info.available ? "available" : "unavailable"}`}>{stockLabel}</span>
           </div>
 
-          {!ctx.css_storefront_policy.hide_price && price ? <div className="pdp-price-card">
+          {!storefrontPolicy.hidePrice && price ? <div className="pdp-price-card">
             <div>
               <span className="pdp-price-label">Your price</span>
               <strong className="pdp-price-value">{money(price.final_price.value, price.final_price.currency)}</strong>
@@ -201,7 +191,7 @@ export default async function ProductPage({
                     <div className="grouped-product-name">
                       <div className="pdp-grouped-title-row">
                         <strong>{child.name}</strong>
-                        {!ctx.css_storefront_policy.hide_price && childPrice ? <span className="pdp-grouped-price">{money(childPrice.value, childPrice.currency)}</span> : null}
+                        {!storefrontPolicy.hidePrice && childPrice ? <span className="pdp-grouped-price">{money(childPrice.value, childPrice.currency)}</span> : null}
                       </div>
                       {!childAvailable ? <span className="product-stock unavailable">Unavailable</span> : null}
                     </div>
