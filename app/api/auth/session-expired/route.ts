@@ -1,11 +1,19 @@
-import { NextResponse, type NextRequest } from "next/server";
+import { NextResponse } from "next/server";
 import { clearCustomerToken } from "@/lib/session";
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   await clearCustomerToken();
 
-  const loginUrl = new URL("/login", request.url);
-  loginUrl.searchParams.set("error", "Your session expired. Please sign in again.");
+  const params = new URLSearchParams({
+    error: "Your session expired. Please sign in again.",
+  });
 
-  return NextResponse.redirect(loginUrl);
+  // Keep Location relative so reverse-proxied production requests resolve on
+  // the public storefront host instead of Next's internal localhost origin.
+  return new NextResponse(null, {
+    status: 303,
+    headers: {
+      Location: `/login?${params.toString()}`,
+    },
+  });
 }
