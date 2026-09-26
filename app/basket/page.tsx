@@ -1,7 +1,8 @@
 import Link from "next/link";
-import { ArrowRight, Trash2 } from "lucide-react";
+import { ArrowLeft, ArrowRight, RefreshCw, Trash2 } from "lucide-react";
 import { EmployeePicker } from "@/components/employee-picker";
 import { QuantityStepper } from "@/components/quantity-stepper";
+import { ProductImage } from "@/components/product-image";
 import { PurchaseAllowanceSummary } from "@/components/purchase-allowance-summary";
 import { SiteHeader } from "@/components/site-header";
 import { getCustomerCart, type CartMoney } from "@/lib/magento/cart";
@@ -55,7 +56,10 @@ export default async function BasketPage({
           <h1>Basket</h1>
           <p className="muted">{cart.total_quantity} item{cart.total_quantity === 1 ? "" : "s"} for {selected?.name || "your selected company"}.</p>
         </div>
-        <Link className="button secondary" href="/catalogue">Continue shopping</Link>
+        <Link className="button secondary basket-continue-shopping" href="/catalogue">
+          <ArrowLeft size={16} aria-hidden="true"/>
+          <span>Continue shopping</span>
+        </Link>
       </div>
 
       {messages.error ? <p className="error basket-message" role="alert">{messages.error}</p> : null}
@@ -75,17 +79,34 @@ export default async function BasketPage({
             const constraints = item.product.css_purchase_constraints;
             return <article className="card basket-line basket-production-line" key={item.uid}>
               <div className="basket-line-main">
+                <Link
+                  className="basket-product-media"
+                  href={`/product/${encodeURIComponent(item.product.sku)}`}
+                  aria-label={`View ${item.product.name}`}
+                >
+                  <ProductImage
+                    src={item.product.small_image?.url}
+                    alt={item.product.small_image?.label || item.product.name}
+                  />
+                </Link>
+
                 <div className="basket-line-copy">
                   <div className="basket-line-badges">
                     {item.css_kit ? <span className="badge">Grouped item</span> : null}
                     <span className="badge">{item.product.css_stock_info.stock_status || item.product.stock_status || "Stock status unavailable"}</span>
                   </div>
-                  <h2>{item.product.name}</h2>
+                  <h2>
+                    <Link href={`/product/${encodeURIComponent(item.product.sku)}`}>{item.product.name}</Link>
+                  </h2>
                   <p className="muted small">SKU {effectiveSku}</p>
-                  {item.configurable_options?.length ? <ul className="basket-options">
-                    {item.configurable_options.map((option) => <li key={`${option.option_label}:${option.value_label}`}><strong>{option.option_label}:</strong> {option.value_label}</li>)}
-                  </ul> : null}
+                  {item.configurable_options?.length ? <div className="basket-option-chips" aria-label="Selected options">
+                    {item.configurable_options.map((option) => <span key={`${option.option_label}:${option.value_label}`}>
+                      <strong>{option.option_label}</strong>
+                      <span>{option.value_label}</span>
+                    </span>)}
+                  </div> : null}
                 </div>
+
                 <div className="basket-line-price">
                   <span className="muted">Unit</span>
                   <strong>{money(item.prices?.price)}</strong>
@@ -105,7 +126,10 @@ export default async function BasketPage({
                     step={constraints?.increments_enforced ? constraints.quantity_increment : "any"}
                     compact
                   />
-                  <button className="button secondary basket-update-button" type="submit">Update</button>
+                  <button className="button secondary basket-update-button" type="submit">
+                    <RefreshCw size={15} aria-hidden="true"/>
+                    <span>Update</span>
+                  </button>
                 </form>
                 <form action={removeBasketItemAction}>
                   <input type="hidden" name="item_uid" value={item.uid}/>
