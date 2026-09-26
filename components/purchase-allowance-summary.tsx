@@ -1,3 +1,4 @@
+import { CircleAlert, ShieldCheck } from "lucide-react";
 import { purchaseAllowanceView, type PurchaseAllowanceEligibility } from "@/lib/purchase-allowance";
 import styles from "./purchase-allowance-summary.module.css";
 
@@ -15,11 +16,23 @@ export function PurchaseAllowanceSummary({ eligibility, items }: Props) {
   const view = purchaseAllowanceView(eligibility, items);
   if (!view) return null;
   if (view.unavailable) return <section className={`card ${styles.panel}`} aria-label="Purchase approval">
-    <p>Purchase approval status is unavailable. Checkout will check again before submission.</p>
+    <div className={`${styles.notice} ${styles.unavailable}`}>
+      <CircleAlert size={18} aria-hidden="true"/>
+      <div>
+        <strong>Approval status unavailable</strong>
+        <span>Checkout will check the basket again before submission.</span>
+      </div>
+    </div>
   </section>;
 
   return <section className={`card ${styles.panel}`} aria-label="Buyer allowances and company approval">
-    {view.requiresApproval ? <p className={styles.approval}><strong>Company approval is required for this basket.</strong> Fluid will confirm the outcome through your company order workflow.</p> : null}
+    {view.requiresApproval ? <div className={styles.notice}>
+      <ShieldCheck size={18} aria-hidden="true"/>
+      <div>
+        <strong>Company approval required</strong>
+        <span>This basket will go through your company approval workflow before the order is placed.</span>
+      </div>
+    </div> : null}
     {view.rows.length ? <details open={view.requiresApproval}>
       <summary>Buyer allowance records</summary>
       <p className={styles.explanation}>These quantities belong to the company user ordering, not the selected Employee. Remaining quantities are before this basket. They are allowance records, not purchasing permission: other company approval rules may apply.</p>
