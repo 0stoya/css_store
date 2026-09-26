@@ -3,6 +3,7 @@
 import { ChevronDown, ChevronRight, X } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { loadNavigationCategories } from "@/lib/client/navigation-categories";
 import type { MenuCategory } from "@/lib/magento/menu-categories";
 
 function categoryHref(category: Pick<MenuCategory, "uid" | "url_key">) {
@@ -49,8 +50,10 @@ function MobileCategoryTree({ categories }: { categories: MenuCategory[] }) {
 
 export function ProductMegaMenu({
   initialCategories,
+  scopeKey,
 }: {
   initialCategories?: MenuCategory[];
+  scopeKey: string;
 }) {
   const [open, setOpen] = useState(false);
   const [fetchedCategories, setFetchedCategories] = useState<MenuCategory[]>([]);
@@ -83,26 +86,15 @@ export function ProductMegaMenu({
     setLoadFailed(false);
 
     try {
-      const response = await fetch("/api/navigation/categories", {
-        credentials: "same-origin",
-        cache: "no-store",
-      });
-
-      if (response.redirected && new URL(response.url).pathname === "/login") {
-        window.location.assign(response.url);
-        return;
-      }
-      if (!response.ok) throw new Error("Category navigation request failed.");
-
-      const body = await response.json() as { categories?: MenuCategory[] };
-      setFetchedCategories(body.categories || []);
+      const result = await loadNavigationCategories(scopeKey);
+      setFetchedCategories(result);
       setFetchedLoaded(true);
     } catch {
       setLoadFailed(true);
     } finally {
       setLoading(false);
     }
-  }, [loaded, loading]);
+  }, [loaded, loading, scopeKey]);
 
   function openMenu() {
     clearCloseTimer();
