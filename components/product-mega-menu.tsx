@@ -53,8 +53,8 @@ export function ProductMegaMenu({
   initialCategories?: MenuCategory[];
 }) {
   const [open, setOpen] = useState(false);
-  const [categories, setCategories] = useState<MenuCategory[]>(initialCategories || []);
-  const [loaded, setLoaded] = useState(initialCategories !== undefined);
+  const [fetchedCategories, setFetchedCategories] = useState<MenuCategory[]>([]);
+  const [fetchedLoaded, setFetchedLoaded] = useState(false);
   const [loading, setLoading] = useState(false);
   const [loadFailed, setLoadFailed] = useState(false);
   const [activeRootUid, setActiveRootUid] = useState<string | null>(null);
@@ -64,6 +64,8 @@ export function ProductMegaMenu({
   const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const suppressTriggerFocusRef = useRef(false);
 
+  const categories = initialCategories ?? fetchedCategories;
+  const loaded = initialCategories !== undefined || fetchedLoaded;
   const activeRoot = categories.find((category) => category.uid === activeRootUid) || null;
   const activeChild = activeRoot?.children.find((child) => child.uid === activeChildUid) || null;
 
@@ -93,8 +95,8 @@ export function ProductMegaMenu({
       if (!response.ok) throw new Error("Category navigation request failed.");
 
       const body = await response.json() as { categories?: MenuCategory[] };
-      setCategories(body.categories || []);
-      setLoaded(true);
+      setFetchedCategories(body.categories || []);
+      setFetchedLoaded(true);
     } catch {
       setLoadFailed(true);
     } finally {
