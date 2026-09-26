@@ -57,9 +57,13 @@ export function CatalogueBadgeProvider({
       }
     }
 
-    void load();
+    const timer = window.setTimeout(() => {
+      void load();
+    }, 180);
+
     return () => {
       cancelled = true;
+      window.clearTimeout(timer);
     };
   }, [uniqueSkus]);
 
