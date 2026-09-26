@@ -49,10 +49,8 @@ function MobileCategoryTree({ categories }: { categories: MenuCategory[] }) {
 
 export function ProductMegaMenu({
   initialCategories,
-  scopeKey,
 }: {
   initialCategories?: MenuCategory[];
-  scopeKey?: string | null;
 }) {
   const [open, setOpen] = useState(false);
   const [categories, setCategories] = useState<MenuCategory[]>(initialCategories || []);
@@ -69,12 +67,12 @@ export function ProductMegaMenu({
   const activeRoot = categories.find((category) => category.uid === activeRootUid) || null;
   const activeChild = activeRoot?.children.find((child) => child.uid === activeChildUid) || null;
 
-  function clearCloseTimer() {
+  const clearCloseTimer = useCallback(() => {
     if (closeTimerRef.current !== null) {
       clearTimeout(closeTimerRef.current);
       closeTimerRef.current = null;
     }
-  }
+  }, []);
 
   const loadCategories = useCallback(async () => {
     if (loaded || loading) return;
@@ -110,7 +108,7 @@ export function ProductMegaMenu({
     void loadCategories();
   }
 
-  function closeMenu(restoreFocus = false) {
+  const closeMenu = useCallback((restoreFocus = false) => {
     clearCloseTimer();
     setOpen(false);
     setActiveRootUid(null);
@@ -119,7 +117,7 @@ export function ProductMegaMenu({
       suppressTriggerFocusRef.current = true;
       triggerRef.current?.focus();
     }
-  }
+  }, [clearCloseTimer]);
 
   function scheduleClose() {
     clearCloseTimer();
@@ -139,13 +137,7 @@ export function ProductMegaMenu({
 
   useEffect(() => {
     return () => clearCloseTimer();
-  }, []);
-
-  useEffect(() => {
-    setCategories(initialCategories || []);
-    setLoaded(initialCategories !== undefined);
-    setLoadFailed(false);
-  }, [initialCategories, scopeKey]);
+  }, [clearCloseTimer]);
 
   useEffect(() => {
     if (loaded || loading) return;
@@ -176,7 +168,7 @@ export function ProductMegaMenu({
       document.removeEventListener("pointerdown", handlePointerDown);
       document.removeEventListener("keydown", handleKeyDown);
     };
-  }, [open]);
+  }, [open, closeMenu]);
 
   return <div
     className={`products-mega${open ? " is-open" : ""}`}
