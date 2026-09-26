@@ -4,8 +4,7 @@ import { CheckoutSteps } from "@/components/checkout-steps";
 import { EmployeePicker } from "@/components/employee-picker";
 import { SiteHeader } from "@/components/site-header";
 import type { CartMoney } from "@/lib/magento/cart";
-import { getCustomerContext } from "@/lib/magento/context";
-import { getEmployeeOrdering } from "@/lib/magento/employee";
+import { getActiveEmployees } from "@/lib/magento/employee";
 import {
   getDeliveryContext,
   type CustomerShippingAddress,
@@ -60,14 +59,12 @@ export default async function DeliveryPage({
   searchParams: Promise<{ error?: string; notice?: string }>;
 }) {
   const token = await requireCustomerToken();
-  const [ctx, delivery, ordering, messages] = await Promise.all([
-    getCustomerContext(token),
+  const [delivery, messages] = await Promise.all([
     getDeliveryContext(token),
-    getEmployeeOrdering(token),
     searchParams,
   ]);
-  const selectedCompany = ctx.css_company_context.companies.find((company) => company.selected) || null;
-  const customerName = `${ctx.customer.firstname} ${ctx.customer.lastname}`.trim();
+  const selectedCompany = delivery.css_company_context.companies.find((company) => company.selected) || null;
+  const customerName = `${delivery.customer.firstname} ${delivery.customer.lastname}`.trim();
   const cart = delivery.customerCart;
   const shippingAddress = cart.shipping_addresses[0] || null;
   const methods = (shippingAddress?.available_shipping_methods || []).filter((method) => method.available !== false);
@@ -82,8 +79,10 @@ export default async function DeliveryPage({
   const defaultCountry = delivery.customer.addresses.find((address) => address.default_shipping)?.country_code
     || delivery.customer.addresses[0]?.country_code
     || "GB";
-  const singleEmployeeCheckout = ordering.usesEmployee && !ordering.multiEmployeeBasket;
-  const activeEmployeeIds = new Set(ordering.employees.map((employee) => employee.employee_id));
+  const employeeConfig = delivery.css_company_employee_configuration;
+  const singleEmployeeCheckout = employeeConfig.uses_employee && !employeeConfig.multi_employee_basket;
+  const employees = singleEmployeeCheckout ? await getActiveEmployees(token) : [];
+  const activeEmployeeIds = new Set(employees.map((employee) => employee.employee_id));
   const assignedIds = cart.itemsV2.items.map(assignedEmployeeId).filter((id): id is number => id !== null);
   const currentEmployeeId = singleEmployeeCheckout
     && assignedIds.length === cart.itemsV2.items.length
@@ -125,9 +124,9 @@ export default async function DeliveryPage({
               <h2>Who is this order for?</h2>
               <p>Select one Employee for the whole order.</p>
             </div>
-            {ordering.employees.length ? <form action={selectCheckoutEmployeeAction} className="checkout-employee-form">
+            {employees.length ? <form action={selectCheckoutEmployeeAction} className="checkout-employee-form">
               <EmployeePicker
-                employees={ordering.employees}
+                employees={employees}
                 name="employee_id"
                 label="Employee"
                 defaultSelectedId={currentEmployeeId}
