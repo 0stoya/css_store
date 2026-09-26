@@ -1,5 +1,5 @@
 import { magentoGraphQL } from "@/lib/magento/client";
-import type { StoreProductResult } from "@/lib/magento/catalogue";
+import type { ProductCardProduct } from "@/components/product-card";
 
 type CataloguePageQuery = {
   customer: {
@@ -16,18 +16,20 @@ type CataloguePageQuery = {
   css_storefront_policy: {
     hide_price: boolean;
   };
-  products: StoreProductResult;
+  products: {
+    total_count: number;
+    page_info: { current_page: number; total_pages: number };
+    items: ProductCardProduct[];
+  };
 };
 
 const PRODUCT_SELECTION = /* GraphQL */ `
   total_count
   page_info { current_page total_pages }
   items {
-    __typename
     uid
     sku
     name
-    url_key
     stock_status
     small_image { url label }
     price_range {
@@ -47,12 +49,6 @@ const PRODUCT_SELECTION = /* GraphQL */ `
       available
       stock_status
       delivery_message
-    }
-    css_purchase_constraints {
-      minimum_quantity
-      maximum_quantity
-      quantity_increment
-      increments_enforced
     }
   }
 `;
@@ -125,7 +121,11 @@ export type CataloguePageContext = {
     name: string | null;
   } | null;
   hidePrice: boolean;
-  products: StoreProductResult;
+  products: {
+    total_count: number;
+    page_info: { current_page: number; total_pages: number };
+    items: ProductCardProduct[];
+  };
 };
 
 export async function getCataloguePageContext(
