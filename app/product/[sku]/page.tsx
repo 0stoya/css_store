@@ -9,6 +9,7 @@ import {
   ShoppingCart,
   Truck,
 } from "lucide-react";
+import { ConfigurableProductControls } from "@/components/configurable-product-controls";
 import { EmployeePicker } from "@/components/employee-picker";
 import { GroupedQuantityControl } from "@/components/grouped-quantity-control";
 import { ProductGallery } from "@/components/product-gallery";
@@ -120,10 +121,34 @@ export default async function ProductPage({
             </summary>
             <div className="product-description" dangerouslySetInnerHTML={{ __html: product.description.html }}/>
           </details> : null}
+
+          {configurable ? <form action={addProductToCartAction} className="configurable-order-card">
+            <input type="hidden" name="product_sku" value={product.sku}/>
+            <div className="configurable-order-card-heading">
+              <div>
+                <p className="eyebrow">Order this product</p>
+                <h2>Choose your options</h2>
+              </div>
+              <p>Select the option you need, then choose a quantity.</p>
+            </div>
+
+            <ConfigurableProductControls
+              options={product.configurable_options || []}
+              variants={product.variants || []}
+              constraints={product.css_purchase_constraints}
+              canAdd={canAdd}
+              addLabel={addLabel}
+              employeeOrdering={employeeOrdering}
+            />
+
+            {employeeOrdering.usesEmployee && !employeeOrdering.multiEmployeeBasket ? <p className="pdp-checkout-note configurable-checkout-note">
+              Employee selection happens at the start of checkout.
+            </p> : null}
+          </form> : null}
         </div>
       </section>
 
-      <section className="card order-panel pdp-order-panel">
+      {!configurable ? <section className="card order-panel pdp-order-panel">
         <div className="order-panel-header">
           <div>
             <p className="eyebrow">Order this product</p>
@@ -142,22 +167,6 @@ export default async function ProductPage({
           <input type="hidden" name="product_sku" value={product.sku}/>
 
           <div className="pdp-order-main stack">
-            {configurable ? <section className="pdp-option-section">
-              <div className="pdp-option-heading">
-                <strong>Product options</strong>
-                <span>Choose one value for each option.</span>
-              </div>
-              <div className="option-grid">
-                {(product.configurable_options || []).map((option) => <label className="field" key={option.uid}>
-                  <span>{option.label}</span>
-                  <select name="selected_option" required defaultValue="">
-                    <option value="" disabled>Choose {option.label}</option>
-                    {option.values.map((value) => <option key={value.uid} value={value.uid}>{value.label}</option>)}
-                  </select>
-                </label>)}
-              </div>
-            </section> : null}
-
             {employeeOrdering.usesEmployee && employeeOrdering.multiEmployeeBasket ? <section className="pdp-option-section pdp-employee-section">
               <div className="pdp-option-heading">
                 <strong>Who is this for?</strong>
@@ -165,7 +174,7 @@ export default async function ProductPage({
               <EmployeePicker employees={employeeOrdering.employees}/>
             </section> : null}
 
-            {product.__typename === "SimpleProduct" || configurable ? <section className="pdp-option-section pdp-single-quantity-section">
+            {product.__typename === "SimpleProduct" ? <section className="pdp-option-section pdp-single-quantity-section">
               <QuantityStepper
                 name="quantity"
                 defaultValue={Math.max(1, product.css_purchase_constraints?.minimum_quantity || 1)}
@@ -261,7 +270,7 @@ export default async function ProductPage({
             </div> : null}
           </div>
         </form>
-      </section>
+      </section> : null}
     </main>
   </>;
 }
