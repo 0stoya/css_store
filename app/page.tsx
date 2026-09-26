@@ -37,7 +37,7 @@ export default async function HomePage({
   const featuredCategories = menuCategories.slice(0, 8);
 
   return <>
-    <SiteHeader customerName={name} companyName={selected?.name}/>
+    <SiteHeader customerName={name} companyName={selected?.name} menuCategories={menuCategories}/>
     <main className="shell catalogue-page home-catalogue-page">
       {!searchTerm && featuredCategories.length ? <section className="home-category-section" aria-labelledby="home-category-heading">
         <div className="home-section-heading">

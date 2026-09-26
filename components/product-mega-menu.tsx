@@ -2,7 +2,7 @@
 
 import { ChevronDown, ChevronRight, X } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { MenuCategory } from "@/lib/magento/menu-categories";
 
 function categoryHref(category: Pick<MenuCategory, "uid" | "url_key">) {
@@ -47,8 +47,18 @@ function MobileCategoryTree({ categories }: { categories: MenuCategory[] }) {
   </ul>;
 }
 
-export function ProductMegaMenu({ categories }: { categories: MenuCategory[] }) {
+export function ProductMegaMenu({
+  initialCategories,
+  scopeKey,
+}: {
+  initialCategories?: MenuCategory[];
+  scopeKey?: string | null;
+}) {
   const [open, setOpen] = useState(false);
+  const [categories, setCategories] = useState<MenuCategory[]>(initialCategories || []);
+  const [loaded, setLoaded] = useState(initialCategories !== undefined);
+  const [loading, setLoading] = useState(false);
+  const [loadFailed, setLoadFailed] = useState(false);
   const [activeRootUid, setActiveRootUid] = useState<string | null>(null);
   const [activeChildUid, setActiveChildUid] = useState<string | null>(null);
   const rootRef = useRef<HTMLDivElement>(null);
@@ -66,9 +76,38 @@ export function ProductMegaMenu({ categories }: { categories: MenuCategory[] }) 
     }
   }
 
+  const loadCategories = useCallback(async () => {
+    if (loaded || loading) return;
+
+    setLoading(true);
+    setLoadFailed(false);
+
+    try {
+      const response = await fetch("/api/navigation/categories", {
+        credentials: "same-origin",
+        cache: "no-store",
+      });
+
+      if (response.redirected && new URL(response.url).pathname === "/login") {
+        window.location.assign(response.url);
+        return;
+      }
+      if (!response.ok) throw new Error("Category navigation request failed.");
+
+      const body = await response.json() as { categories?: MenuCategory[] };
+      setCategories(body.categories || []);
+      setLoaded(true);
+    } catch {
+      setLoadFailed(true);
+    } finally {
+      setLoading(false);
+    }
+  }, [loaded, loading]);
+
   function openMenu() {
     clearCloseTimer();
     setOpen(true);
+    void loadCategories();
   }
 
   function closeMenu(restoreFocus = false) {
@@ -101,6 +140,24 @@ export function ProductMegaMenu({ categories }: { categories: MenuCategory[] }) 
   useEffect(() => {
     return () => clearCloseTimer();
   }, []);
+
+  useEffect(() => {
+    setCategories(initialCategories || []);
+    setLoaded(initialCategories !== undefined);
+    setLoadFailed(false);
+  }, [initialCategories, scopeKey]);
+
+  useEffect(() => {
+    if (loaded || loading) return;
+
+    // Warm the personalised menu after the page has become interactive instead
+    // of putting a full company-catalogue scan on every navigation's critical path.
+    const timer = window.setTimeout(() => {
+      void loadCategories();
+    }, 900);
+
+    return () => window.clearTimeout(timer);
+  }, [loaded, loading, loadCategories]);
 
   useEffect(() => {
     if (!open) return;
@@ -217,7 +274,15 @@ export function ProductMegaMenu({ categories }: { categories: MenuCategory[] }) 
         <div className="mega-menu-mobile-tree">
           <MobileCategoryTree categories={categories}/>
         </div>
-      </> : <p className="mega-menu-empty">No product categories are currently available in the store menu.</p>}
+      </> : <p className="mega-menu-empty">
+        {loading
+          ? "Loading categories…"
+          : loadFailed
+            ? <><span>Categories could not be loaded.</span> <Link href="/catalogue">View all products</Link></>
+            : loaded
+              ? "No product categories are currently available in the store menu."
+              : "Open Products to load your categories."}
+      </p>}
     </div> : null}
   </div>;
 }
