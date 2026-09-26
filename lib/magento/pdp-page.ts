@@ -1,12 +1,6 @@
 import { magentoGraphQL } from "@/lib/magento/client";
 import { getActiveEmployees, type EmployeeOrdering } from "@/lib/magento/employee";
-import type {
-  ConfigurableOption,
-  ConfigurableVariant,
-  GroupedProductChild,
-  ProductConfiguration,
-  ProductPriceRange,
-} from "@/lib/magento/product";
+import type { ProductConfiguration } from "@/lib/magento/product";
 
 type PdpPageQuery = {
   customer: {
