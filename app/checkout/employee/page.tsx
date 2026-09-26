@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { ArrowLeft } from "lucide-react";
 import { CheckoutSteps } from "@/components/checkout-steps";
+import { EmployeePicker } from "@/components/employee-picker";
 import { SiteHeader } from "@/components/site-header";
 import { getCustomerCart } from "@/lib/magento/cart";
 import { getCustomerContext } from "@/lib/magento/context";
@@ -56,7 +58,10 @@ export default async function CheckoutEmployeePage({
           <h1>Who is this order for?</h1>
           <p className="muted">Choose one Employee for the whole order before continuing to delivery.</p>
         </div>
-        <Link className="button secondary" href="/basket">Back to basket</Link>
+        <Link className="button secondary checkout-back" href="/basket">
+          <ArrowLeft size={16} aria-hidden="true"/>
+          <span>Back to basket</span>
+        </Link>
       </div>
 
       {messages.error ? <p className="error" role="alert">{messages.error}</p> : null}
@@ -72,19 +77,14 @@ export default async function CheckoutEmployeePage({
             <p>The Employee you select will be assigned to every item in this order.</p>
           </div>
 
-          {ordering.employees.length ? <form action={selectCheckoutEmployeeAction} className="stack">
-            <label className="field employee-field">
-              <span>Employee</span>
-              <select name="employee_id" required defaultValue={currentEmployeeId}>
-                <option value="" disabled>Choose Employee</option>
-                {ordering.employees.map((employee) => <option value={employee.employee_id} key={employee.employee_id}>
-                  {employee.full_name}{employee.employee_code ? ` · ${employee.employee_code}` : ""}{employee.department ? ` · ${employee.department}` : ""}
-                </option>)}
-              </select>
-            </label>
-            <div>
-              <button className="button" type="submit">Continue to delivery</button>
-            </div>
+          {ordering.employees.length ? <form action={selectCheckoutEmployeeAction} className="checkout-employee-form">
+            <EmployeePicker
+              employees={ordering.employees}
+              name="employee_id"
+              label="Employee"
+              defaultSelectedId={typeof currentEmployeeId === "number" ? currentEmployeeId : null}
+            />
+            <button className="button checkout-employee-submit" type="submit">Continue to delivery</button>
           </form> : <p className="error" role="alert">No active Employees are available for this company. Please contact your account administrator before continuing.</p>}
         </section>
 
