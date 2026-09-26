@@ -215,7 +215,7 @@ export default async function DeliveryPage({
                     <input name="save_in_address_book" type="checkbox" value="1"/>
                     <span>
                       <strong>Save this address for next time</strong>
-                      <small>Add it to your Magento address book when checkout completes.</small>
+                      <small>Magento will add it to your address book when the order is placed.</small>
                     </span>
                   </label>
                   <div className="delivery-span-2"><button className="button" type="submit" disabled={!canCheckout}>Use this address</button></div>
