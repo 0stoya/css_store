@@ -98,7 +98,7 @@ const PRODUCT_SELECTION = /* GraphQL */ `
     name
     url_key
     stock_status
-    custom_attributesV2 {
+    custom_attributesV2(filters: { used_in_product_listing: true }) {
       items {
         code
         ... on AttributeValue { value }
