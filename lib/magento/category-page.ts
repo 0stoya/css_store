@@ -18,8 +18,7 @@ type CategoryRouteQuery = {
     }>;
   };
   css_storefront_policy: { hide_price: boolean };
-  byUid: { items: CategoryRoute[] };
-  byUrl: { items: CategoryRoute[] };
+  categories: { items: CategoryRoute[] };
 };
 
 type CategoryProductsQuery = {
@@ -60,25 +59,22 @@ const PRODUCT_CARD_SELECTION = /* GraphQL */ `
   }
 `;
 
-const CATEGORY_ROUTE = /* GraphQL */ `
-  query StoreCategoryRoute($key: String!) {
-    customer { firstname lastname }
-    css_company_context {
-      companies {
-        company_id
-        name
-        selected
-      }
+const CATEGORY_ROUTE_FIELDS = /* GraphQL */ `
+  customer { firstname lastname }
+  css_company_context {
+    companies {
+      company_id
+      name
+      selected
     }
-    css_storefront_policy { hide_price }
-    byUid: categories(
-      filters: { category_uid: { eq: $key } }
-      pageSize: 1
-      currentPage: 1
-    ) {
-      items { uid name url_key url_path }
-    }
-    byUrl: categories(
+  }
+  css_storefront_policy { hide_price }
+`;
+
+const CATEGORY_ROUTE_BY_URL = /* GraphQL */ `
+  query StoreCategoryRouteByUrl($key: String!) {
+    ${CATEGORY_ROUTE_FIELDS}
+    categories(
       filters: { url_key: { eq: $key } }
       pageSize: 1
       currentPage: 1
@@ -87,6 +83,32 @@ const CATEGORY_ROUTE = /* GraphQL */ `
     }
   }
 `;
+
+const CATEGORY_ROUTE_BY_UID = /* GraphQL */ `
+  query StoreCategoryRouteByUid($key: String!) {
+    ${CATEGORY_ROUTE_FIELDS}
+    categories(
+      filters: { category_uid: { eq: $key } }
+      pageSize: 1
+      currentPage: 1
+    ) {
+      items { uid name url_key url_path }
+    }
+  }
+`;
+
+function isCategoryUid(value: string) {
+  try {
+    const decoded = Buffer.from(value, "base64").toString("utf8");
+    if (!/^\d+$/.test(decoded)) return false;
+
+    return Buffer.from(decoded, "utf8")
+      .toString("base64")
+      .replace(/=+$/, "") === value.replace(/=+$/, "");
+  } catch {
+    return false;
+  }
+}
 
 const CATEGORY_PRODUCTS = /* GraphQL */ `
   query StoreCategoryProducts(
@@ -123,12 +145,12 @@ export async function getCategoryPageContext(
   pageSize = 24,
 ): Promise<CategoryPageContext> {
   const route = await magentoGraphQL<CategoryRouteQuery>(
-    CATEGORY_ROUTE,
+    isCategoryUid(key) ? CATEGORY_ROUTE_BY_UID : CATEGORY_ROUTE_BY_URL,
     { key },
     token,
   );
 
-  const category = route.byUid.items[0] || route.byUrl.items[0] || null;
+  const category = route.categories.items[0] || null;
   const selectedCompany = route.css_company_context.companies.find((company) => company.selected) || null;
 
   if (!category) {
