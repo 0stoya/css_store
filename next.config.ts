@@ -45,6 +45,7 @@ const nextConfig: NextConfig = {
   images: {
     remotePatterns: imageRemotePatterns(),
     formats: ["image/avif", "image/webp"],
+    qualities: [68, 75, 76, 82],
     minimumCacheTTL: 3600,
   },
 };
