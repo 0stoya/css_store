@@ -1,6 +1,6 @@
 import { getMagentoConfig } from "@/lib/config";
 import { magentoGraphQL } from "@/lib/magento/client";
-import type { ProductCustomAttributes } from "@/lib/product-badges";
+import type { ProductBadgeValues } from "@/lib/product-badges";
 
 export type PurchaseAllowance = {
   logical_product_id: number;
@@ -32,14 +32,13 @@ export type StoreCategory = {
   product_count: number;
 };
 
-export type StoreProduct = {
+export type StoreProduct = ProductBadgeValues & {
   __typename: string;
   uid: string;
   sku: string;
   name: string;
   url_key: string | null;
   stock_status: string | null;
-  custom_attributesV2: ProductCustomAttributes;
   small_image: { url: string; label: string | null } | null;
   price_range: {
     minimum_price: {
@@ -98,15 +97,13 @@ const PRODUCT_SELECTION = /* GraphQL */ `
     name
     url_key
     stock_status
-    custom_attributesV2(filters: { used_in_product_listing: true }) {
-      items {
-        code
-        ... on AttributeValue { value }
-        ... on AttributeSelectedOptions {
-          selected_options { label value }
-        }
-      }
-    }
+    ppe_certified
+    express_delivery
+    fast_delivery
+    made_to_order
+    company_logo
+    embroidered
+    printed
     small_image { url label }
     price_range {
       minimum_price {
