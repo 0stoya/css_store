@@ -90,7 +90,7 @@ export default async function ProductPage({
         <div className="pdp-info">
           <p className="eyebrow">{productTypeLabel}</p>
           <h1>{product.name}</h1>
-          <ProductBadges attributes={product.custom_attributesV2}/>
+          <ProductBadges values={product}/>
           <div className="pdp-meta-row">
             <span className="pdp-sku">SKU {product.sku}</span>
             <span className={`product-stock ${product.css_stock_info.available ? "available" : "unavailable"}`}>{stockLabel}</span>
