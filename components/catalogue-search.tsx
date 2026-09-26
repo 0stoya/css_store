@@ -39,12 +39,7 @@ export function CatalogueSearch({
   const isHeader = variant === "header";
 
   useEffect(() => {
-    if (!hasSearchableValue) {
-      setSuggestions([]);
-      setLoading(false);
-      setActiveIndex(-1);
-      return;
-    }
+    if (!hasSearchableValue) return;
 
     const controller = new AbortController();
     const timer = window.setTimeout(async () => {
@@ -135,6 +130,7 @@ export function CatalogueSearch({
     setSuggestions([]);
     setActiveIndex(-1);
     setOpen(false);
+    setLoading(false);
     inputRef.current?.focus();
   }
 
@@ -160,9 +156,19 @@ export function CatalogueSearch({
         aria-controls={`${listId}-listbox`}
         aria-activedescendant={activeIndex >= 0 ? `${listId}-option-${activeIndex}` : undefined}
         onChange={(event) => {
-          setValue(event.target.value);
+          const nextValue = event.target.value;
+          const searchable = nextValue.trim().length >= 2;
+
+          setValue(nextValue);
           setActiveIndex(-1);
-          if (event.target.value.trim().length >= 2) setOpen(true);
+
+          if (searchable) {
+            setOpen(true);
+          } else {
+            setOpen(false);
+            setSuggestions([]);
+            setLoading(false);
+          }
         }}
         onFocus={() => {
           if (hasSearchableValue) setOpen(true);

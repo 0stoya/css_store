@@ -16,13 +16,13 @@ export default function loadTypeScript(root, relativePath, imports = {}) {
   if (errors.length) throw new Error(ts.formatDiagnosticsWithColorAndContext(errors, {
     getCanonicalFileName: (name) => name, getCurrentDirectory: () => root, getNewLine: () => "\n",
   }));
-  const module = { exports: {} };
+  const testModule = { exports: {} };
   vm.runInNewContext(result.outputText, {
-    module, exports: module.exports, FormData, URLSearchParams,
+    module: testModule, exports: testModule.exports, FormData, URLSearchParams,
     require: (name) => {
       if (Object.hasOwn(imports, name)) return imports[name];
       throw new Error(`Unmocked dependency: ${name}`);
     },
   }, { filename: fileName });
-  return module.exports;
+  return testModule.exports;
 }
