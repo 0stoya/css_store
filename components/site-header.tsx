@@ -27,7 +27,7 @@ export function SiteHeader({
       </Link>
       <nav aria-label="Store navigation" className="store-nav">
         {customerName ? <Link className="store-nav-link store-nav-all-products" href="/catalogue">All products</Link> : null}
-        {customerName ? <ProductMegaMenu key={companyName || "customer"} initialCategories={menuCategories}/> : <Link href="/catalogue">Products</Link>}
+        {customerName ? <ProductMegaMenu key={companyName || "customer"} scopeKey={companyName || "customer"} initialCategories={menuCategories}/> : <Link href="/catalogue">Products</Link>}
         {customerName ? <Link
           className="store-nav-link store-nav-search-mobile"
           href="/catalogue?focus=search"
