@@ -9,6 +9,7 @@ import {
   submitCreditOrder,
   type CheckoutContext,
 } from "@/lib/magento/checkout";
+import { getEmployeeOrdering } from "@/lib/magento/employee";
 import { requireCustomerToken } from "@/lib/session";
 
 function paymentRedirect(kind: "error" | "notice", value: string): never {
@@ -24,7 +25,27 @@ function message(error: unknown) {
   return error instanceof Error ? error.message : "The order could not be submitted.";
 }
 
-function assertCheckoutReady(context: CheckoutContext) {
+function assignedEmployeeId(item: CheckoutContext["customerCart"]["itemsV2"]["items"][number]) {
+  return item.css_employee?.employee_id ?? item.css_kit?.employee_id ?? null;
+}
+
+function assertEmployeeReady(
+  cart: CheckoutContext["customerCart"],
+  ordering: Awaited<ReturnType<typeof getEmployeeOrdering>>,
+) {
+  if (!ordering.usesEmployee || ordering.multiEmployeeBasket) return;
+
+  const activeEmployeeIds = new Set(ordering.employees.map((employee) => employee.employee_id));
+  const assignedIds = cart.itemsV2.items.map(assignedEmployeeId).filter((id): id is number => id !== null);
+  const ready = assignedIds.length === cart.itemsV2.items.length
+    && assignedIds.length > 0
+    && assignedIds.every((id) => id === assignedIds[0])
+    && activeEmployeeIds.has(assignedIds[0]);
+
+  if (!ready) throw new Error("Choose an Employee for this order before continuing.");
+}
+
+function assertCheckoutReady(context: CheckoutContext, ordering: Awaited<ReturnType<typeof getEmployeeOrdering>>) {
   const cart = context.customerCart;
   const capabilities = context.css_ordering_capabilities;
 
@@ -32,6 +53,8 @@ function assertCheckoutReady(context: CheckoutContext) {
   if (!capabilities.authenticated || !capabilities.company_context || !capabilities.company_active || !capabilities.can_checkout) {
     throw new Error("This company is not currently allowed to place this order.");
   }
+
+  assertEmployeeReady(cart, ordering);
 
   const shippingAddress = cart.shipping_addresses[0];
   if (!shippingAddress) throw new Error("Choose a delivery address before continuing.");
@@ -53,8 +76,11 @@ export async function preparePaymentAction() {
   const token = await requireCustomerToken();
 
   try {
-    const context = await getCheckoutContext(token);
-    const cart = assertCheckoutReady(context);
+    const [context, ordering] = await Promise.all([
+      getCheckoutContext(token),
+      getEmployeeOrdering(token),
+    ]);
+    const cart = assertCheckoutReady(context, ordering);
     await setBillingSameAsShipping(token, cart.id);
   } catch (error) {
     deliveryRedirect(message(error));
@@ -69,8 +95,11 @@ export async function completeCheckoutAction(formData: FormData) {
   if (!paymentCode) paymentRedirect("error", "Choose a payment method.");
 
   try {
-    const initial = await getCheckoutContext(token);
-    const initialCart = assertCheckoutReady(initial);
+    const [initial, ordering] = await Promise.all([
+      getCheckoutContext(token),
+      getEmployeeOrdering(token),
+    ]);
+    const initialCart = assertCheckoutReady(initial, ordering);
     const paymentMethod = initialCart.available_payment_methods.find((method) => method.code === paymentCode);
     if (!paymentMethod) throw new Error("That payment method is no longer available for this basket.");
 
@@ -82,7 +111,7 @@ export async function completeCheckoutAction(formData: FormData) {
     // Re-read immediately before the irreversible submission so cart/company/payment state
     // cannot be decided from stale browser input.
     const current = await getCheckoutContext(token);
-    const cart = assertCheckoutReady(current);
+    const cart = assertCheckoutReady(current, ordering);
     if (cart.id !== initialCart.id) throw new Error("Your basket changed during checkout. Review it and try again.");
     if (!cart.available_payment_methods.some((method) => method.code === paymentMethod.code)) {
       throw new Error("That payment method is no longer available for this basket.");
