@@ -19,7 +19,7 @@ function variantMatches(
 }
 
 function isVariantInStock(variant: ConfigurableVariant) {
-  return variant.product.stock_status !== "OUT_OF_STOCK";
+  return variant.product.stock_status === "IN_STOCK";
 }
 
 export function ConfigurableProductControls({
