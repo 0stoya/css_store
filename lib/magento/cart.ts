@@ -1,3 +1,4 @@
+import { basketImageNeedsFallback, getGroupedParentImageMap } from "@/lib/magento/cart-images";
 import { MagentoGraphQLError, magentoGraphQL } from "@/lib/magento/client";
 
 export type CartMoney = {
@@ -291,7 +292,37 @@ const ASSIGN_ITEM_EMPLOYEE = /* GraphQL */ `
 
 export async function getCustomerCart(token: string) {
   const data = await magentoGraphQL<{ customerCart: CartSnapshot }>(CUSTOMER_CART, {}, token);
-  return data.customerCart;
+  const cart = data.customerCart;
+  const needsFallback = cart.itemsV2.items.some((item) =>
+    basketImageNeedsFallback(item.product.small_image),
+  );
+
+  if (!needsFallback) return cart;
+
+  const groupedImages = await getGroupedParentImageMap(token);
+  if (!groupedImages.size) return cart;
+
+  return {
+    ...cart,
+    itemsV2: {
+      ...cart.itemsV2,
+      items: cart.itemsV2.items.map((item) => {
+        if (!basketImageNeedsFallback(item.product.small_image)) return item;
+
+        const fallback = groupedImages.get(item.configured_variant?.sku || "")
+          || groupedImages.get(item.product.sku);
+        if (!fallback) return item;
+
+        return {
+          ...item,
+          product: {
+            ...item.product,
+            small_image: fallback,
+          },
+        };
+      }),
+    },
+  };
 }
 
 export async function getCustomerCartWriteContext(token: string) {
