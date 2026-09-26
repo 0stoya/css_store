@@ -256,7 +256,7 @@ export async function setNewShippingAddress(
     postcode: string;
     country_code: string;
     telephone: string;
-    save_in_address_book: false;
+    save_in_address_book: boolean;
   },
 ) {
   const data = await magentoGraphQL<{
