@@ -20,7 +20,7 @@ import {
   setNewShippingAddressAction,
 } from "./actions";
 
-export const metadata = { title: "Delivery" };
+export const metadata = { title: "Delivery & details" };
 
 function money(value: CartMoney | null | undefined) {
   if (!value) return "—";
