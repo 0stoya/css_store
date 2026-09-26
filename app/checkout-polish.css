@@ -1,4 +1,4 @@
-/* Final checkout flow polish: Employee → Delivery → Payment → Confirmation. */
+/* Final checkout flow polish: Delivery & details → Review & submit → Confirmation. */
 
 .checkout-progress {
   margin-bottom: 24px;
@@ -64,20 +64,26 @@
   line-height: 1.5;
 }
 
-/* Employee step */
+/* Employee details live inside the first checkout step when required. */
+.checkout-employee-inline {
+  padding: 24px;
+}
+
 .checkout-employee-form {
-  max-width: 620px;
+  max-width: 680px;
   display: grid;
-  gap: 16px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: end;
 }
 
 .checkout-employee-form .employee-picker {
   max-width: none;
 }
 
-.checkout-employee-submit {
-  width: min(320px, 100%);
-  min-height: 48px;
+.checkout-employee-apply {
+  min-height: 58px;
+  white-space: nowrap;
 }
 
 /* Shared checkout summary treatment */
@@ -214,6 +220,14 @@
 }
 
 @media (max-width: 720px) {
+  .checkout-employee-form {
+    grid-template-columns: 1fr;
+  }
+
+  .checkout-employee-apply {
+    width: 100%;
+  }
+
   .checkout-progress {
     margin-bottom: 20px;
   }
