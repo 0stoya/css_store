@@ -294,13 +294,13 @@ const ASSIGN_ITEM_EMPLOYEE = /* GraphQL */ `
 export async function getCustomerCart(token: string) {
   const data = await magentoGraphQL<{ customerCart: CartSnapshot }>(CUSTOMER_CART, {}, token);
   const cart = data.customerCart;
-  const needsFallback = cart.itemsV2.items.some((item) =>
-    basketImageNeedsFallback(item.product.small_image),
-  );
+  const fallbackSkus = cart.itemsV2.items
+    .filter((item) => basketImageNeedsFallback(item.product.small_image))
+    .map((item) => item.configured_variant?.sku || item.product.sku);
 
-  if (!needsFallback) return cart;
+  if (!fallbackSkus.length) return cart;
 
-  const groupedParents = await getGroupedParentPresentationMap(token);
+  const groupedParents = await getGroupedParentPresentationMap(token, fallbackSkus);
   if (!groupedParents.size) return cart;
 
   return {
