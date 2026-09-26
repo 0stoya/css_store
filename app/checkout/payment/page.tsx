@@ -17,8 +17,6 @@ import { CheckoutSteps } from "@/components/checkout-steps";
 import { SiteHeader } from "@/components/site-header";
 import type { CartMoney } from "@/lib/magento/cart";
 import { getCheckoutContext } from "@/lib/magento/checkout";
-import { getCustomerContext } from "@/lib/magento/context";
-import { getEmployeeOrdering } from "@/lib/magento/employee";
 import { requireCustomerToken } from "@/lib/session";
 import { completeCheckoutAction } from "./actions";
 
@@ -49,15 +47,13 @@ export default async function PaymentPage({
   searchParams: Promise<{ error?: string; notice?: string }>;
 }) {
   const token = await requireCustomerToken();
-  const [ctx, checkout, ordering, messages] = await Promise.all([
-    getCustomerContext(token),
+  const [checkout, messages] = await Promise.all([
     getCheckoutContext(token),
-    getEmployeeOrdering(token),
     searchParams,
   ]);
 
-  const selectedCompany = ctx.css_company_context.companies.find((company) => company.selected) || null;
-  const customerName = `${ctx.customer.firstname} ${ctx.customer.lastname}`.trim();
+  const selectedCompany = checkout.css_company_context.companies.find((company) => company.selected) || null;
+  const customerName = `${checkout.customer.firstname} ${checkout.customer.lastname}`.trim();
   const cart = checkout.customerCart;
   const capabilities = checkout.css_ordering_capabilities;
   const shippingAddress = cart.shipping_addresses[0] || null;
@@ -69,14 +65,13 @@ export default async function PaymentPage({
     && capabilities.can_checkout;
   const usesCreditOrder = capabilities.can_submit_credit_order;
   const nativeApprovalAllowed = usesCreditOrder || cart.css_purchase_eligibility?.approval_status === "ALLOWED";
-  const singleEmployeeCheckout = ordering.usesEmployee && !ordering.multiEmployeeBasket;
-  const activeEmployeeIds = new Set(ordering.employees.map((employee) => employee.employee_id));
+  const employeeConfig = checkout.css_company_employee_configuration;
+  const singleEmployeeCheckout = employeeConfig.uses_employee && !employeeConfig.multi_employee_basket;
   const assignedIds = cart.itemsV2.items.map(assignedEmployeeId).filter((id): id is number => id !== null);
   const employeeReady = !singleEmployeeCheckout || (
     assignedIds.length === cart.itemsV2.items.length
     && assignedIds.length > 0
     && assignedIds.every((id) => id === assignedIds[0])
-    && activeEmployeeIds.has(assignedIds[0])
   );
   const ready = canCheckout
     && employeeReady

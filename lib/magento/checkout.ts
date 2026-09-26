@@ -36,6 +36,17 @@ export type CheckoutContext = {
     firstname: string;
     lastname: string;
   };
+  css_company_context: {
+    companies: Array<{
+      company_id: number;
+      name: string | null;
+      selected: boolean;
+    }>;
+  };
+  css_company_employee_configuration: {
+    uses_employee: boolean;
+    multi_employee_basket: boolean;
+  };
   customerCart: {
     id: string;
     total_quantity: number;
@@ -73,8 +84,19 @@ export type CreditOrderSubmission = {
 };
 
 const CHECKOUT_CONTEXT = /* GraphQL */ `
-  query StoreCheckoutContext {
+  query StoreReviewPage {
     customer { firstname lastname }
+    css_company_context {
+      companies {
+        company_id
+        name
+        selected
+      }
+    }
+    css_company_employee_configuration {
+      uses_employee
+      multi_employee_basket
+    }
     customerCart {
       id
       total_quantity

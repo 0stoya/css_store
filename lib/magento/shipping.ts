@@ -59,6 +59,17 @@ export type DeliveryCartItem = {
 
 export type DeliveryContext = {
   countries: Array<{ id: string; full_name_locale: string }>;
+  css_company_context: {
+    companies: Array<{
+      company_id: number;
+      name: string | null;
+      selected: boolean;
+    }>;
+  };
+  css_company_employee_configuration: {
+    uses_employee: boolean;
+    multi_employee_basket: boolean;
+  };
   customer: {
     firstname: string;
     lastname: string;
@@ -125,8 +136,19 @@ const SHIPPING_ADDRESS_FIELDS = /* GraphQL */ `
 `;
 
 const DELIVERY_CONTEXT = /* GraphQL */ `
-  query StoreDeliveryContext {
+  query StoreDeliveryPage {
     countries { id full_name_locale }
+    css_company_context {
+      companies {
+        company_id
+        name
+        selected
+      }
+    }
+    css_company_employee_configuration {
+      uses_employee
+      multi_employee_basket
+    }
     customer {
       firstname
       lastname
