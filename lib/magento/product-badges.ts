@@ -55,7 +55,7 @@ export async function getProductBadgeValues(
             embroidered: item.embroidered,
             printed: item.printed,
           },
-        ]),
+        ] as const),
     );
   } catch (error) {
     // Product icons are optional presentation metadata. A Magento EAV/GraphQL
