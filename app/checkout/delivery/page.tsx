@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ArrowLeft, ArrowRight, Check, ChevronDown, MapPin, Phone, Plus, Truck } from "lucide-react";
 import { CheckoutSteps } from "@/components/checkout-steps";
+import { EmployeePicker } from "@/components/employee-picker";
 import { SiteHeader } from "@/components/site-header";
 import type { CartMoney } from "@/lib/magento/cart";
 import { getCustomerContext } from "@/lib/magento/context";
@@ -11,6 +12,7 @@ import {
   type ShippingCartAddress,
 } from "@/lib/magento/shipping";
 import { requireCustomerToken } from "@/lib/session";
+import { selectCheckoutEmployeeAction } from "../employee/actions";
 import { preparePaymentAction } from "../payment/actions";
 import {
   selectSavedShippingAddressAction,
@@ -45,6 +47,13 @@ function isSelectedSavedAddress(saved: CustomerShippingAddress, current: Shippin
     && normalise(saved.telephone) === normalise(current.telephone);
 }
 
+function assignedEmployeeId(item: {
+  css_employee: { employee_id: number | null } | null;
+  css_kit: { employee_id: number | null } | null;
+}) {
+  return item.css_employee?.employee_id ?? item.css_kit?.employee_id ?? null;
+}
+
 export default async function DeliveryPage({
   searchParams,
 }: {
@@ -73,22 +82,34 @@ export default async function DeliveryPage({
   const defaultCountry = delivery.customer.addresses.find((address) => address.default_shipping)?.country_code
     || delivery.customer.addresses[0]?.country_code
     || "GB";
-  const includeEmployee = ordering.usesEmployee && !ordering.multiEmployeeBasket;
+  const singleEmployeeCheckout = ordering.usesEmployee && !ordering.multiEmployeeBasket;
+  const activeEmployeeIds = new Set(ordering.employees.map((employee) => employee.employee_id));
+  const assignedIds = cart.itemsV2.items.map(assignedEmployeeId).filter((id): id is number => id !== null);
+  const currentEmployeeId = singleEmployeeCheckout
+    && assignedIds.length === cart.itemsV2.items.length
+    && assignedIds.length > 0
+    && assignedIds.every((id) => id === assignedIds[0])
+    && activeEmployeeIds.has(assignedIds[0])
+    ? assignedIds[0]
+    : null;
+  const employeeReady = !singleEmployeeCheckout || currentEmployeeId !== null;
 
   return <>
     <SiteHeader customerName={customerName} companyName={selectedCompany?.name} basketQuantity={cart.total_quantity}/>
     <main className="shell stack delivery-page">
-      <CheckoutSteps current="delivery" includeEmployee={includeEmployee}/>
+      <CheckoutSteps current="delivery"/>
 
       <div className="basket-heading checkout-heading">
         <div>
           <p className="eyebrow">Checkout</p>
-          <h1>Delivery</h1>
-          <p className="muted">Choose where your order should be delivered and how you’d like it sent.</p>
+          <h1>Delivery & details</h1>
+          <p className="muted">{singleEmployeeCheckout
+            ? "Choose who this order is for, where it should go and how it should be delivered."
+            : "Choose where your order should be delivered and how you’d like it sent."}</p>
         </div>
-        <Link className="button secondary delivery-back" href={includeEmployee ? "/checkout/employee" : "/basket"}>
+        <Link className="button secondary delivery-back" href="/basket">
           <ArrowLeft size={16} aria-hidden="true"/>
-          <span>{includeEmployee ? "Back to Employee" : "Back to basket"}</span>
+          <span>Back to basket</span>
         </Link>
       </div>
 
@@ -99,6 +120,24 @@ export default async function DeliveryPage({
 
       {cart.total_quantity > 0 ? <div className="delivery-layout delivery-layout-refined">
         <div className="stack delivery-main-column">
+          {singleEmployeeCheckout ? <section className="card delivery-card checkout-employee-inline">
+            <div className="checkout-card-intro">
+              <h2>Who is this order for?</h2>
+              <p>Select one Employee for the whole order.</p>
+            </div>
+            {ordering.employees.length ? <form action={selectCheckoutEmployeeAction} className="checkout-employee-form">
+              <EmployeePicker
+                employees={ordering.employees}
+                name="employee_id"
+                label="Employee"
+                defaultSelectedId={currentEmployeeId}
+              />
+              <button className="button secondary checkout-employee-apply" type="submit">
+                {employeeReady ? "Change Employee" : "Use this Employee"}
+              </button>
+            </form> : <p className="error" role="alert">No active Employees are available for this company. Please contact your account administrator before continuing.</p>}
+          </section> : null}
+
           <section className="card delivery-card delivery-address-card">
             <div className="checkout-card-intro">
               <h2>Delivery address</h2>
@@ -158,7 +197,7 @@ export default async function DeliveryPage({
                 <ChevronDown className="delivery-alt-chevron" size={18} aria-hidden="true"/>
               </summary>
               <div className="delivery-alt-address-body">
-                <p className="muted small">This address will be used for this order only and won’t be added to your saved addresses.</p>
+                <p className="muted small">Use this address for the current order, with the option to save it for future orders.</p>
                 <form action={setNewShippingAddressAction} className="delivery-form">
                   <label className="field"><span>First name</span><input name="firstname" autoComplete="given-name" defaultValue={delivery.customer.firstname} required/></label>
                   <label className="field"><span>Last name</span><input name="lastname" autoComplete="family-name" defaultValue={delivery.customer.lastname} required/></label>
@@ -172,6 +211,13 @@ export default async function DeliveryPage({
                     {delivery.countries.map((country) => <option value={country.id} key={country.id}>{country.full_name_locale || country.id}</option>)}
                   </select></label>
                   <label className="field delivery-span-2"><span>Telephone</span><input name="telephone" type="tel" autoComplete="tel" required/></label>
+                  <label className="delivery-save-address delivery-span-2">
+                    <input name="save_in_address_book" type="checkbox" value="1"/>
+                    <span>
+                      <strong>Save this address for next time</strong>
+                      <small>Add it to your Magento address book when checkout completes.</small>
+                    </span>
+                  </label>
                   <div className="delivery-span-2"><button className="button" type="submit" disabled={!canCheckout}>Use this address</button></div>
                 </form>
               </div>
@@ -216,14 +262,14 @@ export default async function DeliveryPage({
               <div className="basket-grand-total"><dt>Grand total</dt><dd>{money(cart.prices?.grand_total)}</dd></div>
             </dl>
 
-            {selectedMethod ? <div className="delivery-summary-method">
+            {singleEmployeeCheckout && !employeeReady ? <p className="muted small delivery-summary-hint">Choose an Employee to continue.</p> : selectedMethod ? <div className="delivery-summary-method">
               <Truck size={17} aria-hidden="true"/>
               <span>{selectedMethod.carrier_title || selectedMethod.carrier_code} · {selectedMethod.method_title || selectedMethod.method_code}</span>
             </div> : <p className="muted small delivery-summary-hint">Choose a delivery address and method to continue.</p>}
 
-            {selectedMethod && canCheckout ? <form action={preparePaymentAction} className="delivery-summary-action">
+            {selectedMethod && canCheckout && employeeReady ? <form action={preparePaymentAction} className="delivery-summary-action">
               <button className="button checkout-forward" type="submit">
-                <span>Continue to payment</span>
+                <span>Review order</span>
                 <ArrowRight size={17} aria-hidden="true"/>
               </button>
             </form> : null}
