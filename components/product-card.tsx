@@ -1,6 +1,7 @@
 import { ArrowRight, Hash, PackageCheck, PackageX, ShieldAlert, Truck } from "lucide-react";
 import Link from "next/link";
-import type { StoreProduct } from "@/lib/magento/catalogue";
+import type { PurchaseAllowance, StockInfo } from "@/lib/magento/catalogue";
+import type { ProductBadgeValues } from "@/lib/product-badges";
 import { CatalogueProductBadges } from "./catalogue-badges";
 import { ProductImage } from "./product-image";
 
@@ -8,7 +9,23 @@ function money(value: number, currency: string) {
   return new Intl.NumberFormat("en-GB", { style: "currency", currency }).format(value);
 }
 
-export function ProductCard({ product, hidePrice }: { product: StoreProduct; hidePrice: boolean }) {
+export type ProductCardProduct = ProductBadgeValues & {
+  uid: string;
+  sku: string;
+  name: string;
+  stock_status: string | null;
+  small_image: { url: string; label: string | null } | null;
+  price_range: {
+    minimum_price: {
+      regular_price: { value: number; currency: string };
+      final_price: { value: number; currency: string };
+    };
+  } | null;
+  css_purchase_allowance: PurchaseAllowance | null;
+  css_stock_info: StockInfo;
+};
+
+export function ProductCard({ product, hidePrice }: { product: ProductCardProduct; hidePrice: boolean }) {
   const price = product.price_range?.minimum_price;
   const restricted = product.css_purchase_allowance?.has_active_restriction === true;
   const available = product.css_stock_info.available;
