@@ -43,6 +43,14 @@ const ACTIVE_EMPLOYEES = /* GraphQL */ `
   }
 `;
 
+export async function getActiveEmployees(token: string): Promise<StoreEmployee[]> {
+  const data = await magentoGraphQL<{
+    css_company_employees: { items: Array<StoreEmployee & { active: boolean }> };
+  }>(ACTIVE_EMPLOYEES, {}, token);
+
+  return data.css_company_employees.items.filter((employee) => employee.active);
+}
+
 export async function getEmployeeOrdering(token: string): Promise<EmployeeOrdering> {
   const configuration = await magentoGraphQL<{
     css_company_employee_configuration: {
@@ -56,13 +64,9 @@ export async function getEmployeeOrdering(token: string): Promise<EmployeeOrderi
     return { usesEmployee: false, multiEmployeeBasket: config.multi_employee_basket, employees: [] };
   }
 
-  const data = await magentoGraphQL<{
-    css_company_employees: { items: Array<StoreEmployee & { active: boolean }> };
-  }>(ACTIVE_EMPLOYEES, {}, token);
-
   return {
     usesEmployee: true,
     multiEmployeeBasket: config.multi_employee_basket,
-    employees: data.css_company_employees.items.filter((employee) => employee.active),
+    employees: await getActiveEmployees(token),
   };
 }
