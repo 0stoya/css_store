@@ -1,6 +1,7 @@
 import { ArrowRight, Hash, PackageCheck, PackageX, ShieldAlert, Truck } from "lucide-react";
 import Link from "next/link";
 import type { StoreProduct } from "@/lib/magento/catalogue";
+import { ProductBadges } from "./product-badges";
 import { ProductImage } from "./product-image";
 
 function money(value: number, currency: string) {
@@ -32,6 +33,7 @@ export function ProductCard({ product, hidePrice }: { product: StoreProduct; hid
         </div>
 
         <h3 className="product-title">{product.name}</h3>
+        <ProductBadges attributes={product.custom_attributesV2} compact/>
 
         {!hidePrice && price ? <div className="product-price-row">
           <span className="product-price-label">Your price</span>
