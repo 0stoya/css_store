@@ -33,7 +33,7 @@ export function ProductCard({ product, hidePrice }: { product: StoreProduct; hid
         </div>
 
         <h3 className="product-title">{product.name}</h3>
-        <ProductBadges attributes={product.custom_attributesV2} compact/>
+        <ProductBadges values={product} compact/>
 
         {!hidePrice && price ? <div className="product-price-row">
           <span className="product-price-label">Your price</span>

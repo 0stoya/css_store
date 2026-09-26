@@ -10,7 +10,7 @@ import {
 import {
   getActiveProductBadgeCodes,
   type ProductBadgeCode,
-  type ProductCustomAttributes,
+  type ProductBadgeValues,
 } from "@/lib/product-badges";
 
 const BADGES: Record<ProductBadgeCode, {
@@ -27,13 +27,13 @@ const BADGES: Record<ProductBadgeCode, {
 };
 
 export function ProductBadges({
-  attributes,
+  values,
   compact = false,
 }: {
-  attributes: ProductCustomAttributes | undefined;
+  values: ProductBadgeValues | undefined;
   compact?: boolean;
 }) {
-  const codes = getActiveProductBadgeCodes(attributes);
+  const codes = getActiveProductBadgeCodes(values);
   const visible = compact ? codes.slice(0, 2) : codes;
 
   if (!visible.length) return null;

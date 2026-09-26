@@ -1,6 +1,6 @@
 import { magentoGraphQL } from "@/lib/magento/client";
 import type { PurchaseAllowance, PurchaseConstraints, StockInfo } from "@/lib/magento/catalogue";
-import type { ProductCustomAttributes } from "@/lib/product-badges";
+import type { ProductBadgeValues } from "@/lib/product-badges";
 
 export type ConfigurableOption = {
   uid: string;
@@ -35,14 +35,13 @@ export type GroupedProductChild = {
   variants?: ConfigurableVariant[] | null;
 };
 
-export type ProductConfiguration = {
+export type ProductConfiguration = ProductBadgeValues & {
   __typename: string;
   uid: string;
   sku: string;
   name: string;
   url_key: string | null;
   stock_status: string | null;
-  custom_attributesV2: ProductCustomAttributes;
   description: { html: string } | null;
   media_gallery: Array<{ url: string; label: string | null; position: number | null }> | null;
   price_range: ProductPriceRange | null;
@@ -112,15 +111,13 @@ const PRODUCT = /* GraphQL */ `
         name
         url_key
         stock_status
-        custom_attributesV2(filters: { is_visible_on_front: true }) {
-          items {
-            code
-            ... on AttributeValue { value }
-            ... on AttributeSelectedOptions {
-              selected_options { label value }
-            }
-          }
-        }
+        ppe_certified
+        express_delivery
+        fast_delivery
+        made_to_order
+        company_logo
+        embroidered
+        printed
         description { html }
         media_gallery { url label position }
         price_range {

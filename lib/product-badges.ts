@@ -10,18 +10,9 @@ export const PRODUCT_BADGE_CODES = [
 
 export type ProductBadgeCode = (typeof PRODUCT_BADGE_CODES)[number];
 
-export type ProductCustomAttribute = {
-  code: string;
-  value?: string | null;
-  selected_options?: Array<{
-    label: string;
-    value: string;
-  }> | null;
-};
-
-export type ProductCustomAttributes = {
-  items: Array<ProductCustomAttribute | null>;
-} | null;
+export type ProductBadgeValues = Partial<
+  Record<ProductBadgeCode, string | number | boolean | null>
+>;
 
 const TRUTHY_ATTRIBUTE_VALUES = new Set([
   "1",
@@ -31,30 +22,20 @@ const TRUTHY_ATTRIBUTE_VALUES = new Set([
   "enabled",
 ]);
 
-function normalise(value: string | null | undefined) {
-  return value?.trim().toLowerCase() || "";
-}
-
-function isTruthyAttribute(attribute: ProductCustomAttribute) {
-  if (TRUTHY_ATTRIBUTE_VALUES.has(normalise(attribute.value))) return true;
-
-  return (attribute.selected_options || []).some((option) =>
-    TRUTHY_ATTRIBUTE_VALUES.has(normalise(option.value))
-    || TRUTHY_ATTRIBUTE_VALUES.has(normalise(option.label)),
-  );
+function normalise(value: string | number | boolean | null | undefined) {
+  if (value === null || value === undefined) return "";
+  return String(value).trim().toLowerCase();
 }
 
 export function getActiveProductBadgeCodes(
-  attributes: ProductCustomAttributes | undefined,
+  values: ProductBadgeValues | undefined,
 ): ProductBadgeCode[] {
   const enabled = new Set<ProductBadgeCode>();
 
-  for (const attribute of attributes?.items || []) {
-    if (!attribute) continue;
-    if (!PRODUCT_BADGE_CODES.includes(attribute.code as ProductBadgeCode)) continue;
-    if (!isTruthyAttribute(attribute)) continue;
-
-    enabled.add(attribute.code as ProductBadgeCode);
+  for (const code of PRODUCT_BADGE_CODES) {
+    if (TRUTHY_ATTRIBUTE_VALUES.has(normalise(values?.[code]))) {
+      enabled.add(code);
+    }
   }
 
   // Express is the stronger customer promise. Avoid displaying two delivery
