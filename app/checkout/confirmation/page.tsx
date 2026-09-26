@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ArrowRight, CircleCheckBig, Clock3 } from "lucide-react";
 import { SiteHeader } from "@/components/site-header";
 import { getCustomerContext } from "@/lib/magento/context";
 import { requireCustomerToken } from "@/lib/session";
@@ -30,43 +31,54 @@ export default async function ConfirmationPage({
 
   let heading = hasResult ? "Order submitted" : "No checkout result";
   let explanation = hasResult
-    ? "Magento accepted the order submission."
+    ? "Your order has been submitted successfully."
     : "This page does not contain a completed checkout result. Return to your basket or catalogue to continue.";
 
   if (isCredit && approvalRequired) {
     heading = "Order submitted for approval";
-    explanation = "Fluid created a company credit order and placed it into the approval workflow. No Magento sales order has been faked or created ahead of approval.";
+    explanation = "Your order has been sent through your company approval workflow. You can follow its status from your account.";
   } else if (isCredit && orderPlaced) {
     heading = "Order placed";
-    explanation = "Fluid accepted the company credit order and completed Magento sales-order creation.";
+    explanation = "Your order has been placed successfully and is now being processed.";
   } else if (isCredit) {
-    heading = "Credit order submitted";
-    explanation = "Fluid accepted the credit order. Its current backend status is shown below; sales-order creation has not been assumed by the storefront.";
+    heading = "Order submitted";
+    explanation = "Your order has been submitted. Its current status is shown below.";
   }
+
+  const success = hasResult && (!approvalRequired || orderPlaced);
+  const ResultIcon = approvalRequired && !orderPlaced ? Clock3 : CircleCheckBig;
 
   return <>
     <SiteHeader customerName={customerName} companyName={selectedCompany?.name}/>
-    <main className="shell">
-      <section className="card delivery-card stack" style={{maxWidth:760,margin:"36px auto"}}>
-        <div>
-          <p className="eyebrow">{hasResult ? "Checkout complete" : "Checkout"}</p>
-          <h1>{heading}</h1>
-          <p className="muted">{explanation}</p>
+    <main className="shell checkout-confirmation-page">
+      <section className={`card checkout-confirmation-card ${hasResult ? "has-result" : ""}`}>
+        <div className={`checkout-confirmation-icon ${success ? "success" : "pending"}`}>
+          <ResultIcon size={28} strokeWidth={2} aria-hidden="true"/>
         </div>
 
-        {hasResult ? <dl className="basket-totals">
-          {isCredit && result.credit ? <div><dt>Credit order</dt><dd>{result.credit}</dd></div> : null}
-          {result.order ? <div><dt>Magento order</dt><dd>{result.order}</dd></div> : null}
-          {isCredit && result.status ? <div><dt>Fluid status</dt><dd>{result.status}</dd></div> : null}
-          {isCredit ? <div><dt>Approval required</dt><dd>{approvalRequired ? "Yes" : "No"}</dd></div> : null}
-          {isCredit && result.auto === "1" ? <div><dt>Auto approved</dt><dd>Yes</dd></div> : null}
+        <div className="checkout-confirmation-copy">
+          <p className="eyebrow">{hasResult ? "Checkout complete" : "Checkout"}</p>
+          <h1>{heading}</h1>
+          <p>{explanation}</p>
+        </div>
+
+        {hasResult ? <dl className="checkout-confirmation-details">
+          {isCredit && result.credit ? <div><dt>Approval reference</dt><dd>{result.credit}</dd></div> : null}
+          {result.order ? <div><dt>Order reference</dt><dd>{result.order}</dd></div> : null}
+          {isCredit && result.status ? <div><dt>Current status</dt><dd>{result.status}</dd></div> : null}
+          {isCredit ? <div><dt>Company approval</dt><dd>{approvalRequired ? "Required" : "Not required"}</dd></div> : null}
         </dl> : null}
 
-        <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
-          {isCredit && result.credit ? <Link className="button" href={`/account/credit-orders/${encodeURIComponent(result.credit)}`}>View credit order</Link> : null}
-          <Link className={isCredit ? "button secondary" : "button"} href="/catalogue">Continue shopping</Link>
-          {result.order ? <Link className="button secondary" href="/account/orders">View order history</Link> : null}
-          <Link className="button secondary" href="/basket">Basket</Link>
+        <div className="checkout-confirmation-actions">
+          {isCredit && result.credit ? <Link className="button" href={`/account/credit-orders/${encodeURIComponent(result.credit)}`}>
+            <span>View order status</span>
+            <ArrowRight size={17} aria-hidden="true"/>
+          </Link> : null}
+          {result.order ? <Link className="button" href="/account/orders">
+            <span>View order history</span>
+            <ArrowRight size={17} aria-hidden="true"/>
+          </Link> : null}
+          <Link className="button secondary" href="/catalogue">Continue shopping</Link>
           <Link className="button secondary" href="/account">Account</Link>
         </div>
       </section>
