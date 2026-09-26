@@ -1,0 +1,172 @@
+"use client";
+
+import { Check, CircleAlert, PackageCheck, ShoppingCart } from "lucide-react";
+import { useMemo, useState } from "react";
+import { EmployeePicker } from "@/components/employee-picker";
+import { QuantityStepper } from "@/components/quantity-stepper";
+import type { PurchaseConstraints } from "@/lib/magento/catalogue";
+import type { ConfigurableOption, ConfigurableVariant } from "@/lib/magento/product";
+import type { EmployeeOrdering } from "@/lib/magento/employee";
+
+function variantMatches(
+  variant: ConfigurableVariant,
+  selected: Record<string, string>,
+) {
+  const selectedUids = Object.values(selected).filter(Boolean);
+  return selectedUids.every((uid) =>
+    variant.attributes.some((attribute) => attribute.uid === uid),
+  );
+}
+
+function isVariantInStock(variant: ConfigurableVariant) {
+  return variant.product.stock_status === "IN_STOCK";
+}
+
+export function ConfigurableProductControls({
+  options,
+  variants,
+  constraints,
+  canAdd,
+  addLabel,
+  employeeOrdering,
+}: {
+  options: ConfigurableOption[];
+  variants: ConfigurableVariant[];
+  constraints: PurchaseConstraints | null;
+  canAdd: boolean;
+  addLabel: string;
+  employeeOrdering: EmployeeOrdering;
+}) {
+  const [selected, setSelected] = useState<Record<string, string>>({});
+
+  const complete = options.length > 0
+    && options.every((option) => Boolean(selected[option.uid]));
+
+  const selectedVariant = useMemo(
+    () => complete
+      ? variants.find((variant) => variantMatches(variant, selected)) || null
+      : null,
+    [complete, selected, variants],
+  );
+
+  const selectedVariantAvailable = Boolean(
+    selectedVariant && isVariantInStock(selectedVariant),
+  );
+  const canSubmit = canAdd && complete && selectedVariantAvailable;
+
+  const remainingOptions = options
+    .filter((option) => !selected[option.uid])
+    .map((option) => option.label);
+
+  function optionValueAvailable(optionUid: string, valueUid: string) {
+    const candidate = {
+      ...selected,
+      [optionUid]: valueUid,
+    };
+
+    return variants.some(
+      (variant) => isVariantInStock(variant) && variantMatches(variant, candidate),
+    );
+  }
+
+  function choose(optionUid: string, valueUid: string) {
+    setSelected((current) => ({
+      ...current,
+      [optionUid]: valueUid,
+    }));
+  }
+
+  const minimum = Math.max(1, constraints?.minimum_quantity || 1);
+
+  return <div className="configurable-order-controls">
+    <div className="configurable-option-stack">
+      {options.map((option) => <section className="configurable-option-group" key={option.uid}>
+        <div className="configurable-option-heading">
+          <strong>{option.label}</strong>
+          <span>Choose {option.label.toLowerCase()}</span>
+        </div>
+
+        <div
+          className="configurable-value-grid"
+          role="group"
+          aria-label={option.label}
+        >
+          {option.values.map((value) => {
+            const active = selected[option.uid] === value.uid;
+            const available = optionValueAvailable(option.uid, value.uid);
+
+            return <button
+              className={[
+                "configurable-value-tile",
+                active ? "selected" : "",
+                !available ? "unavailable" : "",
+              ].filter(Boolean).join(" ")}
+              type="button"
+              aria-pressed={active}
+              disabled={!available && !active}
+              onClick={() => choose(option.uid, value.uid)}
+              key={value.uid}
+            >
+              <span>{value.label}</span>
+              {active ? <Check size={15} strokeWidth={2.5} aria-hidden="true"/> : null}
+            </button>;
+          })}
+        </div>
+
+        {selected[option.uid]
+          ? <input type="hidden" name="selected_option" value={selected[option.uid]}/>
+          : null}
+      </section>)}
+    </div>
+
+    <div
+      className={[
+        "configurable-variant-status",
+        selectedVariantAvailable ? "available" : "",
+        complete && !selectedVariantAvailable ? "unavailable" : "",
+      ].filter(Boolean).join(" ")}
+      aria-live="polite"
+    >
+      {selectedVariant ? <>
+        {selectedVariantAvailable
+          ? <PackageCheck size={17} strokeWidth={2.2} aria-hidden="true"/>
+          : <CircleAlert size={17} strokeWidth={2.2} aria-hidden="true"/>}
+        <span>
+          <strong>{selectedVariant.product.sku}</strong>
+          <small>{selectedVariantAvailable ? "In stock" : "This option is unavailable"}</small>
+        </span>
+      </> : <>
+        <CircleAlert size={17} strokeWidth={2.2} aria-hidden="true"/>
+        <span>
+          <strong>{remainingOptions.length ? `Choose ${remainingOptions.join(" and ")}` : "Choose an available option"}</strong>
+          <small>Select your product options to continue.</small>
+        </span>
+      </>}
+    </div>
+
+    {employeeOrdering.usesEmployee && employeeOrdering.multiEmployeeBasket ? <div className="configurable-employee">
+      <EmployeePicker employees={employeeOrdering.employees}/>
+    </div> : null}
+
+    <div className="configurable-order-actions">
+      <QuantityStepper
+        name="quantity"
+        label="Quantity"
+        defaultValue={minimum}
+        min={constraints?.minimum_quantity || 1}
+        max={constraints?.maximum_quantity ?? undefined}
+        step={constraints?.increments_enforced ? constraints.quantity_increment : "any"}
+        disabled={!canSubmit}
+      />
+
+      <button
+        className="button order-primary-action configurable-add-button"
+        type="submit"
+        disabled={!canSubmit}
+      >
+        <ShoppingCart size={19} aria-hidden="true"/>
+        <span>{canSubmit ? addLabel : canAdd ? "Choose options" : "Ordering unavailable"}</span>
+      </button>
+    </div>
+  </div>;
+}
