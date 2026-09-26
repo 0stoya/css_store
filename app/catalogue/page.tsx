@@ -1,9 +1,9 @@
 import Link from "next/link";
+import { CatalogueBadgeProvider } from "@/components/catalogue-badges";
 import { CataloguePagination } from "@/components/catalogue-pagination";
 import { ProductCard } from "@/components/product-card";
 import { SiteHeader } from "@/components/site-header";
-import { getProducts } from "@/lib/magento/catalogue";
-import { getCustomerContext } from "@/lib/magento/context";
+import { getCataloguePageContext } from "@/lib/magento/catalogue-page";
 import { requireCustomerToken } from "@/lib/session";
 
 export const metadata = { title: "Products" };
@@ -25,12 +25,8 @@ export default async function CataloguePage({
   const { q = "", page: rawPage = "1" } = await searchParams;
   const page = Math.max(1, Math.trunc(Number(rawPage) || 1));
   const searchTerm = q.trim();
-  const [ctx, products] = await Promise.all([
-    getCustomerContext(token),
-    getProducts(token, searchTerm, page),
-  ]);
-  const selected = ctx.css_company_context.companies.find((company) => company.selected) || null;
-  const name = `${ctx.customer.firstname} ${ctx.customer.lastname}`.trim();
+  const catalogue = await getCataloguePageContext(token, searchTerm, page);
+  const { products, selectedCompany: selected, customerName: name, hidePrice } = catalogue;
 
   return <>
     <SiteHeader customerName={name} companyName={selected?.name}/>
@@ -48,9 +44,11 @@ export default async function CataloguePage({
         {searchTerm ? <Link className="button secondary" href="/catalogue">Clear search</Link> : null}
       </header>
 
-      <section className="product-grid" aria-label={searchTerm ? `Search results for ${searchTerm}` : "Products"}>
-        {products.items.map((product) => <ProductCard product={product} hidePrice={ctx.css_storefront_policy.hide_price} key={product.uid}/>)}
-      </section>
+      <CatalogueBadgeProvider skus={products.items.map((product) => product.sku)}>
+        <section className="product-grid" aria-label={searchTerm ? `Search results for ${searchTerm}` : "Products"}>
+          {products.items.map((product) => <ProductCard product={product} hidePrice={hidePrice} key={product.uid}/>)}
+        </section>
+      </CatalogueBadgeProvider>
       {!products.items.length ? <div className="empty card"><h2>No products found</h2><p className="muted">Try a different product name or SKU from the search in the header.</p>{searchTerm ? <p><Link className="button secondary" href="/catalogue">View all products</Link></p> : null}</div> : null}
 
       <CataloguePagination
