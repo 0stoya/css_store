@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Check } from "lucide-react";
 import type { CSSProperties } from "react";
 
 type CheckoutStep = "employee" | "delivery" | "payment";
@@ -26,7 +27,7 @@ export function CheckoutSteps({
         const complete = index < currentIndex;
         const className = index === currentIndex ? "current" : complete ? "complete" : "";
         const content = <>
-          <span className="checkout-step-number" aria-hidden="true">{complete ? "✓" : index + 1}</span>
+          <span className="checkout-step-number" aria-hidden="true">{complete ? <Check size={14} strokeWidth={2.5}/> : index + 1}</span>
           <span>{step.label}</span>
         </>;
         return <li className={className} key={step.key} aria-current={index === currentIndex ? "step" : undefined}>

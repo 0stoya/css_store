@@ -14,6 +14,7 @@ import "./product-badges.css";
 import "./basket-ux.css";
 import "./delivery-ux.css";
 import "./payment-ux.css";
+import "./checkout-polish.css";
 import "./account-ux.css";
 import "./account-sidebar.css";
 import "./portal-width.css";

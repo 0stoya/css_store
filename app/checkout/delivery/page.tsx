@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowLeft, Check, ChevronDown, MapPin, Phone, Plus, Truck } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, ChevronDown, MapPin, Phone, Plus, Truck } from "lucide-react";
 import { CheckoutSteps } from "@/components/checkout-steps";
 import { SiteHeader } from "@/components/site-header";
 import type { CartMoney } from "@/lib/magento/cart";
@@ -222,7 +222,10 @@ export default async function DeliveryPage({
             </div> : <p className="muted small delivery-summary-hint">Choose a delivery address and method to continue.</p>}
 
             {selectedMethod && canCheckout ? <form action={preparePaymentAction} className="delivery-summary-action">
-              <button className="button" type="submit">Continue to payment</button>
+              <button className="button checkout-forward" type="submit">
+                <span>Continue to payment</span>
+                <ArrowRight size={17} aria-hidden="true"/>
+              </button>
             </form> : null}
           </section>
         </aside>

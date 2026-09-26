@@ -1,0 +1,253 @@
+/* Final checkout flow polish: Employee → Delivery → Payment → Confirmation. */
+
+.checkout-progress {
+  margin-bottom: 24px;
+  border-color: #d6e1e9;
+  border-radius: 12px;
+  box-shadow: none;
+}
+
+.checkout-progress li {
+  min-height: 54px;
+  padding: 11px 14px;
+}
+
+.checkout-progress li.current {
+  background: #f4f9fd;
+}
+
+.checkout-step-number {
+  width: 26px;
+  height: 26px;
+}
+
+.checkout-heading {
+  margin-bottom: 22px;
+}
+
+.checkout-heading h1 {
+  margin-bottom: 6px;
+  font-size: clamp(2.45rem, 4.7vw, 3.4rem);
+}
+
+.checkout-heading .muted {
+  max-width: 650px;
+  margin-bottom: 0;
+}
+
+.checkout-back,
+.delivery-back,
+.payment-back {
+  min-height: 42px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.checkout-forward {
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.checkout-card-intro {
+  margin-bottom: 16px;
+  padding-bottom: 14px;
+}
+
+.checkout-card-intro h2 {
+  font-size: 1.18rem;
+}
+
+.checkout-card-intro p {
+  margin-top: 4px;
+  font-size: .82rem;
+  line-height: 1.5;
+}
+
+/* Employee step */
+.checkout-employee-form {
+  max-width: 620px;
+  display: grid;
+  gap: 16px;
+}
+
+.checkout-employee-form .employee-picker {
+  max-width: none;
+}
+
+.checkout-employee-submit {
+  width: min(320px, 100%);
+  min-height: 48px;
+}
+
+/* Shared checkout summary treatment */
+.checkout-summary-card,
+.delivery-summary-card,
+.payment-summary-card {
+  border-color: #c9ddec;
+  background: linear-gradient(180deg, #fff 0%, #f9fbfd 100%);
+}
+
+.delivery-summary-action .button,
+.payment-submit {
+  min-height: 48px;
+}
+
+/* Payment */
+.payment-method-option {
+  min-height: 64px;
+}
+
+.payment-summary-card {
+  padding: 24px;
+}
+
+.payment-submit {
+  display: flex;
+  align-items: center;
+}
+
+/* Confirmation */
+.checkout-confirmation-page {
+  padding-top: 42px;
+  padding-bottom: 72px;
+}
+
+.checkout-confirmation-card {
+  width: min(720px, 100%);
+  margin: 0 auto;
+  padding: clamp(26px, 5vw, 40px);
+  display: grid;
+  justify-items: center;
+  gap: 22px;
+  text-align: center;
+}
+
+.checkout-confirmation-icon {
+  width: 64px;
+  height: 64px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: #eef4f7;
+  color: var(--muted-strong);
+}
+
+.checkout-confirmation-icon.success {
+  background: #edf8f1;
+  color: var(--success);
+}
+
+.checkout-confirmation-icon.pending {
+  background: #f5f9ff;
+  color: var(--blue);
+}
+
+.checkout-confirmation-copy {
+  max-width: 590px;
+}
+
+.checkout-confirmation-copy .eyebrow {
+  margin-bottom: 7px;
+}
+
+.checkout-confirmation-copy h1 {
+  margin-bottom: 10px;
+  font-size: clamp(2rem, 5vw, 3rem);
+}
+
+.checkout-confirmation-copy > p:last-child {
+  margin: 0;
+  color: var(--muted-strong);
+  line-height: 1.6;
+}
+
+.checkout-confirmation-details {
+  width: min(520px, 100%);
+  margin: 0;
+  padding: 16px 18px;
+  display: grid;
+  gap: 0;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #fbfcfd;
+  text-align: left;
+}
+
+.checkout-confirmation-details > div {
+  min-height: 42px;
+  padding: 9px 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 20px;
+  align-items: center;
+}
+
+.checkout-confirmation-details > div + div {
+  border-top: 1px solid #edf1f4;
+}
+
+.checkout-confirmation-details dt {
+  color: var(--muted);
+  font-size: .8rem;
+}
+
+.checkout-confirmation-details dd {
+  margin: 0;
+  color: var(--ink-strong);
+  font-size: .84rem;
+  font-weight: 800;
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
+.checkout-confirmation-actions {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 9px;
+}
+
+.checkout-confirmation-actions .button {
+  min-height: 44px;
+  gap: 8px;
+}
+
+@media (max-width: 720px) {
+  .checkout-progress {
+    margin-bottom: 20px;
+  }
+
+  .checkout-heading {
+    align-items: stretch;
+  }
+
+  .checkout-confirmation-page {
+    padding-top: 28px;
+  }
+}
+
+@media (max-width: 520px) {
+  .checkout-confirmation-card {
+    padding: 22px 18px;
+  }
+
+  .checkout-confirmation-details > div {
+    grid-template-columns: 1fr;
+    gap: 3px;
+  }
+
+  .checkout-confirmation-details dd {
+    text-align: left;
+  }
+
+  .checkout-confirmation-actions {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .checkout-confirmation-actions .button {
+    width: 100%;
+  }
+}
