@@ -114,14 +114,6 @@ export default async function ProductPage({
             </div> : null}
           </div>
 
-          {product.description?.html ? <details className="pdp-description-card" open>
-            <summary>
-              <span><FileText size={18} aria-hidden="true"/>Product details</span>
-              <ChevronDown className="pdp-description-chevron" size={18} aria-hidden="true"/>
-            </summary>
-            <div className="product-description" dangerouslySetInnerHTML={{ __html: product.description.html }}/>
-          </details> : null}
-
           {configurable ? <form action={addProductToCartAction} className="configurable-order-card">
             <input type="hidden" name="product_sku" value={product.sku}/>
             <div className="configurable-order-card-heading">
@@ -145,6 +137,14 @@ export default async function ProductPage({
               Employee selection happens at the start of checkout.
             </p> : null}
           </form> : null}
+
+          {product.description?.html ? <details className="pdp-description-card" open>
+            <summary>
+              <span><FileText size={18} aria-hidden="true"/>Product details</span>
+              <ChevronDown className="pdp-description-chevron" size={18} aria-hidden="true"/>
+            </summary>
+            <div className="product-description" dangerouslySetInnerHTML={{ __html: product.description.html }}/>
+          </details> : null}
         </div>
       </section>
 
