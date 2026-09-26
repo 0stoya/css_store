@@ -1,7 +1,26 @@
 /* Production basket refinement. */
 
 .basket-page {
-  padding-top: 36px;
+  padding-top: 32px;
+}
+
+.basket-heading {
+  margin-bottom: 22px;
+}
+
+.basket-heading h1 {
+  margin-bottom: 8px;
+  font-size: clamp(2.55rem, 4.5vw, 3.35rem);
+}
+
+.basket-heading .muted {
+  margin-bottom: 0;
+}
+
+.basket-continue-shopping {
+  min-height: 42px;
+  padding-inline: 14px;
+  gap: 7px;
 }
 
 .basket-message {
@@ -14,28 +33,114 @@
 }
 
 .basket-production-line {
-  padding: 24px;
+  padding: 20px;
+}
+
+.basket-production-line .basket-line-main {
+  grid-template-columns: 104px minmax(0, 1fr) auto;
+  gap: 18px;
+  align-items: start;
+}
+
+.basket-product-media {
+  width: 104px;
+  height: 104px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #fff;
+}
+
+.basket-product-media img {
+  width: 100%;
+  height: 100%;
+  padding: 8px;
+  display: block;
+  object-fit: contain;
+}
+
+.basket-line-copy {
+  min-width: 0;
 }
 
 .basket-production-line .basket-line-copy h2 {
-  margin: 9px 0 4px;
-  font-size: 1.08rem;
+  margin: 8px 0 4px;
+  font-size: 1.02rem;
+  line-height: 1.35;
 }
 
-.basket-production-line .basket-options {
-  margin-bottom: 0;
+.basket-production-line .basket-line-copy h2 a {
+  color: var(--ink-strong);
+  text-decoration: none;
+}
+
+.basket-production-line .basket-line-copy h2 a:hover {
+  color: var(--blue);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.basket-line-badges {
+  gap: 6px;
+}
+
+.basket-line-badges .badge {
+  padding: 4px 8px;
+  font-size: .68rem;
+}
+
+.basket-option-chips {
+  margin-top: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.basket-option-chips > span {
+  min-height: 27px;
+  padding: 5px 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border: 1px solid #d8e2ea;
+  border-radius: 999px;
+  background: #f8fafc;
+  color: var(--muted-strong);
+  font-size: .72rem;
+}
+
+.basket-option-chips strong {
+  color: var(--ink-strong);
+  font-size: inherit;
+}
+
+.basket-line-price {
+  min-width: 154px;
+  padding-top: 4px;
+  grid-template-columns: auto auto;
+  gap: 5px 12px;
+}
+
+.basket-line-price span {
+  font-size: .78rem;
+}
+
+.basket-line-price strong {
+  font-size: .95rem;
 }
 
 .basket-production-actions {
   align-items: end;
-  margin-top: 18px;
-  padding-top: 18px;
+  margin-top: 16px;
+  padding-top: 16px;
 }
 
 .basket-production-actions .basket-quantity-form {
   display: flex;
   align-items: end;
-  gap: 10px;
+  gap: 9px;
 }
 
 .basket-production-actions .quantity-control {
@@ -46,12 +151,16 @@
   width: 150px;
 }
 
-.basket-update-button {
+.basket-update-button,
+.basket-remove-button {
   min-height: 48px;
 }
 
+.basket-update-button {
+  gap: 7px;
+}
+
 .basket-remove-button {
-  min-height: 48px;
   color: var(--danger);
 }
 
@@ -88,14 +197,26 @@
 
 .basket-checkout-summary {
   padding: 24px;
+  border-color: #c9ddec;
+  background: linear-gradient(180deg, #fff 0%, #f9fbfd 100%);
 }
 
 .basket-checkout-summary h2 {
   margin: 0 0 14px;
+  font-size: 1.25rem;
 }
 
 .basket-checkout-summary dl {
   margin: 0;
+}
+
+.basket-checkout-summary dl > div {
+  padding-block: 2px;
+}
+
+.basket-checkout-summary .basket-grand-total {
+  margin-top: 6px;
+  padding-top: 15px;
 }
 
 .basket-checkout-action {
@@ -112,6 +233,7 @@
 
 .basket-checkout-action .button {
   width: 100%;
+  min-height: 48px;
   justify-content: space-between;
 }
 
@@ -129,9 +251,31 @@
   }
 }
 
+@media (max-width: 720px) {
+  .basket-production-line .basket-line-main {
+    grid-template-columns: 88px minmax(0, 1fr);
+    gap: 14px;
+  }
+
+  .basket-product-media {
+    width: 88px;
+    height: 88px;
+  }
+
+  .basket-line-price {
+    grid-column: 1 / -1;
+    min-width: 0;
+    padding-top: 12px;
+    grid-template-columns: auto auto;
+    justify-content: start;
+    text-align: left;
+    border-top: 1px solid var(--line);
+  }
+}
+
 @media (max-width: 640px) {
   .basket-production-line {
-    padding: 18px;
+    padding: 16px;
   }
 
   .basket-production-actions,
@@ -149,5 +293,25 @@
   .basket-production-actions button,
   .basket-production-employee > .button {
     width: 100%;
+  }
+}
+
+@media (max-width: 460px) {
+  .basket-production-line .basket-line-main {
+    grid-template-columns: 72px minmax(0, 1fr);
+  }
+
+  .basket-product-media {
+    width: 72px;
+    height: 72px;
+  }
+
+  .basket-line-badges {
+    margin-bottom: 3px;
+  }
+
+  .basket-production-line .basket-line-copy h2 {
+    margin-top: 6px;
+    font-size: .95rem;
   }
 }
