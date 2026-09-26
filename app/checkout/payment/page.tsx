@@ -1,6 +1,7 @@
 import Link from "next/link";
 import {
   ArrowLeft,
+  ArrowRight,
   Check,
   ChevronDown,
   MapPin,
@@ -169,7 +170,10 @@ export default async function PaymentPage({
               {shippingMethod ? <span className="payment-shipping-method"><Truck size={15} aria-hidden="true"/>{shippingMethod.carrier_title || shippingMethod.carrier_code} · {shippingMethod.method_title || shippingMethod.method_code}</span> : null}
             </div> : null}
 
-            <button className="button payment-submit" type="submit" disabled={!ready || !methods.length}>{submitLabel}</button>
+            <button className="button payment-submit checkout-forward" type="submit" disabled={!ready || !methods.length}>
+              <span>{submitLabel}</span>
+              <ArrowRight size={17} aria-hidden="true"/>
+            </button>
           </section>
         </aside>
       </form> : null}
