@@ -17,15 +17,13 @@ type GroupedParent = {
   }> | null;
 };
 
-const GROUPED_PARENT_IMAGES = /* GraphQL */ `
-  query StoreGroupedParentImages($page: Int!, $pageSize: Int!) {
+const GROUPED_PARENT_CANDIDATES = /* GraphQL */ `
+  query StoreGroupedParentCandidates($filter: ProductAttributeFilterInput!, $pageSize: Int!) {
     products(
-      filter: { price: { to: "999999999" } }
-      currentPage: $page
+      filter: $filter
+      currentPage: 1
       pageSize: $pageSize
-      sort: { name: ASC }
     ) {
-      page_info { current_page total_pages }
       items {
         __typename
         sku
@@ -58,6 +56,32 @@ function usableImage(image: BasketProductImage | null | undefined) {
   return !/\/placeholder(?:\/|_|\.)/i.test(url);
 }
 
+function parentSkuCandidates(childSku: string) {
+  const parts = childSku.split("/").map((part) => part.trim()).filter(Boolean);
+  const candidates = new Set<string>();
+
+  // Most CSS grouped SKUs append a size/variant segment to the grouped parent.
+  for (let end = parts.length - 1; end >= 2; end -= 1) {
+    candidates.add(parts.slice(0, end).join("/"));
+  }
+
+  // Some legacy SKUs insert the size before a trailing style/length segment,
+  // e.g. CEME/MV91/HO/S/2T -> CEME/MV91/HO/2T.
+  for (let index = 2; index < parts.length; index += 1) {
+    const candidate = parts.filter((_, partIndex) => partIndex !== index).join("/");
+    if (candidate && candidate !== childSku) candidates.add(candidate);
+  }
+
+  return [...candidates];
+}
+
+function parentContainsSku(parent: GroupedParent, childSku: string) {
+  return (parent.items || []).some((item) =>
+    item.product.sku === childSku
+    || (item.product.variants || []).some((variant) => variant.product.sku === childSku),
+  );
+}
+
 export type BasketParentPresentation = {
   parent_sku: string;
   image: BasketProductImage;
@@ -65,49 +89,49 @@ export type BasketParentPresentation = {
 
 export async function getGroupedParentPresentationMap(
   token: string,
+  childSkus: string[],
 ): Promise<Map<string, BasketParentPresentation>> {
-  const presentations = new Map<string, BasketParentPresentation>();
-  const pageSize = 48;
-  let page = 1;
-  let totalPages = 1;
+  const requestedSkus = Array.from(new Set(childSkus.map((sku) => sku.trim()).filter(Boolean)));
+  if (!requestedSkus.length) return new Map();
+
+  const candidateSkus = Array.from(new Set(requestedSkus.flatMap(parentSkuCandidates)));
+  if (!candidateSkus.length) return new Map();
 
   try {
-    do {
-      const data = await magentoGraphQL<{
-        products: {
-          page_info: { current_page: number; total_pages: number };
-          items: GroupedParent[];
-        };
-      }>(GROUPED_PARENT_IMAGES, { page, pageSize }, token);
+    const data = await magentoGraphQL<{
+      products: { items: GroupedParent[] };
+    }>(
+      GROUPED_PARENT_CANDIDATES,
+      {
+        filter: { sku: { in: candidateSkus } },
+        pageSize: Math.min(48, Math.max(1, candidateSkus.length)),
+      },
+      token,
+    );
 
-      totalPages = Math.max(1, data.products.page_info.total_pages || 1);
+    const parents = (data.products.items || []).filter((parent) =>
+      usableImage(parent.small_image)
+      && (parent.__typename === "GroupedProduct" || parent.__typename === "CssGroupedConfigurableProduct"),
+    );
 
-      for (const parent of data.products.items || []) {
-        if (!usableImage(parent.small_image)) continue;
-        if (parent.__typename !== "GroupedProduct" && parent.__typename !== "CssGroupedConfigurableProduct") continue;
+    const presentations = new Map<string, BasketParentPresentation>();
 
-        for (const item of parent.items || []) {
-          const presentation = {
-            parent_sku: parent.sku,
-            image: parent.small_image as BasketProductImage,
-          };
-          presentations.set(item.product.sku, presentation);
+    for (const childSku of requestedSkus) {
+      const parent = parents.find((candidate) => parentContainsSku(candidate, childSku));
+      if (!parent?.small_image) continue;
 
-          for (const variant of item.product.variants || []) {
-            presentations.set(variant.product.sku, presentation);
-          }
-        }
-      }
+      presentations.set(childSku, {
+        parent_sku: parent.sku,
+        image: parent.small_image,
+      });
+    }
 
-      page += 1;
-    } while (page <= totalPages);
+    return presentations;
   } catch {
     // Basket imagery is optional enrichment. Never block the basket if Magento
     // cannot resolve grouped-parent media on a particular installation.
     return new Map();
   }
-
-  return presentations;
 }
 
 export function basketImageNeedsFallback(
