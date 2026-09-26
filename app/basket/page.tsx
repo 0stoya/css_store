@@ -1,13 +1,13 @@
 import Link from "next/link";
 import { ArrowLeft, ArrowRight, RefreshCw, Trash2 } from "lucide-react";
+import { BasketImageProvider, BasketProductMedia, BasketProductTitleLink } from "@/components/basket-images";
 import { EmployeePicker } from "@/components/employee-picker";
 import { QuantityStepper } from "@/components/quantity-stepper";
-import { ProductImage } from "@/components/product-image";
 import { PurchaseAllowanceSummary } from "@/components/purchase-allowance-summary";
 import { SiteHeader } from "@/components/site-header";
-import { getCustomerCart, type CartMoney } from "@/lib/magento/cart";
-import { getCustomerContext } from "@/lib/magento/context";
-import { getEmployeeOrdering } from "@/lib/magento/employee";
+import { getBasketPageContext } from "@/lib/magento/basket-page";
+import { basketImageNeedsFallback } from "@/lib/magento/cart-images";
+import type { CartMoney } from "@/lib/magento/cart";
 import { requireCustomerToken } from "@/lib/session";
 import {
   assignBasketItemEmployeeAction,
@@ -32,15 +32,15 @@ export default async function BasketPage({
   searchParams: Promise<{ error?: string; notice?: string }>;
 }) {
   const token = await requireCustomerToken();
-  const [ctx, cart, ordering, messages] = await Promise.all([
-    getCustomerContext(token),
-    getCustomerCart(token),
-    getEmployeeOrdering(token),
+  const [basket, messages] = await Promise.all([
+    getBasketPageContext(token),
     searchParams,
   ]);
-  const selected = ctx.css_company_context.companies.find((company) => company.selected) || null;
-  const customerName = `${ctx.customer.firstname} ${ctx.customer.lastname}`.trim();
+  const { cart, ordering, selectedCompany: selected, customerName } = basket;
   const items = cart.itemsV2.items;
+  const fallbackSkus = items
+    .filter((item) => basketImageNeedsFallback(item.product.small_image))
+    .map((item) => item.configured_variant?.sku || item.product.sku);
   const activeEmployeeIds = new Set(ordering.employees.map((employee) => employee.employee_id));
   const totalCurrency = cart.prices?.grand_total?.currency || cart.prices?.subtotal_excluding_tax?.currency || "GBP";
   const discountCurrency = cart.css_company_discount.currency || totalCurrency;
@@ -69,26 +69,22 @@ export default async function BasketPage({
         <p className="muted">Browse the catalogue to add products to your order.</p>
         <p><Link className="button" href="/catalogue">Browse products</Link></p>
       </section> : <div className="basket-layout basket-production-layout">
-        <section className="basket-lines" aria-label="Basket items">
-          <PurchaseAllowanceSummary eligibility={cart.css_purchase_eligibility} items={items} />
-          {items.map((item) => {
+        <BasketImageProvider skus={fallbackSkus}>
+          <section className="basket-lines" aria-label="Basket items">
+            <PurchaseAllowanceSummary eligibility={cart.css_purchase_eligibility} items={items} />
+            {items.map((item) => {
             const assignedId = employeeId(item);
             const effectiveSku = item.configured_variant?.sku || item.product.sku;
-            const productHrefSku = item.display_parent_sku || item.product.sku;
             const activeAssignedId = assignedId !== null && activeEmployeeIds.has(assignedId) ? assignedId : null;
             const constraints = item.product.css_purchase_constraints;
             return <article className="card basket-line basket-production-line" key={item.uid}>
               <div className="basket-line-main">
-                <Link
-                  className="basket-product-media"
-                  href={`/product/${encodeURIComponent(productHrefSku)}`}
-                  aria-label={`View ${item.product.name}`}
-                >
-                  <ProductImage
-                    src={item.product.small_image?.url}
-                    alt={item.product.small_image?.label || item.product.name}
-                  />
-                </Link>
+                <BasketProductMedia
+                  lookupSku={effectiveSku}
+                  productSku={item.product.sku}
+                  image={item.product.small_image}
+                  productName={item.product.name}
+                />
 
                 <div className="basket-line-copy">
                   <div className="basket-line-badges">
@@ -96,7 +92,11 @@ export default async function BasketPage({
                     <span className="badge">{item.product.css_stock_info.stock_status || item.product.stock_status || "Stock status unavailable"}</span>
                   </div>
                   <h2>
-                    <Link href={`/product/${encodeURIComponent(productHrefSku)}`}>{item.product.name}</Link>
+                    <BasketProductTitleLink
+                      lookupSku={effectiveSku}
+                      productSku={item.product.sku}
+                      productName={item.product.name}
+                    />
                   </h2>
                   <p className="muted small">SKU {effectiveSku}</p>
                   {item.configurable_options?.length ? <div className="basket-option-chips" aria-label="Selected options">
@@ -146,8 +146,9 @@ export default async function BasketPage({
                 <button className="button secondary" type="submit">Update Employee</button>
               </form> : null}
             </article>;
-          })}
-        </section>
+            })}
+          </section>
+        </BasketImageProvider>
 
         <aside className="basket-sidebar">
           <section className="card basket-card basket-totals basket-checkout-summary">
