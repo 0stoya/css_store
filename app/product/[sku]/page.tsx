@@ -60,11 +60,15 @@ export default async function ProductPage({
   const gallery = (product.media_gallery || []).filter((image) => Boolean(image.url)).sort((a, b) => (a.position || 0) - (b.position || 0));
   const repeatLists = repeatListsData.css_repeat_order_lists;
   const stockLabel = product.css_stock_info.stock_status || (product.css_stock_info.available ? "Available" : "Unavailable");
-  const productTypeLabel = grouped ? "Product set" : configurable ? "Choose your options" : "Product";
+  const productTypeLabel = grouped ? "Product set" : "Product";
   const addLabel = ctx.css_storefront_policy.add_to_cart_label || "Add to basket";
   const groupedItems = (product.items || [])
     .map((item, originalIndex) => ({ item, originalIndex }))
     .sort((a, b) => (a.item.position || 0) - (b.item.position || 0));
+  const configurableOptions = product.configurable_options || [];
+  const configurableOrderTitle = configurableOptions.length === 1
+    ? `Choose your ${configurableOptions[0].label.toLowerCase()}`
+    : "Choose your options";
 
   return <>
     <SiteHeader customerName={customerName} companyName={selectedCompany?.name}/>
@@ -88,7 +92,7 @@ export default async function ProductPage({
         </div>
 
         <div className="pdp-info">
-          <p className="eyebrow">{productTypeLabel}</p>
+          {!configurable ? <p className="eyebrow">{productTypeLabel}</p> : null}
           <h1>{product.name}</h1>
           <ProductBadges values={product}/>
           <div className="pdp-meta-row">
@@ -119,15 +123,11 @@ export default async function ProductPage({
           {configurable ? <form action={addProductToCartAction} className="configurable-order-card">
             <input type="hidden" name="product_sku" value={product.sku}/>
             <div className="configurable-order-card-heading">
-              <div>
-                <p className="eyebrow">Order this product</p>
-                <h2>Choose your options</h2>
-              </div>
-              <p>Select the option you need, then choose a quantity.</p>
+              <h2>{configurableOrderTitle}</h2>
             </div>
 
             <ConfigurableProductControls
-              options={product.configurable_options || []}
+              options={configurableOptions}
               variants={product.variants || []}
               constraints={product.css_purchase_constraints}
               canAdd={canAdd}

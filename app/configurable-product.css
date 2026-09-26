@@ -11,30 +11,10 @@
   box-shadow: var(--shadow-sm);
 }
 
-.configurable-order-card-heading {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 18px;
-}
-
-.configurable-order-card-heading .eyebrow {
-  margin-bottom: 3px;
-}
-
 .configurable-order-card-heading h2 {
   margin: 0;
   color: var(--ink-strong);
   font-size: 1.2rem;
-}
-
-.configurable-order-card-heading > p {
-  max-width: 270px;
-  margin: 0;
-  color: var(--muted);
-  font-size: .78rem;
-  line-height: 1.45;
-  text-align: right;
 }
 
 .configurable-order-controls {
@@ -126,58 +106,56 @@
   text-decoration-thickness: 1px;
 }
 
-.configurable-variant-status {
-  min-height: 48px;
-  padding: 10px 12px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  background: #f8fafc;
+.configurable-selection-hint {
+  margin: -3px 0 0;
   color: var(--muted);
+  font-size: .76rem;
+}
+
+.configurable-variant-status {
+  width: max-content;
+  max-width: 100%;
+  min-height: 34px;
+  padding: 7px 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: #f8fafc;
+  color: var(--muted-strong);
+  font-size: .76rem;
 }
 
 .configurable-variant-status > svg {
   flex: 0 0 auto;
 }
 
-.configurable-variant-status > span {
-  min-width: 0;
-  display: grid;
-  gap: 1px;
-}
-
 .configurable-variant-status strong {
+  min-width: 0;
   overflow: hidden;
   color: var(--ink-strong);
-  font-size: .8rem;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.configurable-variant-status small {
-  color: var(--muted);
-  font-size: .72rem;
 }
 
 .configurable-variant-status.available {
   border-color: #c7e0d0;
   background: #f5fbf7;
+  color: var(--success);
 }
 
-.configurable-variant-status.available > svg,
-.configurable-variant-status.available small {
+.configurable-variant-status.available > svg {
   color: var(--success);
 }
 
 .configurable-variant-status.unavailable {
   border-color: #efc0bc;
   background: var(--danger-soft);
+  color: var(--danger);
 }
 
-.configurable-variant-status.unavailable > svg,
-.configurable-variant-status.unavailable small {
+.configurable-variant-status.unavailable > svg {
   color: var(--danger);
 }
 
@@ -217,19 +195,6 @@
 
 .configurable-checkout-note {
   margin: -4px 0 0;
-}
-
-@media (max-width: 1180px) {
-  .configurable-order-card-heading {
-    align-items: flex-start;
-    flex-direction: column;
-    gap: 5px;
-  }
-
-  .configurable-order-card-heading > p {
-    max-width: none;
-    text-align: left;
-  }
 }
 
 @media (max-width: 720px) {

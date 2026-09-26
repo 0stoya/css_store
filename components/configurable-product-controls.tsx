@@ -77,6 +77,10 @@ export function ConfigurableProductControls({
   }
 
   const minimum = Math.max(1, constraints?.minimum_quantity || 1);
+  const singleOptionLabel = options.length === 1 ? options[0].label.toLowerCase() : null;
+  const selectionPrompt = singleOptionLabel
+    ? `Select a ${singleOptionLabel}`
+    : "Choose options";
 
   return <div className="configurable-order-controls">
     <div className="configurable-option-stack">
@@ -119,30 +123,26 @@ export function ConfigurableProductControls({
       </section>)}
     </div>
 
-    <div
+    {selectedVariant ? <div
       className={[
         "configurable-variant-status",
-        selectedVariantAvailable ? "available" : "",
-        complete && !selectedVariantAvailable ? "unavailable" : "",
-      ].filter(Boolean).join(" ")}
+        selectedVariantAvailable ? "available" : "unavailable",
+      ].join(" ")}
       aria-live="polite"
     >
-      {selectedVariant ? <>
-        {selectedVariantAvailable
-          ? <PackageCheck size={17} strokeWidth={2.2} aria-hidden="true"/>
-          : <CircleAlert size={17} strokeWidth={2.2} aria-hidden="true"/>}
-        <span>
-          <strong>{selectedVariant.product.sku}</strong>
-          <small>{selectedVariantAvailable ? "In stock" : "This option is unavailable"}</small>
-        </span>
-      </> : <>
-        <CircleAlert size={17} strokeWidth={2.2} aria-hidden="true"/>
-        <span>
-          <strong>{remainingOptions.length ? `Choose ${remainingOptions.join(" and ")}` : "Choose an available option"}</strong>
-          <small>Select your product options to continue.</small>
-        </span>
-      </>}
-    </div>
+      {selectedVariantAvailable
+        ? <PackageCheck size={16} strokeWidth={2.2} aria-hidden="true"/>
+        : <CircleAlert size={16} strokeWidth={2.2} aria-hidden="true"/>}
+      <strong>{selectedVariant.product.sku}</strong>
+      <span aria-hidden="true">·</span>
+      <span>{selectedVariantAvailable ? "In stock" : "Unavailable"}</span>
+    </div> : <p className="configurable-selection-hint" aria-live="polite">
+      {singleOptionLabel
+        ? `${selectionPrompt} to continue.`
+        : remainingOptions.length
+          ? `Select ${remainingOptions.map((label) => label.toLowerCase()).join(" and ")} to continue.`
+          : "Select an available option to continue."}
+    </p>}
 
     {employeeOrdering.usesEmployee && employeeOrdering.multiEmployeeBasket ? <div className="configurable-employee">
       <EmployeePicker employees={employeeOrdering.employees}/>
@@ -165,7 +165,7 @@ export function ConfigurableProductControls({
         disabled={!canSubmit}
       >
         <ShoppingCart size={19} aria-hidden="true"/>
-        <span>{canSubmit ? addLabel : canAdd ? "Choose options" : "Ordering unavailable"}</span>
+        <span>{canSubmit ? addLabel : canAdd ? selectionPrompt : "Ordering unavailable"}</span>
       </button>
     </div>
   </div>;
