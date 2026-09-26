@@ -88,7 +88,7 @@ export async function setNewShippingAddressAction(formData: FormData) {
   deliveryRedirect(
     failure ? "error" : "notice",
     failure || (saveRequested
-      ? "Delivery address selected. It will be saved to your address book when checkout completes."
+      ? "Delivery address selected. Magento will save it to your address book when the order is placed."
       : "Delivery address applied to this basket."),
   );
 }
