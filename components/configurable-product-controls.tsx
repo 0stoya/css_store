@@ -137,9 +137,11 @@ export function ConfigurableProductControls({
       <span aria-hidden="true">·</span>
       <span>{selectedVariantAvailable ? "In stock" : "Unavailable"}</span>
     </div> : <p className="configurable-selection-hint" aria-live="polite">
-      {remainingOptions.length
-        ? `Select ${remainingOptions.map((label) => label.toLowerCase()).join(" and ")} to continue.`
-        : "Select an available option to continue."}
+      {singleOptionLabel
+        ? `${selectionPrompt} to continue.`
+        : remainingOptions.length
+          ? `Select ${remainingOptions.map((label) => label.toLowerCase()).join(" and ")} to continue.`
+          : "Select an available option to continue."}
     </p>}
 
     {employeeOrdering.usesEmployee && employeeOrdering.multiEmployeeBasket ? <div className="configurable-employee">
