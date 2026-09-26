@@ -2,6 +2,8 @@ import { magentoGraphQL } from "@/lib/magento/client";
 import { getActiveEmployees, type EmployeeOrdering } from "@/lib/magento/employee";
 import type { ProductConfiguration } from "@/lib/magento/product";
 
+type PdpProduct = Omit<ProductConfiguration, "uid" | "url_key" | "stock_status">;
+
 type PdpPageQuery = {
   customer: {
     firstname: string;
@@ -28,7 +30,7 @@ type PdpPageQuery = {
     name: string;
   }>;
   products: {
-    items: ProductConfiguration[];
+    items: PdpProduct[];
   };
 };
 
@@ -175,7 +177,7 @@ export type PdpPageContext = {
     list_id: number;
     name: string;
   }>;
-  product: ProductConfiguration | null;
+  product: PdpProduct | null;
 };
 
 export async function getPdpPageContext(
