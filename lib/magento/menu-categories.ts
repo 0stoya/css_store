@@ -18,8 +18,16 @@ type MagentoCategoryNode = {
   children: MagentoCategoryNode[] | null;
 };
 
-type CategoryCountResult = {
-  total_count: number | null;
+type CustomerCatalogueCategoryPage = {
+  products: {
+    page_info: {
+      current_page: number;
+      total_pages: number;
+    };
+    items: Array<{
+      categories: Array<{ uid: string }> | null;
+    } | null>;
+  };
 };
 
 const STORE_ROOT = /* GraphQL */ `
@@ -58,7 +66,23 @@ const MENU_CATEGORIES = /* GraphQL */ `
   }
 `;
 
-const CATEGORY_COUNT_BATCH_SIZE = 30;
+const CUSTOMER_CATALOGUE_CATEGORIES = /* GraphQL */ `
+  query CustomerCatalogueCategories($filter: ProductAttributeFilterInput!, $page: Int!, $pageSize: Int!) {
+    products(
+      filter: $filter
+      currentPage: $page
+      pageSize: $pageSize
+      sort: { name: ASC }
+    ) {
+      page_info { current_page total_pages }
+      items {
+        categories { uid }
+      }
+    }
+  }
+`;
+
+const CUSTOMER_CATALOGUE_PAGE_SIZE = 100;
 
 function menuEnabled(value: number | null | undefined) {
   return value === 1;
@@ -68,60 +92,44 @@ function sortCategories(categories: MenuCategory[]) {
   return categories.sort((a, b) => a.position - b.position || a.name.localeCompare(b.name));
 }
 
-function collectMenuCategoryUids(nodes: MagentoCategoryNode[], result: string[] = []) {
-  for (const node of nodes) {
-    if (!node?.uid || !node.name || !menuEnabled(node.include_in_menu)) continue;
-    result.push(node.uid);
-    collectMenuCategoryUids(node.children || [], result);
-  }
-  return result;
-}
+async function getCustomerCategoryProductCounts(token: string) {
+  const counts = new Map<string, number>();
+  let currentPage = 1;
+  let totalPages = 1;
 
-async function getCategoryProductCounts(token: string, categoryUids: string[]) {
-  const uniqueUids = Array.from(new Set(categoryUids));
-  const batches: string[][] = [];
+  do {
+    const data = await magentoGraphQL<CustomerCatalogueCategoryPage>(
+      CUSTOMER_CATALOGUE_CATEGORIES,
+      {
+        // Match the storefront's broad authenticated browse. Magento 2.4.7-p10
+        // can return an empty result for price { from: "0" } in this setup.
+        filter: { price: { to: "999999999" } },
+        page: currentPage,
+        pageSize: CUSTOMER_CATALOGUE_PAGE_SIZE,
+      },
+      token,
+    );
 
-  for (let index = 0; index < uniqueUids.length; index += CATEGORY_COUNT_BATCH_SIZE) {
-    batches.push(uniqueUids.slice(index, index + CATEGORY_COUNT_BATCH_SIZE));
-  }
+    totalPages = Math.max(1, data.products.page_info.total_pages || 1);
 
-  const results = await Promise.all(
-    batches.map(async (batch) => {
-      const declarations = batch.map((_, index) => `$c${index}: String!`).join(", ");
-      const selections = batch.map((_, index) => `
-        c${index}: products(
-          filter: { category_uid: { eq: $c${index} } }
-          pageSize: 1
-          currentPage: 1
-        ) {
-          total_count
-        }
-      `).join("\n");
+    for (const item of data.products.items || []) {
+      if (!item) continue;
 
-      const query = `
-        query CustomerMenuCategoryProductCounts(${declarations}) {
-          ${selections}
-        }
-      `;
+      // A product can expose its leaf and ancestor categories. Count each UID
+      // at most once per product so menu counts remain customer-product counts.
+      const seen = new Set<string>();
+      for (const category of item.categories || []) {
+        const uid = category?.uid?.trim();
+        if (!uid || seen.has(uid)) continue;
+        seen.add(uid);
+        counts.set(uid, (counts.get(uid) || 0) + 1);
+      }
+    }
 
-      const variables = Object.fromEntries(
-        batch.map((uid, index) => [`c${index}`, uid]),
-      );
+    currentPage += 1;
+  } while (currentPage <= totalPages);
 
-      const data = await magentoGraphQL<Record<string, CategoryCountResult | null>>(
-        query,
-        variables,
-        token,
-      );
-
-      return batch.map((uid, index) => {
-        const count = data[`c${index}`]?.total_count;
-        return [uid, typeof count === "number" ? Math.max(0, count) : 0] as const;
-      });
-    }),
-  );
-
-  return new Map(results.flat());
+  return counts;
 }
 
 function mapCategory(
@@ -167,13 +175,12 @@ export async function getMenuCategories(token: string): Promise<MenuCategory[]> 
   const rawCategories = (data.categories.items[0]?.children || [])
     .filter((category) => Boolean(category?.uid && category?.name) && menuEnabled(category.include_in_menu));
 
-  const categoryUids = collectMenuCategoryUids(rawCategories);
-  if (categoryUids.length === 0) return [];
+  if (rawCategories.length === 0) return [];
 
-  // Magento category product_count is store-wide. Verify each category through
-  // the authenticated products resolver instead so company/role catalogue
-  // restrictions remain authoritative for the navigation.
-  const productCounts = await getCategoryProductCounts(token, categoryUids);
+  // Build the navigation scope from the same authenticated customer product
+  // universe used by "All products". This avoids store-wide category counts and
+  // keeps menu visibility aligned with company/role catalogue restrictions.
+  const productCounts = await getCustomerCategoryProductCounts(token);
 
   return sortCategories(
     rawCategories
