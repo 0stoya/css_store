@@ -88,6 +88,7 @@ export function BasketProductMedia({
     <ProductImage
       src={displayImage?.url}
       alt={displayImage?.label || productName}
+      sizes="104px"
     />
   </Link>;
 }
