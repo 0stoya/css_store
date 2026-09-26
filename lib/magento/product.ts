@@ -1,5 +1,6 @@
 import { magentoGraphQL } from "@/lib/magento/client";
 import type { PurchaseAllowance, PurchaseConstraints, StockInfo } from "@/lib/magento/catalogue";
+import { getProductBadgeValues } from "@/lib/magento/product-badges";
 import type { ProductBadgeValues } from "@/lib/product-badges";
 
 export type ConfigurableOption = {
@@ -111,13 +112,6 @@ const PRODUCT = /* GraphQL */ `
         name
         url_key
         stock_status
-        ppe_certified
-        express_delivery
-        fast_delivery
-        made_to_order
-        company_logo
-        embroidered
-        printed
         description { html }
         media_gallery { url label position }
         price_range {
@@ -168,5 +162,13 @@ const PRODUCT = /* GraphQL */ `
 
 export async function getProduct(token: string, sku: string): Promise<ProductConfiguration | null> {
   const data = await magentoGraphQL<{ products: { items: ProductConfiguration[] } }>(PRODUCT, { sku }, token);
-  return data.products.items.find((item) => item?.sku === sku) || null;
+  const product = data.products.items.find((item) => item?.sku === sku) || null;
+  if (!product) return null;
+
+  const badges = await getProductBadgeValues(token, [product.sku]);
+
+  return {
+    ...product,
+    ...(badges.get(product.sku) || {}),
+  };
 }
