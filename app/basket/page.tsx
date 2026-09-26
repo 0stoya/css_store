@@ -74,13 +74,14 @@ export default async function BasketPage({
           {items.map((item) => {
             const assignedId = employeeId(item);
             const effectiveSku = item.configured_variant?.sku || item.product.sku;
+            const productHrefSku = item.display_parent_sku || item.product.sku;
             const activeAssignedId = assignedId !== null && activeEmployeeIds.has(assignedId) ? assignedId : null;
             const constraints = item.product.css_purchase_constraints;
             return <article className="card basket-line basket-production-line" key={item.uid}>
               <div className="basket-line-main">
                 <Link
                   className="basket-product-media"
-                  href={`/product/${encodeURIComponent(item.product.sku)}`}
+                  href={`/product/${encodeURIComponent(productHrefSku)}`}
                   aria-label={`View ${item.product.name}`}
                 >
                   <ProductImage
@@ -95,7 +96,7 @@ export default async function BasketPage({
                     <span className="badge">{item.product.css_stock_info.stock_status || item.product.stock_status || "Stock status unavailable"}</span>
                   </div>
                   <h2>
-                    <Link href={`/product/${encodeURIComponent(item.product.sku)}`}>{item.product.name}</Link>
+                    <Link href={`/product/${encodeURIComponent(productHrefSku)}`}>{item.product.name}</Link>
                   </h2>
                   <p className="muted small">SKU {effectiveSku}</p>
                   {item.configurable_options?.length ? <div className="basket-option-chips" aria-label="Selected options">
