@@ -22,7 +22,7 @@ import { getEmployeeOrdering } from "@/lib/magento/employee";
 import { requireCustomerToken } from "@/lib/session";
 import { completeCheckoutAction } from "./actions";
 
-export const metadata = { title: "Payment & review" };
+export const metadata = { title: "Review & submit" };
 
 function money(value: CartMoney | null | undefined) {
   if (!value) return "—";
