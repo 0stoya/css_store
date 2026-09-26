@@ -66,6 +66,7 @@ export async function setNewShippingAddressAction(formData: FormData) {
     const street = [text(formData, "street_1"), text(formData, "street_2", false)].filter(Boolean);
     const region = text(formData, "region", false);
     const company = text(formData, "company", false);
+    const saveInAddressBook = String(formData.get("save_in_address_book") || "") === "1";
 
     await setNewShippingAddress(token, cart.id, {
       firstname: text(formData, "firstname"),
@@ -77,13 +78,19 @@ export async function setNewShippingAddressAction(formData: FormData) {
       postcode: text(formData, "postcode"),
       country_code: text(formData, "country_code").toUpperCase(),
       telephone: text(formData, "telephone"),
-      save_in_address_book: false,
+      save_in_address_book: saveInAddressBook,
     });
   } catch (error) {
     failure = message(error);
   }
 
-  deliveryRedirect(failure ? "error" : "notice", failure || "Delivery address applied to this basket.");
+  const saveRequested = String(formData.get("save_in_address_book") || "") === "1";
+  deliveryRedirect(
+    failure ? "error" : "notice",
+    failure || (saveRequested
+      ? "Delivery address selected. Magento will save it to your address book when the order is placed."
+      : "Delivery address applied to this basket."),
+  );
 }
 
 export async function selectShippingMethodAction(formData: FormData) {

@@ -1,3 +1,4 @@
+import { basketImageNeedsFallback, getGroupedParentPresentationMap } from "@/lib/magento/cart-images";
 import { MagentoGraphQLError, magentoGraphQL } from "@/lib/magento/client";
 
 export type CartMoney = {
@@ -75,6 +76,7 @@ export type CartItemSnapshot = {
   } | null;
   configured_variant?: { sku: string; name: string } | null;
   configurable_options?: Array<{ option_label: string; value_label: string }> | null;
+  display_parent_sku?: string | null;
   css_kit: CartKitMetadata | null;
   css_employee: CartEmployeeAssignment | null;
 };
@@ -291,7 +293,38 @@ const ASSIGN_ITEM_EMPLOYEE = /* GraphQL */ `
 
 export async function getCustomerCart(token: string) {
   const data = await magentoGraphQL<{ customerCart: CartSnapshot }>(CUSTOMER_CART, {}, token);
-  return data.customerCart;
+  const cart = data.customerCart;
+  const needsFallback = cart.itemsV2.items.some((item) =>
+    basketImageNeedsFallback(item.product.small_image),
+  );
+
+  if (!needsFallback) return cart;
+
+  const groupedParents = await getGroupedParentPresentationMap(token);
+  if (!groupedParents.size) return cart;
+
+  return {
+    ...cart,
+    itemsV2: {
+      ...cart.itemsV2,
+      items: cart.itemsV2.items.map((item) => {
+        if (!basketImageNeedsFallback(item.product.small_image)) return item;
+
+        const fallback = groupedParents.get(item.configured_variant?.sku || "")
+          || groupedParents.get(item.product.sku);
+        if (!fallback) return item;
+
+        return {
+          ...item,
+          display_parent_sku: fallback.parent_sku,
+          product: {
+            ...item.product,
+            small_image: fallback.image,
+          },
+        };
+      }),
+    },
+  };
 }
 
 export async function getCustomerCartWriteContext(token: string) {

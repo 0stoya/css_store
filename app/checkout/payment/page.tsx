@@ -22,7 +22,7 @@ import { getEmployeeOrdering } from "@/lib/magento/employee";
 import { requireCustomerToken } from "@/lib/session";
 import { completeCheckoutAction } from "./actions";
 
-export const metadata = { title: "Payment & review" };
+export const metadata = { title: "Review & submit" };
 
 function money(value: CartMoney | null | undefined) {
   if (!value) return "—";
@@ -34,6 +34,13 @@ function lineEmployee(item: {
   css_kit: { employee_name: string } | null;
 }) {
   return item.css_employee?.employee_name || item.css_kit?.employee_name || null;
+}
+
+function assignedEmployeeId(item: {
+  css_employee: { employee_id: number | null } | null;
+  css_kit: { employee_id: number | null } | null;
+}) {
+  return item.css_employee?.employee_id ?? item.css_kit?.employee_id ?? null;
 }
 
 export default async function PaymentPage({
@@ -62,28 +69,37 @@ export default async function PaymentPage({
     && capabilities.can_checkout;
   const usesCreditOrder = capabilities.can_submit_credit_order;
   const nativeApprovalAllowed = usesCreditOrder || cart.css_purchase_eligibility?.approval_status === "ALLOWED";
+  const singleEmployeeCheckout = ordering.usesEmployee && !ordering.multiEmployeeBasket;
+  const activeEmployeeIds = new Set(ordering.employees.map((employee) => employee.employee_id));
+  const assignedIds = cart.itemsV2.items.map(assignedEmployeeId).filter((id): id is number => id !== null);
+  const employeeReady = !singleEmployeeCheckout || (
+    assignedIds.length === cart.itemsV2.items.length
+    && assignedIds.length > 0
+    && assignedIds.every((id) => id === assignedIds[0])
+    && activeEmployeeIds.has(assignedIds[0])
+  );
   const ready = canCheckout
+    && employeeReady
     && nativeApprovalAllowed
     && cart.total_quantity > 0
     && Boolean(shippingAddress && shippingMethod)
     && methods.length > 0;
-  const includeEmployee = ordering.usesEmployee && !ordering.multiEmployeeBasket;
   const submitLabel = checkoutSubmitLabel(usesCreditOrder, cart.css_purchase_eligibility?.approval_status);
 
   return <>
     <SiteHeader customerName={customerName} companyName={selectedCompany?.name} basketQuantity={cart.total_quantity}/>
     <main className="shell stack payment-page">
-      <CheckoutSteps current="payment" includeEmployee={includeEmployee}/>
+      <CheckoutSteps current="payment"/>
 
       <div className="basket-heading checkout-heading">
         <div>
           <p className="eyebrow">Checkout</p>
-          <h1>Payment & review</h1>
-          <p className="muted">Choose a payment method and confirm your order.</p>
+          <h1>Review & submit</h1>
+          <p className="muted">Review delivery, choose payment and submit your order.</p>
         </div>
         <Link className="button secondary payment-back" href="/checkout/delivery">
           <ArrowLeft size={16} aria-hidden="true"/>
-          <span>Back to delivery</span>
+          <span>Back to details</span>
         </Link>
       </div>
 
@@ -94,6 +110,7 @@ export default async function PaymentPage({
       {cart.total_quantity > 0 && !canCheckout ? <p className="error" role="alert">This company is not currently able to place this order.</p> : null}
       {cart.total_quantity > 0 && canCheckout && !nativeApprovalAllowed ? <p className="error" role="alert">This order is not currently authorised for submission. Return to your basket or contact your account administrator.</p> : null}
       {cart.total_quantity > 0 && (!shippingAddress || !shippingMethod) ? <section className="notice"><strong>Delivery is not complete.</strong><p className="muted small">Choose a delivery address and method before continuing.</p><p><Link className="button secondary" href="/checkout/delivery">Complete delivery</Link></p></section> : null}
+      {cart.total_quantity > 0 && singleEmployeeCheckout && !employeeReady ? <section className="notice"><strong>Employee selection is not complete.</strong><p className="muted small">Choose the Employee for this order before submission.</p><p><Link className="button secondary" href="/checkout/delivery">Complete order details</Link></p></section> : null}
 
       {cart.total_quantity > 0 ? <form action={completeCheckoutAction} className="payment-layout">
         <div className="payment-main-column stack">

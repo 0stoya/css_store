@@ -216,6 +216,42 @@
   margin: 0 0 18px;
 }
 
+.delivery-save-address {
+  padding: 12px 13px;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  border: 1px solid #d8e3eb;
+  border-radius: 10px;
+  background: #f8fafc;
+  cursor: pointer;
+}
+
+.delivery-save-address input {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 auto;
+  margin: 2px 0 0;
+  accent-color: var(--blue);
+}
+
+.delivery-save-address > span {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.delivery-save-address strong {
+  color: var(--ink-strong);
+  font-size: .82rem;
+}
+
+.delivery-save-address small {
+  color: var(--muted);
+  font-size: .75rem;
+  line-height: 1.4;
+}
+
 .delivery-method-list {
   margin-top: 18px;
   display: grid;
