@@ -35,7 +35,7 @@ export const metadata: Metadata = {
 export default async function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
   const impersonating = await isCustomerImpersonation();
 
-  return <html lang="en"><body>
+  return <html lang="en"><body className={impersonating ? "support-session-active" : undefined}>
     {impersonating ? (
       <aside className="impersonation-banner" role="status" aria-label="Admin support session">
         <span><strong>Admin support session</strong> · You are shopping as a customer.</span>
