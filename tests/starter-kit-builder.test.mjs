@@ -51,6 +51,8 @@ test("Starter-kit presentation removes the old line-by-line add pattern", () => 
 
   assert.match(builder, /starter-kit-progress/);
   assert.match(builder, /starter-kit-item-state/);
+  assert.match(builder, /kit items ready/);
+  assert.match(builder, /needs-options/);
   assert.match(builder, /Items with quantity 0 are left out/);
   assert.match(styles, /\.starter-kit-order-panel/);
   assert.match(styles, /\.starter-kit-item\.complete/);
