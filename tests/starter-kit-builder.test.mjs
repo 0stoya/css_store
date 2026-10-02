@@ -13,7 +13,7 @@ test("Css grouped configurable products use the dedicated starter-kit builder", 
   assert.match(page, /<form action=\{addProductToCartAction\} className="starter-kit-form">/);
   assert.match(page, /Build this starter kit/);
   assert.match(page, /Who is this kit for\?/);
-  assert.doesNotMatch(page, /starterKit \? <section[\s\S]*?addGroupedChildToCartAction/);
+  assert.match(page, /starterKit \? <section className="card starter-kit-order-panel">/);
 });
 
 test("Starter-kit items submit one grouped selection with the existing field contract", () => {
