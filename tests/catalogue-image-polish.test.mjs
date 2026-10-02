@@ -28,6 +28,14 @@ test("PDP gallery uses the same natural-width max-height containment", () => {
   assert.match(styles, /max-height:\s*100%/);
   assert.match(styles, /object-fit:\s*contain/);
 });
+test("PDP desktop layout gives product information more room", () => {
+  const styles = source("app/pdp.css");
+
+  assert.match(styles, /\.pdp-hero \{[\s\S]*?grid-template-columns:\s*minmax\(0, 1fr\) minmax\(380px, 2fr\)/);
+  assert.match(styles, /\.pdp-info h1 \{[\s\S]*?max-width:\s*none/);
+  assert.match(styles, /@media \(max-width: 980px\)[\s\S]*?\.pdp-hero,[\s\S]*?grid-template-columns:\s*1fr/);
+});
+
 test("starter-kit incomplete option badge stays compact and single-line", () => {
   const styles = source("app/starter-kit.css");
   const builder = source("components/starter-kit-builder.tsx");
