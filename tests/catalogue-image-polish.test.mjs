@@ -4,20 +4,36 @@ import { readFileSync } from "node:fs";
 
 const source = (file) => readFileSync(new URL(`../${file}`, import.meta.url), "utf8");
 
-test("catalogue cards keep product imagery compact on desktop and responsive sizes", () => {
+test("catalogue cards use the square media box itself as the height-filled image frame", () => {
   const styles = source("app/catalogue-ux.css");
+  const card = source("components/product-card.tsx");
 
-  assert.match(styles, /grid-template-rows:\s*195px 1fr/);
-  assert.match(styles, /height:\s*195px/);
-  assert.match(styles, /padding:\s*24px/);
+  assert.doesNotMatch(card, /product-media-frame/);
+  assert.match(styles, /\.product-media \{[\s\S]*?height:\s*auto;[\s\S]*?aspect-ratio:\s*1/);
+  assert.match(styles, /grid-template-rows:\s*auto 1fr/);
   assert.match(styles, /\.product-media img/);
-  assert.match(styles, /width:\s*100% !important/);
-  assert.match(styles, /height:\s*100% !important/);
+  assert.match(styles, /width:\s*auto !important/);
+  assert.match(styles, /height:\s*auto !important/);
+  assert.match(styles, /max-height:\s*100%/);
   assert.match(styles, /object-fit:\s*contain/);
-  assert.match(styles, /grid-template-rows:\s*185px 1fr/);
-  assert.match(styles, /height:\s*185px/);
-  assert.match(styles, /grid-template-rows:\s*235px auto/);
-  assert.match(styles, /height:\s*235px/);
+});
+
+test("PDP gallery uses the same natural-width max-height containment", () => {
+  const styles = source("app/pdp.css");
+
+  assert.match(styles, /\.pdp-gallery-main > img/);
+  assert.match(styles, /width:\s*auto/);
+  assert.match(styles, /height:\s*auto/);
+  assert.match(styles, /max-width:\s*100%/);
+  assert.match(styles, /max-height:\s*100%/);
+  assert.match(styles, /object-fit:\s*contain/);
+});
+test("PDP desktop layout gives product information more room", () => {
+  const styles = source("app/pdp.css");
+
+  assert.match(styles, /\.pdp-hero \{[\s\S]*?grid-template-columns:\s*minmax\(0, 1fr\) minmax\(380px, 2fr\)/);
+  assert.match(styles, /\.pdp-info h1 \{[\s\S]*?max-width:\s*none/);
+  assert.match(styles, /@media \(max-width: 980px\)[\s\S]*?\.pdp-hero,[\s\S]*?grid-template-columns:\s*1fr/);
 });
 
 test("starter-kit incomplete option badge stays compact and single-line", () => {
