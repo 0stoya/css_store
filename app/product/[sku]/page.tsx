@@ -5,6 +5,7 @@ import {
   ChevronRight,
   CircleAlert,
   FileText,
+  PackageCheck,
   Repeat2,
   ShoppingCart,
   Truck,
@@ -16,6 +17,7 @@ import { DeferredProductBadges } from "@/components/deferred-product-badges";
 import { ProductGallery } from "@/components/product-gallery";
 import { QuantityStepper } from "@/components/quantity-stepper";
 import { SiteHeader } from "@/components/site-header";
+import { StarterKitBuilder } from "@/components/starter-kit-builder";
 import { getPdpPageContext } from "@/lib/magento/pdp-page";
 import { requireCustomerToken } from "@/lib/session";
 import { addProductToCartAction, saveProductToRepeatListAction } from "./actions";
@@ -44,17 +46,56 @@ export default async function ProductPage({
   const price = product.price_range?.minimum_price;
   const allowance = product.css_purchase_allowance;
   const allowanceBlocked = Boolean(allowance?.has_active_restriction && allowance.remaining_quantity <= 0);
-  const grouped = product.__typename === "CssGroupedConfigurableProduct" || product.__typename === "GroupedProduct";
+  const starterKit = product.__typename === "CssGroupedConfigurableProduct";
+  const nativeGrouped = product.__typename === "GroupedProduct";
+  const grouped = starterKit || nativeGrouped;
   const configurable = product.__typename === "ConfigurableProduct";
   const supported = ["SimpleProduct", "ConfigurableProduct", "CssGroupedConfigurableProduct", "GroupedProduct"].includes(product.__typename);
   const canAdd = !storefrontPolicy.hideAddToCart && product.css_stock_info.available && !allowanceBlocked && supported;
   const gallery = (product.media_gallery || []).filter((image) => Boolean(image.url)).sort((a, b) => (a.position || 0) - (b.position || 0));
   const stockLabel = product.css_stock_info.stock_status || (product.css_stock_info.available ? "Available" : "Unavailable");
-  const productTypeLabel = grouped ? "Product set" : "Product";
+  const productTypeLabel = starterKit ? "Starter kit" : grouped ? "Product set" : "Product";
   const addLabel = storefrontPolicy.addToCartLabel || "Add to basket";
   const groupedItems = (product.items || [])
     .map((item, originalIndex) => ({ item, originalIndex }))
     .sort((a, b) => (a.item.position || 0) - (b.item.position || 0));
+  const starterKitItems = starterKit
+    ? groupedItems.map(({ item, originalIndex }) => {
+        const child = item.product;
+        const childPrice = child.price_range?.minimum_price.final_price;
+        const allowanceBlocked = Boolean(
+          child.css_purchase_allowance?.has_active_restriction
+          && child.css_purchase_allowance.remaining_quantity <= 0,
+        );
+        const available = child.css_stock_info.available && !allowanceBlocked;
+        const minPositive = Math.max(1, child.css_purchase_constraints?.minimum_quantity || 1);
+        const step = child.css_purchase_constraints?.increments_enforced
+          ? child.css_purchase_constraints.quantity_increment
+          : 1;
+        const configuredQuantity = Number(item.qty || 0);
+
+        return {
+          index: originalIndex,
+          sku: child.sku,
+          name: child.name,
+          image: child.small_image || null,
+          priceLabel: !storefrontPolicy.hidePrice && childPrice
+            ? money(childPrice.value, childPrice.currency)
+            : null,
+          available,
+          unavailableReason: !child.css_stock_info.available
+            ? child.css_stock_info.delivery_message || "Currently unavailable."
+            : allowanceBlocked
+              ? "No remaining purchase allowance."
+              : null,
+          defaultQuantity: configuredQuantity > 0 ? configuredQuantity : 0,
+          minPositive,
+          max: child.css_purchase_constraints?.maximum_quantity ?? null,
+          step,
+          options: child.configurable_options || [],
+        };
+      })
+    : [];
   const configurableOptions = product.configurable_options || [];
   const configurableOrderTitle = configurableOptions.length === 1
     ? `Choose your ${configurableOptions[0].label.toLowerCase()}`
@@ -74,11 +115,22 @@ export default async function ProductPage({
       {status.error ? <p className="error pdp-message" role="alert">{status.error}</p> : null}
 
       <section className="pdp pdp-hero">
-        <div className="pdp-gallery card">
-          <ProductGallery
-            images={gallery.map((image) => ({ url: image.url, label: image.label }))}
-            productName={product.name}
-          />
+        <div className={`pdp-gallery card ${starterKit && !gallery.length ? "starter-kit-hero-card" : ""}`}>
+          {starterKit && !gallery.length ? (
+            <div className="starter-kit-hero-media">
+              <span className="starter-kit-hero-icon"><PackageCheck size={52} aria-hidden="true" /></span>
+              <div>
+                <span>Starter kit</span>
+                <strong>{starterKitItems.length} products to configure</strong>
+                <small>Choose sizes and quantities below, then add the kit selection in one go.</small>
+              </div>
+            </div>
+          ) : (
+            <ProductGallery
+              images={gallery.map((image) => ({ url: image.url, label: image.label }))}
+              productName={product.name}
+            />
+          )}
         </div>
 
         <div className="pdp-info">
@@ -90,7 +142,7 @@ export default async function ProductPage({
             <span className={`product-stock ${product.css_stock_info.available ? "available" : "unavailable"}`}>{stockLabel}</span>
           </div>
 
-          {!storefrontPolicy.hidePrice && price ? <div className="pdp-price-card">
+          {!storefrontPolicy.hidePrice && price && (!starterKit || price.final_price.value > 0) ? <div className="pdp-price-card">
             <div>
               <span className="pdp-price-label">Your price</span>
               <strong className="pdp-price-value">{money(price.final_price.value, price.final_price.currency)}</strong>
@@ -140,7 +192,61 @@ export default async function ProductPage({
         </div>
       </section>
 
-      {!configurable ? <section className="card order-panel pdp-order-panel">
+      {starterKit ? <section className="card starter-kit-order-panel">
+        <div className="starter-kit-order-heading">
+          <div>
+            <p className="eyebrow">Starter kit</p>
+            <h2>Build this starter kit</h2>
+            <p>Choose the products, sizes and quantities needed, then add the full selection to the basket in one go.</p>
+          </div>
+          <span>{starterKitItems.length} kit items</span>
+        </div>
+
+        <form action={addProductToCartAction} className="starter-kit-form">
+          <input type="hidden" name="product_sku" value={product.sku}/>
+
+          {employeeOrdering.usesEmployee && employeeOrdering.multiEmployeeBasket ? <section className="starter-kit-employee">
+            <div>
+              <strong>Who is this kit for?</strong>
+              <span>The Employee is attached to every item added from this kit.</span>
+            </div>
+            <EmployeePicker employees={employeeOrdering.employees}/>
+          </section> : null}
+
+          <StarterKitBuilder items={starterKitItems} canAdd={canAdd}/>
+
+          {employeeOrdering.usesEmployee && !employeeOrdering.multiEmployeeBasket ? <p className="pdp-checkout-note starter-kit-checkout-note">
+            Employee selection happens at the start of checkout.
+          </p> : null}
+
+          <section className="repeat-save-card starter-kit-repeat-card stack">
+            <div className="pdp-repeat-heading">
+              <Repeat2 size={19} aria-hidden="true"/>
+              <div>
+                <strong>Save this kit selection</strong>
+                <p className="muted small">Save the current sizes and quantities to one of your repeat-order lists.</p>
+              </div>
+            </div>
+            {repeatLists.length ? <div className="pdp-repeat-actions">
+              <label className="field">
+                <span>Repeat-order list</span>
+                <select name="repeat_list_id" defaultValue="">
+                  <option value="" disabled>Choose a list</option>
+                  {repeatLists.map((list) => <option key={list.list_id} value={list.list_id}>{list.name}</option>)}
+                </select>
+              </label>
+              <button
+                className="button secondary"
+                type="submit"
+                formAction={saveProductToRepeatListAction}
+                disabled={!canAdd || !starterKitItems.length}
+              >Save selection</button>
+            </div> : <p className="muted small">No repeat lists yet. <Link href="/account/repeat-orders">Create one in your account</Link>.</p>}
+          </section>
+        </form>
+      </section> : null}
+
+      {!starterKit && !configurable ? <section className="card order-panel pdp-order-panel">
         <div className="order-panel-header">
           <div>
             <p className="eyebrow">Order this product</p>
@@ -224,31 +330,6 @@ export default async function ProductPage({
             {employeeOrdering.usesEmployee && !employeeOrdering.multiEmployeeBasket ? <p className="pdp-checkout-note">
               Employee selection happens at the start of checkout.
             </p> : null}
-
-            {product.__typename === "CssGroupedConfigurableProduct" ? <section className="repeat-save-card pdp-repeat-card stack">
-              <div className="pdp-repeat-heading">
-                <Repeat2 size={19} aria-hidden="true"/>
-                <div>
-                  <strong>Save for next time</strong>
-                  <p className="muted small">Save the quantities and options currently shown to one of your repeat-order lists.</p>
-                </div>
-              </div>
-              {repeatLists.length ? <div className="pdp-repeat-actions">
-                <label className="field">
-                  <span>Repeat-order list</span>
-                  <select name="repeat_list_id" defaultValue="">
-                    <option value="" disabled>Choose a list</option>
-                    {repeatLists.map((list) => <option key={list.list_id} value={list.list_id}>{list.name}</option>)}
-                  </select>
-                </label>
-                <button
-                  className="button secondary"
-                  type="submit"
-                  formAction={saveProductToRepeatListAction}
-                  disabled={!canAdd || !product.items?.length}
-                >Save selection</button>
-              </div> : <p className="muted small">No repeat lists yet. <Link href="/account/repeat-orders">Create one in your account</Link>.</p>}
-            </section> : null}
 
             {!grouped ? <div className="pdp-primary-row">
               <button className="button order-primary-action" type="submit" disabled={!canAdd}>
