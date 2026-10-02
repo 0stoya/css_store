@@ -2,8 +2,8 @@
   position: sticky;
   top: 0;
   z-index: 40;
-  min-height: 42px;
-  padding: 0.45rem max(24px, calc((100vw - var(--content)) / 2));
+  height: 42px;
+  padding: 0 max(24px, calc((100vw - var(--content)) / 2));
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -14,8 +14,15 @@
   font-size: 0.84rem;
 }
 
+.support-session-active .site-header {
+  top: 42px;
+}
+
 .impersonation-banner span {
   min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .impersonation-banner form {
@@ -41,10 +48,14 @@
 
 @media (max-width: 640px) {
   .impersonation-banner {
-    align-items: flex-start;
-    flex-direction: column;
-    gap: 0.45rem;
-    padding-top: 0.6rem;
-    padding-bottom: 0.6rem;
+    padding: 0 0.75rem;
+    gap: 0.5rem;
+    font-size: 0.76rem;
+  }
+
+  .impersonation-banner button {
+    min-height: 28px;
+    padding: 0.3rem 0.5rem;
+    font-size: 0.74rem;
   }
 }
