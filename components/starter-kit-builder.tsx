@@ -96,7 +96,7 @@ export function StarterKitBuilder({
             <strong>Build your kit</strong>
             <small>
               {progress.selectedCount
-                ? `${progress.readyCount} of ${progress.selectedCount} selected items ready`
+                ? `${progress.readyCount} of ${progress.selectedCount} kit items ready`
                 : "Choose the items you need, then select their options."}
             </small>
           </span>
@@ -216,7 +216,7 @@ export function StarterKitBuilder({
                 {complete ? (
                   <span className="ready"><CheckCircle2 size={15} aria-hidden="true" /> Ready</span>
                 ) : selected ? (
-                  <span>Choose options</span>
+                  <span className="needs-options">Choose options</span>
                 ) : item.available ? (
                   <span>Not included</span>
                 ) : (
