@@ -407,6 +407,13 @@
   color: var(--success);
 }
 
+.starter-kit-item-state .needs-options {
+  padding: 5px 8px;
+  border-radius: 999px;
+  background: var(--warning-soft);
+  color: var(--warning);
+}
+
 .starter-kit-submit {
   min-height: 82px;
   padding: 16px 17px;
