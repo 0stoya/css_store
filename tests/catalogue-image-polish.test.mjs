@@ -13,7 +13,19 @@ test("catalogue cards use the square media box itself as the height-filled image
   assert.match(styles, /grid-template-rows:\s*auto 1fr/);
   assert.match(styles, /\.product-media img/);
   assert.match(styles, /width:\s*auto !important/);
-  assert.match(styles, /height:\s*100% !important/);
+  assert.match(styles, /height:\s*auto !important/);
+  assert.match(styles, /max-height:\s*100%/);
+  assert.match(styles, /object-fit:\s*contain/);
+});
+
+test("PDP gallery uses the same natural-width max-height containment", () => {
+  const styles = source("app/pdp.css");
+
+  assert.match(styles, /\.pdp-gallery-main > img/);
+  assert.match(styles, /width:\s*auto/);
+  assert.match(styles, /height:\s*auto/);
+  assert.match(styles, /max-width:\s*100%/);
+  assert.match(styles, /max-height:\s*100%/);
   assert.match(styles, /object-fit:\s*contain/);
 });
 test("starter-kit incomplete option badge stays compact and single-line", () => {
