@@ -10,6 +10,10 @@ test("catalogue cards keep product imagery compact on desktop and responsive siz
   assert.match(styles, /grid-template-rows:\s*195px 1fr/);
   assert.match(styles, /height:\s*195px/);
   assert.match(styles, /padding:\s*24px/);
+  assert.match(styles, /\.product-media img/);
+  assert.match(styles, /width:\s*100% !important/);
+  assert.match(styles, /height:\s*100% !important/);
+  assert.match(styles, /object-fit:\s*contain/);
   assert.match(styles, /grid-template-rows:\s*185px 1fr/);
   assert.match(styles, /height:\s*185px/);
   assert.match(styles, /grid-template-rows:\s*235px auto/);
