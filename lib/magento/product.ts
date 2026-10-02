@@ -28,6 +28,7 @@ export type GroupedProductChild = {
   sku: string;
   name: string;
   stock_status: string | null;
+  small_image: { url: string; label: string | null } | null;
   price_range: ProductPriceRange | null;
   css_purchase_allowance: PurchaseAllowance | null;
   css_stock_info: StockInfo;
@@ -77,6 +78,7 @@ const GROUPED_CHILD_FIELDS = /* GraphQL */ `
   sku
   name
   stock_status
+  small_image { url label }
   price_range {
     minimum_price {
       regular_price { value currency }
