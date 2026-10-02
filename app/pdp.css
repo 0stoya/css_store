@@ -23,7 +23,7 @@
 }
 
 .pdp-hero {
-  grid-template-columns: minmax(0, 1.04fr) minmax(380px, .96fr);
+  grid-template-columns: minmax(0, 1fr) minmax(380px, 2fr);
   gap: clamp(32px, 5vw, 64px);
 }
 
@@ -146,7 +146,7 @@
 }
 
 .pdp-info h1 {
-  max-width: 720px;
+  max-width: none;
   margin-bottom: 12px;
   font-size: clamp(2.2rem, 4.6vw, 3.7rem);
   line-height: 1.04;
