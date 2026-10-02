@@ -84,7 +84,26 @@ test("basket read has labels and decisions; cart write queries stay minimal", as
   const cart = load(root, "lib/magento/cart.ts", {
     "@/lib/magento/client": { MagentoGraphQLError: Error, magentoGraphQL: async (query) => {
       calls.push(query);
-      return { customerCart: {}, updateCartItems: { cart: {} } };
+      return {
+        customerCart: {
+          id: "cart",
+          total_quantity: 0,
+          itemsV2: { items: [] },
+          prices: null,
+          css_purchase_eligibility: null,
+          css_company_credit: null,
+          css_company_discount: {
+            applied: false,
+            label: "",
+            percent: 0,
+            amount: 0,
+            base_amount: 0,
+            currency: "GBP",
+            base_currency: "GBP",
+          },
+        },
+        updateCartItems: { cart: {} },
+      };
     } },
     "@/lib/magento/cart-images": {
       basketImageNeedsFallback: () => false,
