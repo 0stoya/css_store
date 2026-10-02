@@ -7,11 +7,16 @@ const source = (file) => readFileSync(new URL(`../${file}`, import.meta.url), "u
 test("catalogue cards keep product imagery compact on desktop and responsive sizes", () => {
   const styles = source("app/catalogue-ux.css");
 
+  const card = source("components/product-card.tsx");
+
+  assert.match(card, /className="product-media-frame"/);
   assert.match(styles, /grid-template-rows:\s*195px 1fr/);
   assert.match(styles, /height:\s*195px/);
   assert.match(styles, /padding:\s*24px/);
-  assert.match(styles, /\.product-media img/);
-  assert.match(styles, /width:\s*100% !important/);
+  assert.match(styles, /\.product-media-frame/);
+  assert.match(styles, /aspect-ratio:\s*1/);
+  assert.match(styles, /\.product-media-frame img/);
+  assert.match(styles, /width:\s*auto !important/);
   assert.match(styles, /height:\s*100% !important/);
   assert.match(styles, /object-fit:\s*contain/);
   assert.match(styles, /grid-template-rows:\s*185px 1fr/);
