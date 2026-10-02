@@ -86,6 +86,10 @@ test("basket read has labels and decisions; cart write queries stay minimal", as
       calls.push(query);
       return { customerCart: {}, updateCartItems: { cart: {} } };
     } },
+    "@/lib/magento/cart-images": {
+      basketImageNeedsFallback: () => false,
+      getGroupedParentPresentationMap: async () => new Map(),
+    },
   });
   await cart.getCustomerCart("token");
   await cart.updateCartItem("token", "cart", "item", 2);
@@ -120,6 +124,13 @@ async function submitWithContexts(initial, current) {
       setBillingSameAsShipping: async () => {}, setCheckoutPaymentMethod: async () => {},
       placeCheckoutOrder: async () => { calls.push("native"); return { order_number: "X" }; },
       submitCreditOrder: async () => { calls.push("credit"); return { credit_order_id: 1 }; },
+    },
+    "@/lib/magento/employee": {
+      getEmployeeOrdering: async () => ({
+        usesEmployee: false,
+        multiEmployeeBasket: false,
+        employees: [],
+      }),
     },
   });
   const data = new FormData(); data.set("payment_method", "checkmo");
