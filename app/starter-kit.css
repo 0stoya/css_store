@@ -207,7 +207,7 @@
 
 .starter-kit-item {
   display: grid;
-  grid-template-columns: 76px minmax(220px, 1.25fr) minmax(260px, 1fr) 150px 92px;
+  grid-template-columns: 76px minmax(220px, 1.25fr) minmax(260px, 1fr) 150px 112px;
   align-items: center;
   gap: 18px;
   padding: 17px;
@@ -408,10 +408,13 @@
 }
 
 .starter-kit-item-state .needs-options {
-  padding: 5px 8px;
+  padding: 5px 9px;
   border-radius: 999px;
   background: var(--warning-soft);
   color: var(--warning);
+  font-size: .68rem;
+  line-height: 1.1;
+  white-space: nowrap;
 }
 
 .starter-kit-submit {
