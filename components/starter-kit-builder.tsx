@@ -103,7 +103,7 @@ export function StarterKitBuilder({
         </div>
         <span className={progress.incompleteCount ? "starter-kit-progress-status incomplete" : "starter-kit-progress-status"}>
           {progress.incompleteCount
-            ? `${progress.incompleteCount} option${progress.incompleteCount === 1 ? "" : "s"} missing`
+            ? `${progress.incompleteCount} item${progress.incompleteCount === 1 ? "" : "s"} need options`
             : progress.selectedCount
               ? "Ready to add"
               : "Nothing selected"}
