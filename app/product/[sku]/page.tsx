@@ -79,7 +79,7 @@ export default async function ProductPage({
           sku: child.sku,
           name: child.name,
           image: child.small_image || null,
-          priceLabel: !storefrontPolicy.hidePrice && childPrice
+          priceLabel: !storefrontPolicy.hidePrice && childPrice && childPrice.value > 0
             ? money(childPrice.value, childPrice.currency)
             : null,
           available,
