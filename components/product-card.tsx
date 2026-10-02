@@ -35,7 +35,9 @@ export function ProductCard({ product, hidePrice }: { product: ProductCardProduc
   return <article className="card product">
     <Link className="product-link" href={`/product/${encodeURIComponent(product.sku)}`}>
       <div className="product-media">
-        <ProductImage src={product.small_image?.url} alt={product.small_image?.label || product.name}/>
+        <div className="product-media-frame">
+          <ProductImage src={product.small_image?.url} alt={product.small_image?.label || product.name}/>
+        </div>
       </div>
       <div className="product-body">
         <div className="product-card-meta">
