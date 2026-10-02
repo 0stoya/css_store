@@ -50,6 +50,7 @@ const GROUPED_CHILD_FIELDS = /* GraphQL */ `
   sku
   name
   stock_status
+  small_image { url label }
   price_range {
     minimum_price {
       regular_price { value currency }
