@@ -132,7 +132,11 @@ export type CategoryPageContext = {
   } | null;
   hidePrice: boolean;
   category: CategoryRoute | null;
-  products: CategoryProductsQuery["products"] | null;
+  products: {
+    total_count: number;
+    page_info: { current_page: number; total_pages: number };
+    items: ProductCardProduct[];
+  } | null;
 };
 
 export async function getCategoryPageContext(
