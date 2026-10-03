@@ -61,6 +61,18 @@ test("Starter-kit option selects only allow real in-stock variant combinations",
   assert.match(actions, /child\.name.*error\.message/);
 });
 
+test("Starter-kit add reuses the proven single-item grouped mutation with rollback", () => {
+  const actions = source("app/product/[sku]/actions.ts");
+
+  assert.match(actions, /async function addGroupedConfigurableSelectionsSafely/);
+  assert.match(actions, /for \(const item of items\)/);
+  assert.match(actions, /items: \[item\]/);
+  assert.match(actions, /async function restoreCartWriteSnapshot/);
+  assert.match(actions, /removeCartItem\(token, working\.id, item\.uid\)/);
+  assert.match(actions, /updateCartItem\(token, working\.id, item\.uid, originalItem\.quantity\)/);
+  assert.match(actions, /await addGroupedConfigurableSelectionsSafely\(/);
+});
+
 test("Starter-kit presentation removes the old line-by-line add pattern", () => {
   const builder = source("components/starter-kit-builder.tsx");
   const styles = source("app/starter-kit.css");
