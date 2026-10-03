@@ -61,6 +61,20 @@ test("Starter-kit option selects only allow real in-stock variant combinations",
   assert.match(actions, /child\.name.*error\.message/);
 });
 
+test("Starter-kit basket fallback uses Magento configurable parent/variant pairs", () => {
+  const actions = source("app/product/[sku]/actions.ts");
+
+  assert.match(actions, /async function addStarterKitThroughNativeConfigurableCart/);
+  assert.match(actions, /sku: selected\.variantSku/);
+  assert.match(actions, /parentSku: selected\.configurableSku/);
+  assert.match(actions, /quantity: selected\.quantity/);
+  assert.match(actions, /assignCartItemEmployee\(token, current\.id, addedVariant\.uid, employeeId\)/);
+  assert.match(actions, /async function restoreCartWriteSnapshot/);
+  assert.match(actions, /removeCartItem\(token, working\.id, item\.uid\)/);
+  assert.match(actions, /updateCartItem\(token, working\.id, item\.uid, originalItem\.quantity\)/);
+  assert.doesNotMatch(actions, /await addGroupedConfigurableProduct\(token/);
+});
+
 test("Starter-kit presentation removes the old line-by-line add pattern", () => {
   const builder = source("components/starter-kit-builder.tsx");
   const styles = source("app/starter-kit.css");
