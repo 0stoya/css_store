@@ -27,8 +27,7 @@ test("Starter-kit items submit one grouped selection with the existing field con
 
   assert.match(actions, /function groupedConfigurableSelections/);
   assert.match(actions, /const items = groupedConfigurableSelections\(product, formData\)/);
-  assert.match(actions, /await addGroupedConfigurableProduct\(token, \{/);
-  assert.match(actions, /items,/);
+  assert.match(actions, /await addStarterKitThroughNativeConfigurableCart\(/);
 });
 
 test("Starter-kit PDP reuses Magento child images and grouped default quantities", () => {
