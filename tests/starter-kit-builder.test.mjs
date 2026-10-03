@@ -44,6 +44,23 @@ test("Starter-kit PDP reuses Magento child images and grouped default quantities
   assert.match(page, /childPrice && childPrice\.value > 0/);
 });
 
+test("Starter-kit option selects only allow real in-stock variant combinations", () => {
+  const page = source("app/product/[sku]/page.tsx");
+  const builder = source("components/starter-kit-builder.tsx");
+  const actions = source("app/product/[sku]/actions.ts");
+
+  assert.match(page, /variants: child\.variants \|\| \[\]/);
+  assert.match(builder, /variants: ConfigurableVariant\[\]/);
+  assert.match(builder, /function variantMatches/);
+  assert.match(builder, /function selectedVariant/);
+  assert.match(builder, /function optionValueAvailable/);
+  assert.match(builder, /variantInStock\(variant\) && variantMatches\(variant, candidate\)/);
+  assert.match(builder, /disabled=\{!available && !active\}/);
+  assert.match(builder, /Combination unavailable/);
+  assert.match(builder, /const incomplete = selectedItems\.filter\(\(item\) => !selectedVariant\(item, selections\)\)/);
+  assert.match(actions, /child\.name.*error\.message/);
+});
+
 test("Starter-kit presentation removes the old line-by-line add pattern", () => {
   const builder = source("components/starter-kit-builder.tsx");
   const styles = source("app/starter-kit.css");

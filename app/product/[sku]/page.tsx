@@ -93,6 +93,7 @@ export default async function ProductPage({
           max: child.css_purchase_constraints?.maximum_quantity ?? null,
           step,
           options: child.configurable_options || [],
+          variants: child.variants || [],
         };
       })
     : [];

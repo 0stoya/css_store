@@ -9,7 +9,7 @@ import {
   getCustomerCartWriteContext,
 } from "@/lib/magento/cart";
 import { getEmployeeOrdering } from "@/lib/magento/employee";
-import { getProduct, type ProductConfiguration } from "@/lib/magento/product";
+import { getProduct, type ConfigurableVariant, type ProductConfiguration } from "@/lib/magento/product";
 import { getRepeatOrderLists, saveGroupedRepeatOrderListItem } from "@/lib/magento/repeat-orders";
 import { requireCustomerToken } from "@/lib/session";
 
@@ -83,7 +83,15 @@ function groupedConfigurableSelections(product: ProductConfiguration, formData: 
     }
 
     const selected = selectedUids(formData, `child_${index}_option`);
-    const variant = validateConfigurableSelection(child, selected);
+    let variant: ConfigurableVariant | null;
+    try {
+      variant = validateConfigurableSelection(child, selected);
+    } catch (error) {
+      if (error instanceof Error) {
+        throw new Error(`${child.name}: ${error.message}`);
+      }
+      throw error;
+    }
     if (!variant) throw new Error(`${child.name} does not expose configurable options.`);
     items.push({ configurableSku: child.sku, variantSku: variant.product.sku, quantity: rawQuantity });
   }
