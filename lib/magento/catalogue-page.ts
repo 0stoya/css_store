@@ -1,5 +1,8 @@
 import { magentoGraphQL } from "@/lib/magento/client";
+import { getResilientCataloguePrices } from "@/lib/magento/catalogue-prices";
 import type { ProductCardProduct } from "@/components/product-card";
+
+type CatalogueBaseProduct = Omit<ProductCardProduct, "price_range">;
 
 type CataloguePageQuery = {
   customer: {
@@ -19,7 +22,7 @@ type CataloguePageQuery = {
   products: {
     total_count: number;
     page_info: { current_page: number; total_pages: number };
-    items: ProductCardProduct[];
+    items: CatalogueBaseProduct[];
   };
 };
 
@@ -32,12 +35,6 @@ const PRODUCT_SELECTION = /* GraphQL */ `
     name
     stock_status
     small_image { url label }
-    price_range {
-      minimum_price {
-        regular_price { value currency }
-        final_price { value currency }
-      }
-    }
     css_purchase_allowance {
       logical_product_id
       has_active_restriction
@@ -160,6 +157,13 @@ export async function getCataloguePageContext(
   );
 
   const selectedCompany = data.css_company_context.companies.find((company) => company.selected) || null;
+  const hidePrice = data.css_storefront_policy.hide_price;
+  const prices = hidePrice
+    ? new Map()
+    : await getResilientCataloguePrices(
+        token,
+        data.products.items.map((product) => product.sku),
+      );
 
   return {
     customerName: `${data.customer.firstname} ${data.customer.lastname}`.trim(),
@@ -169,7 +173,13 @@ export async function getCataloguePageContext(
           name: selectedCompany.name,
         }
       : null,
-    hidePrice: data.css_storefront_policy.hide_price,
-    products: data.products,
+    hidePrice,
+    products: {
+      ...data.products,
+      items: data.products.items.map((product) => ({
+        ...product,
+        price_range: hidePrice ? null : prices.get(product.sku) ?? null,
+      })),
+    },
   };
 }
