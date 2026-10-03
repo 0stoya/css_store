@@ -2,11 +2,13 @@
 
 import { redirect, unstable_rethrow } from "next/navigation";
 import {
-  addGroupedConfigurableProduct,
   addNativeProduct,
   addNativeProducts,
   assignCartItemEmployee,
   getCustomerCartWriteContext,
+  removeCartItem,
+  updateCartItem,
+  type CartWriteSnapshot,
 } from "@/lib/magento/cart";
 import { getEmployeeOrdering } from "@/lib/magento/employee";
 import { getProduct, type ConfigurableVariant, type ProductConfiguration } from "@/lib/magento/product";
@@ -61,6 +63,86 @@ function assertGroupedChildAvailable(child: NonNullable<ProductConfiguration["it
   }
   if (child.css_purchase_allowance?.has_active_restriction && child.css_purchase_allowance.remaining_quantity <= 0) {
     throw new Error(`${child.name} has no remaining purchase allowance.`);
+  }
+}
+
+async function restoreCartWriteSnapshot(
+  token: string,
+  original: CartWriteSnapshot,
+  current: CartWriteSnapshot,
+) {
+  const originalByUid = new Map(original.itemsV2.items.map((item) => [item.uid, item]));
+  let working = current;
+
+  for (const item of [...working.itemsV2.items]) {
+    const originalItem = originalByUid.get(item.uid);
+    if (!originalItem) {
+      working = await removeCartItem(token, working.id, item.uid);
+      continue;
+    }
+    if (item.quantity !== originalItem.quantity) {
+      working = await updateCartItem(token, working.id, item.uid, originalItem.quantity);
+    }
+  }
+
+  return working;
+}
+
+async function addStarterKitThroughNativeConfigurableCart(
+  token: string,
+  before: CartWriteSnapshot,
+  items: Array<{ configurableSku: string; variantSku: string; quantity: number }>,
+  employeeId: number | undefined,
+) {
+  let current = before;
+
+  if (employeeId) {
+    for (const selected of items) {
+      const matching = before.itemsV2.items.filter(
+        (item) => cartItemSku(item) === selected.variantSku,
+      );
+      if (matching.some((item) => item.css_employee?.employee_id !== employeeId)) {
+        throw new Error(
+          `${selected.variantSku} is already assigned to another Employee. Adjust it from the basket before adding this kit.`,
+        );
+      }
+    }
+  }
+
+  try {
+    for (const selected of items) {
+      const previousUids = new Set(current.itemsV2.items.map((item) => item.uid));
+      const matchingExisting = current.itemsV2.items.find(
+        (item) => cartItemSku(item) === selected.variantSku,
+      ) || null;
+
+      current = await addNativeProduct(token, current.id, {
+        sku: selected.variantSku,
+        parentSku: selected.configurableSku,
+        quantity: selected.quantity,
+      });
+
+      if (employeeId && !matchingExisting) {
+        const added = current.itemsV2.items.filter((item) => !previousUids.has(item.uid));
+        const addedVariant = added.find((item) => cartItemSku(item) === selected.variantSku);
+        if (!addedVariant) {
+          throw new Error(
+            `Magento did not expose the new ${selected.variantSku} basket line for Employee assignment.`,
+          );
+        }
+        current = await assignCartItemEmployee(token, current.id, addedVariant.uid, employeeId);
+      }
+    }
+
+    return current;
+  } catch (error) {
+    try {
+      await restoreCartWriteSnapshot(token, before, current);
+    } catch {
+      const reason = error instanceof Error ? error.message : "The starter kit could not be added.";
+      throw new Error(`${reason} Some kit lines may have been added; please review your basket.`);
+    }
+    throw error;
   }
 }
 
@@ -126,12 +208,12 @@ export async function addProductToCartAction(formData: FormData) {
 
     if (product.__typename === "CssGroupedConfigurableProduct") {
       const items = groupedConfigurableSelections(product, formData);
-      await addGroupedConfigurableProduct(token, {
-        cartId: before.id,
-        parentSku: product.sku,
-        employeeId,
+      await addStarterKitThroughNativeConfigurableCart(
+        token,
+        before,
         items,
-      });
+        employeeId,
+      );
     } else if (product.__typename === "GroupedProduct") {
       const items: Array<{ sku: string; quantity: number }> = [];
       const childCount = product.items?.length || 0;
