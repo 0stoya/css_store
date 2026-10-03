@@ -7,6 +7,9 @@ import {
   addNativeProducts,
   assignCartItemEmployee,
   getCustomerCartWriteContext,
+  removeCartItem,
+  updateCartItem,
+  type CartWriteSnapshot,
 } from "@/lib/magento/cart";
 import { getEmployeeOrdering } from "@/lib/magento/employee";
 import { getProduct, type ConfigurableVariant, type ProductConfiguration } from "@/lib/magento/product";
@@ -61,6 +64,58 @@ function assertGroupedChildAvailable(child: NonNullable<ProductConfiguration["it
   }
   if (child.css_purchase_allowance?.has_active_restriction && child.css_purchase_allowance.remaining_quantity <= 0) {
     throw new Error(`${child.name} has no remaining purchase allowance.`);
+  }
+}
+
+async function restoreCartWriteSnapshot(
+  token: string,
+  original: CartWriteSnapshot,
+  current: CartWriteSnapshot,
+) {
+  const originalByUid = new Map(original.itemsV2.items.map((item) => [item.uid, item]));
+  let working = current;
+
+  for (const item of [...working.itemsV2.items]) {
+    const originalItem = originalByUid.get(item.uid);
+    if (!originalItem) {
+      working = await removeCartItem(token, working.id, item.uid);
+      continue;
+    }
+    if (item.quantity !== originalItem.quantity) {
+      working = await updateCartItem(token, working.id, item.uid, originalItem.quantity);
+    }
+  }
+
+  return working;
+}
+
+async function addGroupedConfigurableSelectionsSafely(
+  token: string,
+  before: CartWriteSnapshot,
+  parentSku: string,
+  employeeId: number | undefined,
+  items: Array<{ configurableSku: string; variantSku: string; quantity: number }>,
+) {
+  let current = before;
+
+  try {
+    for (const item of items) {
+      current = await addGroupedConfigurableProduct(token, {
+        cartId: before.id,
+        parentSku,
+        employeeId,
+        items: [item],
+      });
+    }
+    return current;
+  } catch (error) {
+    try {
+      await restoreCartWriteSnapshot(token, before, current);
+    } catch {
+      const reason = error instanceof Error ? error.message : "The starter kit could not be added.";
+      throw new Error(`${reason} Some kit lines may have been added; please review your basket.`);
+    }
+    throw error;
   }
 }
 
@@ -126,12 +181,13 @@ export async function addProductToCartAction(formData: FormData) {
 
     if (product.__typename === "CssGroupedConfigurableProduct") {
       const items = groupedConfigurableSelections(product, formData);
-      await addGroupedConfigurableProduct(token, {
-        cartId: before.id,
-        parentSku: product.sku,
+      await addGroupedConfigurableSelectionsSafely(
+        token,
+        before,
+        product.sku,
         employeeId,
         items,
-      });
+      );
     } else if (product.__typename === "GroupedProduct") {
       const items: Array<{ sku: string; quantity: number }> = [];
       const childCount = product.items?.length || 0;
