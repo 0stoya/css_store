@@ -1,0 +1,61 @@
+.impersonation-banner {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  height: 42px;
+  padding: 0 max(24px, calc((100vw - var(--content)) / 2));
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  background: var(--warning-soft);
+  border-bottom: 1px solid #e3c95a;
+  color: var(--ink-strong);
+  font-size: 0.84rem;
+}
+
+.support-session-active .site-header {
+  top: 42px;
+}
+
+.impersonation-banner span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.impersonation-banner form {
+  margin: 0;
+}
+
+.impersonation-banner button {
+  min-height: 30px;
+  padding: 0.35rem 0.65rem;
+  border: 1px solid #b69a2f;
+  border-radius: 8px;
+  background: #fff;
+  color: var(--ink-strong);
+  cursor: pointer;
+  font: inherit;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.impersonation-banner button:hover {
+  background: #fffdf4;
+}
+
+@media (max-width: 640px) {
+  .impersonation-banner {
+    padding: 0 0.75rem;
+    gap: 0.5rem;
+    font-size: 0.76rem;
+  }
+
+  .impersonation-banner button {
+    min-height: 28px;
+    padding: 0.3rem 0.5rem;
+    font-size: 0.74rem;
+  }
+}

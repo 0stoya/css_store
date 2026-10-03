@@ -23,14 +23,29 @@ import "./catalogue-ux.css";
 import "./catalogue-polish.css";
 import "./header-search.css";
 import "./home-catalogue.css";
+import "./impersonation.css";
 import { SiteFooter } from "@/components/site-footer";
 import { getStoreName } from "@/lib/config";
+import { isCustomerImpersonation } from "@/lib/session";
 
 export const metadata: Metadata = {
   title: { default: getStoreName(), template: `%s | ${getStoreName()}` },
   description: "Chelmsford Safety Supplies customer portal",
 };
 
-export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
-  return <html lang="en"><body>{children}<SiteFooter/></body></html>;
+export default async function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
+  const impersonating = await isCustomerImpersonation();
+
+  return <html lang="en"><body className={impersonating ? "support-session-active" : undefined}>
+    {impersonating ? (
+      <aside className="impersonation-banner" role="status" aria-label="Admin support session">
+        <span><strong>Admin support session</strong> · You are shopping as a customer.</span>
+        <form action="/api/auth/impersonate/exit" method="post">
+          <button type="submit">Exit support session</button>
+        </form>
+      </aside>
+    ) : null}
+    {children}
+    <SiteFooter/>
+  </body></html>;
 }
