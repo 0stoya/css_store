@@ -2,6 +2,7 @@
 
 import { CheckCircle2, Minus, PackageCheck, Plus } from "lucide-react";
 import { useMemo, useState } from "react";
+import type { ConfigurableVariant } from "@/lib/magento/product";
 
 export type StarterKitBuilderItem = {
   index: number;
@@ -20,10 +21,48 @@ export type StarterKitBuilderItem = {
     label: string;
     values: Array<{ uid: string; label: string }>;
   }>;
+  variants: ConfigurableVariant[];
 };
 
 function precision(value: number) {
   return String(value).split(".")[1]?.length || 0;
+}
+
+function variantMatches(
+  variant: ConfigurableVariant,
+  selected: Record<string, string>,
+) {
+  const selectedUids = Object.values(selected).filter(Boolean);
+  return selectedUids.every((uid) =>
+    variant.attributes.some((attribute) => attribute.uid === uid),
+  );
+}
+
+function variantInStock(variant: ConfigurableVariant) {
+  return variant.product.stock_status === "IN_STOCK";
+}
+
+function selectedForItem(
+  item: StarterKitBuilderItem,
+  selections: Record<string, string>,
+) {
+  return Object.fromEntries(
+    item.options.map((option) => [
+      option.uid,
+      selections[`${item.index}:${option.uid}`] || "",
+    ]),
+  );
+}
+
+function selectedVariant(
+  item: StarterKitBuilderItem,
+  selections: Record<string, string>,
+) {
+  const selected = selectedForItem(item, selections);
+  if (!item.options.every((option) => Boolean(selected[option.uid]))) return null;
+  return item.variants.find(
+    (variant) => variantInStock(variant) && variantMatches(variant, selected),
+  ) || null;
 }
 
 export function StarterKitBuilder({
@@ -40,9 +79,7 @@ export function StarterKitBuilder({
 
   const progress = useMemo(() => {
     const selectedItems = items.filter((item) => item.available && (quantities[item.index] || 0) > 0);
-    const incomplete = selectedItems.filter((item) =>
-      item.options.some((option) => !selections[`${item.index}:${option.uid}`]),
-    );
+    const incomplete = selectedItems.filter((item) => !selectedVariant(item, selections));
     return {
       selectedCount: selectedItems.length,
       readyCount: selectedItems.length - incomplete.length,
@@ -87,6 +124,21 @@ export function StarterKitBuilder({
     }));
   }
 
+  function optionValueAvailable(
+    item: StarterKitBuilderItem,
+    optionUid: string,
+    valueUid: string,
+  ) {
+    const candidate = {
+      ...selectedForItem(item, selections),
+      [optionUid]: valueUid,
+    };
+
+    return item.variants.some(
+      (variant) => variantInStock(variant) && variantMatches(variant, candidate),
+    );
+  }
+
   return (
     <div className="starter-kit-builder">
       <div className="starter-kit-progress">
@@ -114,9 +166,11 @@ export function StarterKitBuilder({
         {items.map((item, position) => {
           const quantity = quantities[item.index] || 0;
           const selected = quantity > 0;
-          const complete = selected && item.options.every((option) =>
+          const allOptionsSelected = item.options.every((option) =>
             Boolean(selections[`${item.index}:${option.uid}`]),
           );
+          const complete = selected && Boolean(selectedVariant(item, selections));
+          const invalidCombination = selected && allOptionsSelected && !complete;
 
           return (
             <article
@@ -169,9 +223,19 @@ export function StarterKitBuilder({
                         }))}
                       >
                         <option value="">Choose {option.label}</option>
-                        {option.values.map((value) => (
-                          <option value={value.uid} key={value.uid}>{value.label}</option>
-                        ))}
+                        {option.values.map((value) => {
+                          const available = optionValueAvailable(item, option.uid, value.uid);
+                          const active = selections[key] === value.uid;
+                          return (
+                            <option
+                              value={value.uid}
+                              key={value.uid}
+                              disabled={!available && !active}
+                            >
+                              {value.label}{available || active ? "" : " — unavailable"}
+                            </option>
+                          );
+                        })}
                       </select>
                     </label>
                   );
@@ -215,6 +279,8 @@ export function StarterKitBuilder({
               <div className="starter-kit-item-state">
                 {complete ? (
                   <span className="ready"><CheckCircle2 size={15} aria-hidden="true" /> Ready</span>
+                ) : invalidCombination ? (
+                  <span className="needs-options">Combination unavailable</span>
                 ) : selected ? (
                   <span className="needs-options">Choose options</span>
                 ) : item.available ? (
