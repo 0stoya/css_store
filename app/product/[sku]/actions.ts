@@ -9,7 +9,7 @@ import {
   getCustomerCartWriteContext,
 } from "@/lib/magento/cart";
 import { getEmployeeOrdering } from "@/lib/magento/employee";
-import { getProduct, type ProductConfiguration } from "@/lib/magento/product";
+import { getProduct, type ConfigurableVariant, type ProductConfiguration } from "@/lib/magento/product";
 import { getRepeatOrderLists, saveGroupedRepeatOrderListItem } from "@/lib/magento/repeat-orders";
 import { requireCustomerToken } from "@/lib/session";
 
@@ -83,7 +83,7 @@ function groupedConfigurableSelections(product: ProductConfiguration, formData: 
     }
 
     const selected = selectedUids(formData, `child_${index}_option`);
-    let variant;
+    let variant: ConfigurableVariant | null;
     try {
       variant = validateConfigurableSelection(child, selected);
     } catch (error) {
