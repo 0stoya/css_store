@@ -57,6 +57,28 @@ const CARD_FIELDS = /* GraphQL */ `
   }
 `;
 
+
+const PRODUCT_STRUCTURE = /* GraphQL */ `
+  query StoreCatalogueDiagnosticStructure($sku: String!) {
+    products(filter: { sku: { eq: $sku } }, currentPage: 1, pageSize: 1) {
+      items {
+        __typename
+        sku
+        name
+        ... on ConfigurableProduct {
+          variants {
+            product {
+              sku
+              name
+              stock_status
+            }
+          }
+        }
+      }
+    }
+  }
+`;
+
 const PRICE_FIELD = /* GraphQL */ `
   query StoreCatalogueDiagnosticPrice(
     $filter: ProductAttributeFilterInput!
@@ -136,6 +158,32 @@ async function probe(token: string, skus: string[], query: string) {
   }
 }
 
+
+async function productStructure(token: string, sku: string) {
+  const data = await magentoGraphQL<{
+    products: {
+      items: Array<{
+        __typename: string;
+        sku: string;
+        name: string;
+        variants?: Array<{
+          product: {
+            sku: string;
+            name: string;
+            stock_status: string | null;
+          };
+        }> | null;
+      }>;
+    };
+  }>(
+    PRODUCT_STRUCTURE,
+    { sku },
+    token,
+  );
+
+  return data.products.items[0] || null;
+}
+
 async function findFailingSkus(
   token: string,
   skus: string[],
@@ -191,6 +239,19 @@ export async function GET() {
           probe(token, [sku], STOCK_FIELD),
         ]);
 
+        const structure = await productStructure(token, sku);
+        const variantSkus = (structure?.variants || [])
+          .map((variant) => variant.product.sku)
+          .filter(Boolean);
+        const variantPriceChecks = price.ok
+          ? []
+          : await Promise.all(
+              variantSkus.map(async (variantSku) => ({
+                sku: variantSku,
+                ...(await probe(token, [variantSku], PRICE_FIELD)),
+              })),
+            );
+
         return {
           sku,
           name: productBySku.get(sku)?.name || null,
@@ -200,6 +261,8 @@ export async function GET() {
             css_purchase_allowance: allowance,
             css_stock_info: stock,
           },
+          structure,
+          variant_price_checks: variantPriceChecks,
         };
       }),
     );
