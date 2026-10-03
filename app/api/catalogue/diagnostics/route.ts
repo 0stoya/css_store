@@ -74,6 +74,16 @@ const PRODUCT_STRUCTURE = /* GraphQL */ `
             }
           }
         }
+        ... on GroupedProduct {
+          items {
+            product {
+              __typename
+              sku
+              name
+              stock_status
+            }
+          }
+        }
       }
     }
   }
@@ -173,6 +183,14 @@ async function productStructure(token: string, sku: string) {
             stock_status: string | null;
           };
         }> | null;
+        items?: Array<{
+          product: {
+            __typename: string;
+            sku: string;
+            name: string;
+            stock_status: string | null;
+          };
+        }> | null;
       }>;
     };
   }>(
@@ -240,15 +258,16 @@ export async function GET() {
         ]);
 
         const structure = await productStructure(token, sku);
-        const variantSkus = (structure?.variants || [])
-          .map((variant) => variant.product.sku)
-          .filter(Boolean);
-        const variantPriceChecks = price.ok
+        const childSkus = [
+          ...(structure?.variants || []).map((variant) => variant.product.sku),
+          ...(structure?.items || []).map((item) => item.product.sku),
+        ].filter(Boolean);
+        const childPriceChecks = price.ok
           ? []
           : await Promise.all(
-              variantSkus.map(async (variantSku) => ({
-                sku: variantSku,
-                ...(await probe(token, [variantSku], PRICE_FIELD)),
+              childSkus.map(async (childSku) => ({
+                sku: childSku,
+                ...(await probe(token, [childSku], PRICE_FIELD)),
               })),
             );
 
@@ -262,7 +281,7 @@ export async function GET() {
             css_stock_info: stock,
           },
           structure,
-          variant_price_checks: variantPriceChecks,
+          child_price_checks: childPriceChecks,
         };
       }),
     );
