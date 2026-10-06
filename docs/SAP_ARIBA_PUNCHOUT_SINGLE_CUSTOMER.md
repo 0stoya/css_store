@@ -256,7 +256,7 @@ The first implementation must fail closed on:
 
 - invalid or missing configured credentials;
 - malformed XML;
-- external-entity / external-DTD behaviour;
+- any external-entity resolution and all internal DTD/entity declarations; an external cXML `SYSTEM` DTD declaration may be present but is never fetched;
 - oversized request bodies;
 - unsupported operation;
 - missing or duplicate `payloadID`;
