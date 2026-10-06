@@ -24,6 +24,11 @@ function graphQLTimingThreshold() {
   return Number.isFinite(value) && value > 0 ? value : 0;
 }
 
+function graphQLTimeoutMs() {
+  const value = Number(process.env.MAGENTO_GRAPHQL_TIMEOUT_MS || "15000");
+  return Number.isInteger(value) && value >= 1000 && value <= 60000 ? value : 15000;
+}
+
 function logGraphQLTiming(
   operation: string,
   startedAt: number,
@@ -77,7 +82,7 @@ export async function magentoGraphQL<T>(query: string, variables: Record<string,
       },
       body: JSON.stringify({ query, variables }),
       cache: "no-store",
-      signal: AbortSignal.timeout(15000),
+      signal: AbortSignal.timeout(graphQLTimeoutMs()),
     });
   } catch {
     logGraphQLTiming(operation, startedAt, "network-error");
