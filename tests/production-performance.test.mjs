@@ -30,10 +30,16 @@ test("Store navigation caches only store-wide category metadata", () => {
   assert.match(menu, /Customer-specific visibility and[\s\S]*recomputed/);
 });
 
-test("expensive Account bootstrap is not prefetched from every Store header", () => {
+test("expensive Account bootstrap is not prefetched from global Store chrome", () => {
   const header = source("components/site-header.tsx");
+  const footer = source("components/site-footer.tsx");
 
   assert.match(header, /href="\/account" prefetch=\{false\}/);
+  assert.match(footer, /href="\/account" prefetch=\{false\}/);
+  assert.match(footer, /href="\/account\/orders" prefetch=\{false\}/);
+  assert.match(footer, /href="\/account\/repeat-orders" prefetch=\{false\}/);
+  assert.match(footer, /href="\/account\/credit-orders" prefetch=\{false\}/);
+  assert.match(footer, /href="\/account\/returns" prefetch=\{false\}/);
 });
 
 test("customer context is memoized only within the current server render", () => {
