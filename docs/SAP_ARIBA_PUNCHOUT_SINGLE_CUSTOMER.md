@@ -41,7 +41,7 @@ PunchOut should reuse those paths rather than create a second catalogue, pricing
 
 Magento / Fluid remains the application/domain authority. The storefront must not call OGL directly and must not use Magento Admin APIs.
 
-A very small additive Fluid capability may be required to exchange a server-authenticated PunchOut session for a customer token bound to the one configured customer/company. That backend seam must be proved separately; the storefront must not store or replay a customer's Magento password.
+The reviewed backend seam is a small additive Fluid customer-session exchange tracked in `0stoya/Fluid#108`. css_store signs a short-lived one-use RS256 assertion only after its PunchOut setup/session boundary has authenticated the request. Fluid verifies that assertion against a public key, binds it to one configured customer/company/store, revalidates that relationship, consumes the assertion replay ID, and reuses the existing customer-token issuer. The storefront never stores or replays a customer's Magento password.
 
 ## Deliberately narrow launch scope
 
@@ -190,18 +190,31 @@ Do not:
 
 ## Configuration
 
-Configuration names are provisional until implementation, but the model is intentionally single-customer and explicit.
+Configuration is intentionally single-customer and explicit.
 
 ```text
 SAP_PUNCHOUT_ENABLED
-SAP_PUNCHOUT_BUYER_IDENTITY
-SAP_PUNCHOUT_SUPPLIER_IDENTITY
+SAP_PUNCHOUT_FROM_DOMAIN
+SAP_PUNCHOUT_FROM_IDENTITY
+SAP_PUNCHOUT_TO_DOMAIN
+SAP_PUNCHOUT_TO_IDENTITY
+SAP_PUNCHOUT_SENDER_DOMAIN
+SAP_PUNCHOUT_SENDER_IDENTITY
 SAP_PUNCHOUT_SHARED_SECRET
+SAP_PUNCHOUT_MAGENTO_CUSTOMER_ID
 SAP_PUNCHOUT_COMPANY_ID
-SAP_PUNCHOUT_CUSTOMER_IDENTITY
+SAP_PUNCHOUT_STORE_CODE
 SAP_PUNCHOUT_ALLOWED_RETURN_HOSTS
+SAP_PUNCHOUT_STORE_ORIGIN
+SAP_PUNCHOUT_SESSION_DB_PATH
 SAP_PUNCHOUT_SESSION_TTL_SECONDS
 SAP_PUNCHOUT_MAX_CLOCK_SKEW_SECONDS
+SAP_PUNCHOUT_MAX_BODY_BYTES
+SAP_PUNCHOUT_ASSERTION_PRIVATE_KEY_B64
+SAP_PUNCHOUT_ASSERTION_ISSUER
+SAP_PUNCHOUT_ASSERTION_AUDIENCE
+SAP_PUNCHOUT_ASSERTION_KEY_ID
+SAP_PUNCHOUT_ASSERTION_TTL_SECONDS
 ```
 
 Secrets stay in protected production configuration and must never be committed.
@@ -229,9 +242,11 @@ returned_at
 status
 ```
 
-A durable database table is preferred if the production store can run across restarts / multiple processes. An in-memory session store is not an acceptable production contract.
+For the current deployment, PunchOut session state belongs to `css_store` in a dedicated SQLite database at the configured absolute `SAP_PUNCHOUT_SESSION_DB_PATH`. The store uses transactional one-use state transitions and unique `payloadID` / token hashes, so state survives PM2 restarts without introducing Redis or placing SAP callback state in Magento. SQLite also remains usable if the app later has more than one local process, provided they share the same local database file.
 
-Secrets must not be persisted in the session record.
+The current PM2 topology is one `css-store` fork instance. If the application is later split across hosts, the PunchOut session store must move to a shared transactional database before scaling out; local SQLite must not silently become per-host state.
+
+Secrets are not persisted in the session record. Entry/browser tokens are stored only as SHA-256 hashes.
 
 ## cXML security invariants
 
@@ -299,12 +314,22 @@ No production PunchOut entry point is enabled in PUNCH.1.
 
 ### PUNCH.2 — cXML setup boundary
 
-- safe XML parser;
-- strict credential / timestamp / replay validation;
-- return-host allowlist;
-- session persistence;
-- `PunchOutSetupResponse`;
-- unit fixtures for accepted and rejected requests.
+Current draft implementation (not publicly routed):
+
+- strict SAX cXML parser using `saxes`, with bounded body/depth/node counts;
+- external cXML SYSTEM DTD declarations may be present but are never fetched/resolved;
+- internal DTD/entity declarations are rejected;
+- exact From / To / Sender credential validation;
+- constant-time SharedSecret comparison;
+- timestamp window validation;
+- exact HTTPS BrowserFormPost hostname allowlist;
+- SQLite-backed `payloadID` replay protection and one-use StartPage/browser session transitions;
+- `PunchOutSetupResponse` serializer;
+- synthetic accepted/rejected fixtures only;
+- signed Fluid customer-session exchange client for Fluid draft PR #108;
+- PunchOut checkout guard that blocks native `placeOrder` and `cssSubmitCreditOrder` submission whenever a PunchOut browser-session cookie is present.
+
+The public `POST /api/punchout/cxml` route remains deliberately absent until this foundation passes the local/build/runtime gates and a real customer fixture is reviewed.
 
 ### PUNCH.3 — storefront session
 
