@@ -3,7 +3,7 @@ import { DatabaseSync } from "node:sqlite";
 import type { EnabledPunchOutConfig } from "@/lib/punchout/config";
 import type { ValidatedPunchOutSetup } from "@/lib/punchout/security";
 
-export type PunchOutSessionStatus = "CREATED" | "ACTIVE" | "RETURNED";
+export type PunchOutSessionStatus = "CREATED" | "ACTIVE" | "RETURNED" | "EXPIRED";
 export type PunchOutSession = {
   id: string; payloadId: string; buyerCookie: string; browserFormPost: string; buyerIdentity: string;
   customerId: number; companyId: number; storeCode: string; createdAt: number; expiresAt: number;
@@ -41,32 +41,66 @@ export class PunchOutSessionStore {
       "id TEXT PRIMARY KEY, entry_token_hash TEXT NOT NULL UNIQUE, browser_token_hash TEXT UNIQUE,",
       "payload_id TEXT NOT NULL UNIQUE, buyer_cookie TEXT NOT NULL, browser_form_post TEXT NOT NULL,",
       "buyer_identity TEXT NOT NULL, customer_id INTEGER NOT NULL, company_id INTEGER NOT NULL,",
-      "store_code TEXT NOT NULL, created_at INTEGER NOT NULL, expires_at INTEGER NOT NULL,",
+      "store_code TEXT NOT NULL, created_at INTEGER NOT NULL, expires_at INTEGER NOT NULL, purge_at INTEGER NOT NULL,",
       "entry_consumed_at INTEGER, returned_at INTEGER,",
-      "status TEXT NOT NULL CHECK (status IN ('CREATED', 'ACTIVE', 'RETURNED'))",
+      "status TEXT NOT NULL CHECK (status IN ('CREATED', 'ACTIVE', 'RETURNED', 'EXPIRED'))",
       ")",
     ].join(" "));
-    this.db.exec("CREATE INDEX IF NOT EXISTS punchout_session_expires_at ON punchout_session(expires_at)");
+    this.db.exec("CREATE INDEX IF NOT EXISTS punchout_session_purge_at ON punchout_session(purge_at)");
+    this.db.exec(
+      "CREATE UNIQUE INDEX IF NOT EXISTS punchout_session_active_customer " +
+      "ON punchout_session(customer_id) WHERE status IN ('CREATED', 'ACTIVE')",
+    );
+  }
+
+  private expireAndPurge(nowMs: number) {
+    this.db.prepare(
+      "UPDATE punchout_session SET status = 'EXPIRED' " +
+      "WHERE status IN ('CREATED', 'ACTIVE') AND expires_at <= ?",
+    ).run(nowMs);
+    this.db.prepare("DELETE FROM punchout_session WHERE purge_at <= ?").run(nowMs);
   }
 
   create(setup: ValidatedPunchOutSetup, config: EnabledPunchOutConfig, nowMs = Date.now()) {
-    this.db.prepare("DELETE FROM punchout_session WHERE expires_at < ?").run(nowMs);
+    this.expireAndPurge(nowMs);
     const id = randomUUID();
     const entryToken = newToken();
     const expiresAt = nowMs + config.sessionTtlSeconds * 1000;
+    // A request timestamp may legally arrive up to one skew window in the future,
+    // then remain acceptable until one skew window after that timestamp. Keep the
+    // payloadID replay row for at least two skew windows even if the browser session
+    // itself expires sooner.
+    const purgeAt = Math.max(
+      expiresAt,
+      nowMs + ((config.maxClockSkewSeconds * 2) + 1) * 1000,
+    );
+
     try {
       this.db.prepare([
         "INSERT INTO punchout_session (",
         "id, entry_token_hash, payload_id, buyer_cookie, browser_form_post, buyer_identity,",
-        "customer_id, company_id, store_code, created_at, expires_at, status",
-        ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'CREATED')",
+        "customer_id, company_id, store_code, created_at, expires_at, purge_at, status",
+        ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'CREATED')",
       ].join(" ")).run(
         id, tokenHash(entryToken), setup.payloadId, setup.buyerCookie, setup.browserFormPost,
-        setup.from.identity, config.magentoCustomerId, config.companyId, config.storeCode, nowMs, expiresAt,
+        setup.from.identity, config.magentoCustomerId, config.companyId, config.storeCode,
+        nowMs, expiresAt, purgeAt,
       );
     } catch (error) {
-      const existing = this.db.prepare("SELECT id FROM punchout_session WHERE payload_id = ? LIMIT 1").get(setup.payloadId);
-      if (existing) throw new PunchOutReplayError();
+      const replay = this.db.prepare(
+        "SELECT id FROM punchout_session WHERE payload_id = ? LIMIT 1",
+      ).get(setup.payloadId);
+      if (replay) throw new PunchOutReplayError();
+
+      const active = this.db.prepare(
+        "SELECT id FROM punchout_session WHERE customer_id = ? " +
+        "AND status IN ('CREATED', 'ACTIVE') LIMIT 1",
+      ).get(config.magentoCustomerId);
+      if (active) {
+        throw new PunchOutSessionError(
+          "Another PunchOut session is already active for the configured customer.",
+        );
+      }
       throw error;
     }
     return { id, entryToken, expiresAt };
@@ -76,6 +110,7 @@ export class PunchOutSessionStore {
     const browserToken = newToken();
     this.db.exec("BEGIN IMMEDIATE");
     try {
+      this.expireAndPurge(nowMs);
       const row = this.db.prepare("SELECT * FROM punchout_session WHERE entry_token_hash = ? LIMIT 1")
         .get(tokenHash(entryToken)) as Record<string, unknown> | undefined;
       if (!row || String(row.status) !== "CREATED" || row.entry_consumed_at !== null || Number(row.expires_at) <= nowMs) {
@@ -96,6 +131,7 @@ export class PunchOutSessionStore {
   }
 
   getActiveByBrowserToken(browserToken: string, nowMs = Date.now()) {
+    this.expireAndPurge(nowMs);
     const row = this.db.prepare(
       "SELECT * FROM punchout_session WHERE browser_token_hash = ? AND status = 'ACTIVE' " +
       "AND returned_at IS NULL AND expires_at > ? LIMIT 1",
@@ -106,6 +142,7 @@ export class PunchOutSessionStore {
   markReturned(browserToken: string, nowMs = Date.now()) {
     this.db.exec("BEGIN IMMEDIATE");
     try {
+      this.expireAndPurge(nowMs);
       const row = this.db.prepare("SELECT * FROM punchout_session WHERE browser_token_hash = ? LIMIT 1")
         .get(tokenHash(browserToken)) as Record<string, unknown> | undefined;
       if (!row || String(row.status) !== "ACTIVE" || row.returned_at !== null || Number(row.expires_at) <= nowMs) {

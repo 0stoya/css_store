@@ -20,14 +20,15 @@ function validTimestamp(value: string) {
 }
 
 export function validateBrowserFormPost(value: string, allowedHosts: string[]) {
+  const callback = value.trim();
   let url: URL;
-  try { url = new URL(value); }
+  try { url = new URL(callback); }
   catch { throw new PunchOutValidationError("BrowserFormPost URL is invalid."); }
   if (url.protocol !== "https:") throw new PunchOutValidationError("BrowserFormPost URL must use HTTPS.");
   if (url.username || url.password || url.hash) throw new PunchOutValidationError("BrowserFormPost URL contains unsupported URL components.");
   if (url.port && url.port !== "443") throw new PunchOutValidationError("BrowserFormPost URL must use the standard HTTPS port.");
   if (!allowedHosts.includes(url.hostname.toLowerCase())) throw new PunchOutValidationError("BrowserFormPost host is not allowed.");
-  return url.toString();
+  return callback;
 }
 
 export type ValidatedPunchOutSetup = PunchOutSetupRequest & { browserFormPost: string };

@@ -157,6 +157,8 @@ PunchOut mode must never fall through to native Magento `placeOrder` or Fluid cr
 
 The existing Magento customer cart remains the basket authority. Do not introduce a parallel local PunchOut basket.
 
+Because Magento `customerCart` is scoped to the Magento customer, the launch PunchOut principal must be a dedicated Magento customer account assigned to the configured company and not used for ordinary human storefront login. The single-customer launch also permits only one CREATED/ACTIVE PunchOut session for that configured principal at a time. This prevents two SAP browser sessions from silently sharing one Magento basket. If the customer requires concurrent PunchOut users, that is a separate design decision rather than something to fake with parallel local baskets.
+
 ## Customer / company identity
 
 For the one-customer launch, mapping is server-side configuration.
@@ -246,7 +248,7 @@ For the current deployment, PunchOut session state belongs to `css_store` in a d
 
 The current PM2 topology is one `css-store` fork instance. If the application is later split across hosts, the PunchOut session store must move to a shared transactional database before scaling out; local SQLite must not silently become per-host state.
 
-Secrets are not persisted in the session record. Entry/browser tokens are stored only as SHA-256 hashes.
+Secrets are not persisted in the session record. Entry/browser tokens are stored only as SHA-256 hashes. Expired session rows retain their unique `payloadID` until the complete accepted timestamp/replay window has elapsed, so a short browser-session TTL cannot accidentally reopen a replay window.
 
 ## cXML security invariants
 

@@ -123,7 +123,7 @@ test("enabled PunchOut config fails closed when exact customer mapping is absent
   assert.throws(() => configModule.getPunchOutConfig({ SAP_PUNCHOUT_ENABLED: "1" }), /required/);
 });
 
-test("durable session store enforces payload replay, one-use entry and one return", () => {
+test("durable session store enforces replay, one active cart principal, one-use entry and one return", () => {
   const sessionModule = load(root, "lib/punchout/session.ts", {
     "node:crypto": crypto,
     "node:sqlite": { DatabaseSync },
@@ -133,6 +133,9 @@ test("durable session store enforces payload replay, one-use entry and one retur
   const created = store.create(setup, config(), now);
   assert.match(created.entryToken, /^[A-Za-z0-9_-]{43}$/);
   assert.throws(() => store.create(setup, config(), now), /payloadID/);
+
+  const concurrent = { ...setup, payloadId: "fixture-2@buyer.test" };
+  assert.throws(() => store.create(concurrent, config(), now), /already active/);
 
   const active = store.consumeEntryToken(created.entryToken, now + 1000);
   assert.equal(active.session.status, "ACTIVE");
@@ -145,6 +148,29 @@ test("durable session store enforces payload replay, one-use entry and one retur
   assert.equal(returned.status, "RETURNED");
   assert.equal(store.getActiveByBrowserToken(active.browserToken, now + 4000), null);
   assert.throws(() => store.markReturned(active.browserToken, now + 4000), /already returned/);
+
+  const next = store.create(concurrent, config(), now + 5000);
+  assert.match(next.entryToken, /^[A-Za-z0-9_-]{43}$/);
+  store.close();
+});
+
+test("payloadID replay survives browser-session expiry for the full timestamp acceptance window", () => {
+  const sessionModule = load(root, "lib/punchout/session.ts", {
+    "node:crypto": crypto,
+    "node:sqlite": { DatabaseSync },
+  });
+  const store = new sessionModule.PunchOutSessionStore(":memory:");
+  const longSkew = config({ sessionTtlSeconds: 300, maxClockSkewSeconds: 900 });
+  const setup = security.validatePunchOutSetup(cxml.parsePunchOutSetupRequest(fixture), longSkew, now);
+  store.create(setup, longSkew, now);
+
+  assert.throws(
+    () => store.create(setup, longSkew, now + 400000),
+    /payloadID/,
+  );
+
+  const newPayload = { ...setup, payloadId: "fixture-after-expiry@buyer.test" };
+  assert.doesNotThrow(() => store.create(newPayload, longSkew, now + 400000));
   store.close();
 });
 
