@@ -349,24 +349,81 @@ Production enablement is a separate explicit decision after PUNCH.5 evidence is 
 
 If required, design cXML `OrderRequest` intake as a separate write boundary. Returning a PunchOut basket to SAP does not itself create a Magento / OGL order.
 
-## Required customer inputs
+## Required SAP/customer inputs
 
-Before PUNCH.2 is frozen, request:
+PUNCH.2 must remain fixture-led. Do not invent values for any of the items below.
 
-- SAP Ariba / Business Network test buyer identity / NetworkID;
-- credential domain and Sender identity;
-- test SharedSecret through a secure channel;
-- one real `PunchOutSetupRequest` sample;
-- expected cXML version;
-- confirmation that Level 1 / `create` is sufficient;
-- test BrowserFormPost host / URL pattern;
-- required UOM;
-- required UNSPSC / classification, if any;
-- required Extrinsic fields;
-- whether `SupplierPartAuxiliaryID` is required;
-- whether basket prices are expected ex VAT;
-- test contact / Catalog Tester acceptance process;
-- whether cXML `OrderRequest` is a separate requirement.
+Ask the customer's SAP Ariba / procurement implementation contact for the following test-profile information:
+
+### Authentication and cXML identity
+
+- one real non-production `PunchOutSetupRequest` captured from their SAP Ariba test environment;
+- the cXML version they expect us to accept and return;
+- the exact credential domains and identities SAP will send for:
+  - `Header/From/Credential`;
+  - `Header/To/Credential`;
+  - `Header/Sender/Credential`;
+- their SAP Ariba / Business Network buyer identity / NetworkID where applicable;
+- the supplier identity they expect CSS to use;
+- a non-production SharedSecret supplied through an agreed secure channel, never committed to Git and never pasted into fixtures or test output;
+- confirmation that initial launch uses `PunchOutSetupRequest operation="create"` only;
+- confirmation of any required header or setup-request `Extrinsic` values and whether their names/casing are significant.
+
+The committed request fixture should preserve the customer's real XML structure while replacing the SharedSecret and any other secret value with an obvious non-secret placeholder.
+
+### Browser return contract
+
+Request:
+
+- the exact non-production `BrowserFormPost/URL` SAP Ariba will send;
+- the expected HTTPS callback host or hosts so they can be configured as an exact allowlist;
+- confirmation of the form-post contract expected by their Ariba configuration for the returned `PunchOutOrderMessage`;
+- any callback-path restrictions or environment-specific test URLs.
+
+The callback URL received in an authenticated setup request may be retained for that PunchOut session, but its scheme and host must still match server configuration. A request-supplied host never becomes trusted configuration.
+
+### Basket line contract
+
+Confirm the exact line-level fields SAP expects from CSS:
+
+- `UnitOfMeasure` value and code system, for example whether a simple `EA` value is required;
+- UNSPSC or other `Classification` requirement and the expected classification domain;
+- whether `SupplierPartAuxiliaryID` is required and, if so, what business value it must contain;
+- required item-level `Extrinsic` fields, exact names/casing and expected values;
+- whether line descriptions have any length or formatting restrictions;
+- whether basket prices are expected ex VAT or inc VAT;
+- whether SAP expects any tax element in the returned basket;
+- whether currency is always GBP or must simply follow the Magento-returned cart currency.
+
+Until these are confirmed, `SupplierPartID` is the only product identifier we can freeze: it maps to the effective Magento purchased SKU. Configurable cart lines therefore use `configured_variant.sku`; otherwise use the cart product SKU. Grouped/configurable child identity must come from Magento, never a naming convention.
+
+### SAP test and acceptance process
+
+Request:
+
+- the customer's SAP Ariba test/Catalog Tester contact;
+- how they want a test PunchOut supplier/catalogue activated;
+- any SAP-side test identifier or catalogue name that is operationally required;
+- their expected happy-path acceptance steps;
+- any required negative tests in addition to wrong credentials, replay, expiry and wrong callback host;
+- confirmation that Level 1 PunchOut is sufficient for launch;
+- confirmation that Level 2 search/indexing is not required for launch;
+- confirmation whether cXML `OrderRequest` / electronic PO delivery is a separate later requirement rather than part of PunchOut basket return.
+
+### What the real fixture must prove
+
+Once the real `PunchOutSetupRequest` arrives, use it to freeze rather than guess:
+
+- actual `From`, `To` and `Sender` credential domains/identities;
+- actual timestamp format and timezone representation;
+- actual `payloadID` shape;
+- `BuyerCookie` location/content characteristics;
+- actual `BrowserFormPost/URL` host and path;
+- namespace, DOCTYPE/DTD and cXML version details;
+- any request `Extrinsic` elements;
+- any customer-specific fields that must be echoed or mapped into the return.
+
+CSS can provide the test PunchOut setup endpoint only after the PUNCH.2 boundary is implemented and explicitly enabled in a non-production environment. Do not expose a production PunchOut endpoint merely to obtain this information.
 
 ## Acceptance boundary
 
