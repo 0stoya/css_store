@@ -60,6 +60,7 @@ const fixture = [
 
 const cxml = load(root, "lib/punchout/cxml.ts", { saxes: { SaxesParser } });
 const security = load(root, "lib/punchout/security.ts", { "node:crypto": crypto });
+const http = load(root, "lib/punchout/http.ts");
 
 test("synthetic cXML setup request parses external DTD without resolving it", () => {
   const request = cxml.parsePunchOutSetupRequest(fixture);
@@ -112,6 +113,21 @@ test("status response never needs to echo credential-bearing request XML", () =>
   });
   assert.match(response, /code="400"/);
   assert.doesNotMatch(response, /SharedSecret|synthetic-shared-secret/);
+});
+
+test("request body limit is enforced even without Content-Length", async () => {
+  const encoder = new TextEncoder();
+  const body = new ReadableStream({
+    start(controller) {
+      controller.enqueue(encoder.encode("12345"));
+      controller.enqueue(encoder.encode("67890"));
+      controller.close();
+    },
+  });
+  await assert.rejects(
+    () => http.readBoundedTextBody({ body, text: async () => "unused" }, 9),
+    /too large/,
+  );
 });
 
 test("setup response XML escapes the fixed StartPage URL", () => {
@@ -415,6 +431,7 @@ test("disabled setup route is not exposed", async () => {
     "next/server": { NextResponse: MockNextResponse },
     "@/lib/punchout/cxml": cxml,
     "@/lib/punchout/config": { getPunchOutConfig: () => ({ enabled: false }) },
+    "@/lib/punchout/http": http,
     "@/lib/punchout/security": security,
     "@/lib/punchout/session": {
       PunchOutReplayError: class extends Error {},
@@ -448,12 +465,18 @@ test("development setup route returns a fixed-origin one-use StartPage", async (
         }),
       }),
     },
+    "@/lib/punchout/http": http,
     "@/lib/punchout/security": security,
     "@/lib/punchout/session": sessionModule,
   });
+  const freshFixture = fixture.replace(
+    'timestamp="2026-10-06T16:30:00Z"',
+    'timestamp="' + new Date().toISOString() + '"',
+  );
   const response = await route.POST({
     headers: new Headers({ "content-type": "text/xml" }),
-    text: async () => fixture,
+    body: null,
+    text: async () => freshFixture,
   });
   assert.equal(response.status, 200);
   assert.match(response.body, /<PunchOutSetupResponse>/);

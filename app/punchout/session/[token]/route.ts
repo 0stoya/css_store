@@ -60,7 +60,13 @@ export async function GET(
     }
   }
 
-  const store = new PunchOutSessionStore(config.sessionDbPath);
+  let store: PunchOutSessionStore;
+  try {
+    store = new PunchOutSessionStore(config.sessionDbPath);
+  } catch {
+    return response(503, "PunchOut session storage is unavailable.");
+  }
+
   let active: ReturnType<PunchOutSessionStore["consumeEntryToken"]>;
   try {
     active = store.consumeEntryToken(entryToken);

@@ -14,7 +14,13 @@ export async function getActivePunchOutSession() {
   const browserToken = await getPunchOutBrowserToken();
   if (!browserToken) return null;
 
-  const store = new PunchOutSessionStore(config.sessionDbPath);
+  let store: PunchOutSessionStore;
+  try {
+    store = new PunchOutSessionStore(config.sessionDbPath);
+  } catch {
+    return null;
+  }
+
   try {
     const session = store.getActiveByBrowserToken(browserToken);
     if (

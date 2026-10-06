@@ -8,6 +8,10 @@ import {
 } from "@/lib/punchout/cxml";
 import { getPunchOutConfig, type PunchOutConfig } from "@/lib/punchout/config";
 import {
+  PunchOutBodyTooLargeError,
+  readBoundedTextBody,
+} from "@/lib/punchout/http";
+import {
   PunchOutReplayError,
   PunchOutSessionError,
   PunchOutSessionStore,
@@ -78,7 +82,7 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const body = await request.text();
+    const body = await readBoundedTextBody(request, config.maxBodyBytes);
     const setup = validatePunchOutSetup(
       parsePunchOutSetupRequest(body, config.maxBodyBytes),
       config,
@@ -104,6 +108,9 @@ export async function POST(request: NextRequest) {
       version: setup.version,
     }), 200);
   } catch (error) {
+    if (error instanceof PunchOutBodyTooLargeError) {
+      return statusResponse(413, "Payload Too Large", "The cXML request is too large.");
+    }
     if (error instanceof PunchOutReplayError || error instanceof PunchOutSessionError) {
       return statusResponse(409, "Conflict", "A PunchOut session cannot be created for this request.");
     }
