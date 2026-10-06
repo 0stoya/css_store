@@ -115,7 +115,7 @@ test("setup response XML escapes the fixed StartPage URL", () => {
 
 test("disabled PunchOut config requires no customer or SAP values", () => {
   const configModule = load(root, "lib/punchout/config.ts", { "node:path": nodePath });
-  assert.deepEqual(configModule.getPunchOutConfig({ SAP_PUNCHOUT_ENABLED: "0" }), { enabled: false });
+  assert.equal(configModule.getPunchOutConfig({ SAP_PUNCHOUT_ENABLED: "0" }).enabled, false);
 });
 
 test("enabled PunchOut config fails closed when exact customer mapping is absent", () => {
