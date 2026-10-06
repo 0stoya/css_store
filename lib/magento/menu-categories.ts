@@ -30,6 +30,17 @@ type CustomerCatalogueCategoryPage = {
   };
 };
 
+type RawMenuCacheEntry = {
+  expiresAt: number;
+  promise: Promise<MagentoCategoryNode[]>;
+};
+
+declare global {
+  // The category tree is store-scoped presentation metadata. Customer-specific
+  // entitlement remains live in getCustomerCategoryProductCounts().
+  var __cssStoreRawMenuCategories: RawMenuCacheEntry | undefined;
+}
+
 const STORE_ROOT = /* GraphQL */ `
   query StoreMenuRootCategoryId {
     storeConfig { root_category_id }
@@ -83,6 +94,7 @@ const CUSTOMER_CATALOGUE_CATEGORIES = /* GraphQL */ `
 `;
 
 const CUSTOMER_CATALOGUE_PAGE_SIZE = 100;
+const RAW_MENU_TTL_MS = 5 * 60 * 1000;
 
 function menuEnabled(value: number | null | undefined) {
   return value === 1;
@@ -90,6 +102,46 @@ function menuEnabled(value: number | null | undefined) {
 
 function sortCategories(categories: MenuCategory[]) {
   return categories.sort((a, b) => a.position - b.position || a.name.localeCompare(b.name));
+}
+
+async function loadRawMenuCategories(token: string) {
+  const now = Date.now();
+  const existing = globalThis.__cssStoreRawMenuCategories;
+  if (existing && existing.expiresAt > now) return existing.promise;
+
+  const promise = (async () => {
+    const root = await magentoGraphQL<{ storeConfig: { root_category_id: number | null } }>(
+      STORE_ROOT,
+      {},
+      token,
+    );
+    if (!root.storeConfig.root_category_id) return [];
+
+    const data = await magentoGraphQL<{
+      categories: { items: Array<{ children: MagentoCategoryNode[] | null }> };
+    }>(
+      MENU_CATEGORIES,
+      { rootId: String(root.storeConfig.root_category_id) },
+      token,
+    );
+
+    return (data.categories.items[0]?.children || [])
+      .filter((category) => Boolean(category?.uid && category?.name) && menuEnabled(category.include_in_menu));
+  })();
+
+  globalThis.__cssStoreRawMenuCategories = {
+    expiresAt: now + RAW_MENU_TTL_MS,
+    promise,
+  };
+
+  try {
+    return await promise;
+  } catch (error) {
+    if (globalThis.__cssStoreRawMenuCategories?.promise === promise) {
+      globalThis.__cssStoreRawMenuCategories = undefined;
+    }
+    throw error;
+  }
 }
 
 async function getCustomerCategoryProductCounts(token: string) {
@@ -157,29 +209,11 @@ function mapCategory(
 }
 
 export async function getMenuCategories(token: string): Promise<MenuCategory[]> {
-  const root = await magentoGraphQL<{ storeConfig: { root_category_id: number | null } }>(
-    STORE_ROOT,
-    {},
-    token,
-  );
-  if (!root.storeConfig.root_category_id) return [];
-
-  const data = await magentoGraphQL<{
-    categories: { items: Array<{ children: MagentoCategoryNode[] | null }> };
-  }>(
-    MENU_CATEGORIES,
-    { rootId: String(root.storeConfig.root_category_id) },
-    token,
-  );
-
-  const rawCategories = (data.categories.items[0]?.children || [])
-    .filter((category) => Boolean(category?.uid && category?.name) && menuEnabled(category.include_in_menu));
-
+  // Cache only store-wide category metadata. Customer-specific visibility and
+  // counts are deliberately recomputed from the authenticated product universe.
+  const rawCategories = await loadRawMenuCategories(token);
   if (rawCategories.length === 0) return [];
 
-  // Build the navigation scope from the same authenticated customer product
-  // universe used by "All products". This avoids store-wide category counts and
-  // keeps menu visibility aligned with company/role catalogue restrictions.
   const productCounts = await getCustomerCategoryProductCounts(token);
 
   return sortCategories(

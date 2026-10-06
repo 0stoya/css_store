@@ -19,3 +19,32 @@ test("Store nginx enables HTTP\/2 and preserves App Router streaming", () => {
   assert.match(nginx, /listen \[::\]:443 ssl http2;/);
   assert.match(nginx, /proxy_buffering off;/);
 });
+
+test("Store navigation caches only store-wide category metadata", () => {
+  const menu = source("lib/magento/menu-categories.ts");
+
+  assert.match(menu, /RAW_MENU_TTL_MS = 5 \* 60 \* 1000/);
+  assert.match(menu, /__cssStoreRawMenuCategories/);
+  assert.match(menu, /const rawCategories = await loadRawMenuCategories\(token\)/);
+  assert.match(menu, /const productCounts = await getCustomerCategoryProductCounts\(token\)/);
+  assert.match(menu, /Customer-specific visibility and[\s\S]*recomputed/);
+});
+
+test("expensive Account bootstrap is not prefetched from global Store chrome", () => {
+  const header = source("components/site-header.tsx");
+  const footer = source("components/site-footer.tsx");
+
+  assert.match(header, /href="\/account" prefetch=\{false\}/);
+  assert.match(footer, /href="\/account" prefetch=\{false\}/);
+  assert.match(footer, /href="\/account\/orders" prefetch=\{false\}/);
+  assert.match(footer, /href="\/account\/repeat-orders" prefetch=\{false\}/);
+  assert.match(footer, /href="\/account\/credit-orders" prefetch=\{false\}/);
+  assert.match(footer, /href="\/account\/returns" prefetch=\{false\}/);
+});
+
+test("customer context is memoized only within the current server render", () => {
+  const context = source("lib/magento/context.ts");
+
+  assert.match(context, /import \{ cache \} from "react"/);
+  assert.match(context, /getCustomerContext = cache/);
+});

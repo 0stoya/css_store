@@ -41,7 +41,7 @@ export function SiteHeader({
           <Settings size={16} strokeWidth={2.1} aria-hidden="true"/>
           <span>Manage</span>
         </a> : null}
-        {customerName ? <Link className="store-nav-link" href="/account">
+        {customerName ? <Link className="store-nav-link" href="/account" prefetch={false}>
           <UserRound size={16} strokeWidth={2.1} aria-hidden="true"/>
           <span>Account</span>
         </Link> : <Link href="/login">Sign in</Link>}

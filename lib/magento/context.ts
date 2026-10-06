@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { magentoGraphQL } from "@/lib/magento/client";
 
 export type CompanySummary = {
@@ -53,9 +54,9 @@ const SELECT_COMPANY = /* GraphQL */ `
   }
 `;
 
-export function getCustomerContext(token: string) {
-  return magentoGraphQL<CustomerContext>(CONTEXT, {}, token);
-}
+export const getCustomerContext = cache((token: string) =>
+  magentoGraphQL<CustomerContext>(CONTEXT, {}, token),
+);
 
 export function selectCompany(token: string, companyId: number) {
   return magentoGraphQL(SELECT_COMPANY, { companyId }, token);

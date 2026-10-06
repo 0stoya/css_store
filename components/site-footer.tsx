@@ -58,11 +58,11 @@ export function SiteFooter() {
         <section className="footer-column">
           <h2>Customer support</h2>
           <nav aria-label="Customer support">
-            <Link href="/account">My account</Link>
-            <Link href="/account/orders">Order history</Link>
-            <Link href="/account/repeat-orders">Repeat orders</Link>
-            <Link href="/account/credit-orders">Credit orders</Link>
-            <Link href="/account/returns">Returns</Link>
+            <Link href="/account" prefetch={false}>My account</Link>
+            <Link href="/account/orders" prefetch={false}>Order history</Link>
+            <Link href="/account/repeat-orders" prefetch={false}>Repeat orders</Link>
+            <Link href="/account/credit-orders" prefetch={false}>Credit orders</Link>
+            <Link href="/account/returns" prefetch={false}>Returns</Link>
           </nav>
         </section>
 
