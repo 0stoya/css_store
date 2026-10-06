@@ -44,9 +44,13 @@ const nextConfig: NextConfig = {
   reactStrictMode: true,
   images: {
     remotePatterns: imageRemotePatterns(),
-    formats: ["image/avif", "image/webp"],
+    // Prefer one broadly supported optimized format. AVIF is smaller but
+    // materially slower to encode on the first request and doubles cache
+    // variants when offered alongside WebP.
+    formats: ["image/webp"],
     qualities: [68, 75, 76, 82],
-    minimumCacheTTL: 3600,
+    minimumCacheTTL: 14400,
+    maximumDiskCacheSize: 1_000_000_000,
   },
 };
 
