@@ -170,7 +170,7 @@ export default async function BasketPage({
                   Return basket to SAP
                 </button>
                 <p className="muted small">
-                  Basket return will be enabled when the customer's SAP return-line profile is confirmed.
+                  Basket return will be enabled when the customer&apos;s SAP return-line profile is confirmed.
                 </p>
               </> : <>
                 <p className="muted small">Choose order details and delivery, then review and submit.</p>
