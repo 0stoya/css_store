@@ -1,8 +1,9 @@
 import path from "node:path";
 
 export type PunchOutCredential = { domain: string; identity: string };
+export type PunchOutAuthMode = "preauthenticated" | "fluid_exchange";
 
-export type EnabledPunchOutConfig = {
+type PunchOutBaseConfig = {
   enabled: true;
   credentials: { from: PunchOutCredential; to: PunchOutCredential; sender: PunchOutCredential };
   sharedSecret: string;
@@ -15,6 +16,15 @@ export type EnabledPunchOutConfig = {
   maxClockSkewSeconds: number;
   maxBodyBytes: number;
   storeOrigin: string;
+};
+
+export type PreauthenticatedPunchOutConfig = PunchOutBaseConfig & {
+  authMode: "preauthenticated";
+  assertion: null;
+};
+
+export type FluidExchangePunchOutConfig = PunchOutBaseConfig & {
+  authMode: "fluid_exchange";
   assertion: {
     privateKeyPem: string;
     issuer: string;
@@ -23,6 +33,10 @@ export type EnabledPunchOutConfig = {
     ttlSeconds: number;
   };
 };
+
+export type EnabledPunchOutConfig =
+  | PreauthenticatedPunchOutConfig
+  | FluidExchangePunchOutConfig;
 
 export type PunchOutConfig = { enabled: false } | EnabledPunchOutConfig;
 type Env = Record<string, string | undefined>;
@@ -45,6 +59,17 @@ function positiveInteger(env: Env, name: string, fallback: number, min: number, 
 function configuredId(env: Env, name: string) {
   const value = Number(required(env, name));
   if (!Number.isInteger(value) || value <= 0) throw new Error(name + " must be a positive integer.");
+  return value;
+}
+
+function authMode(env: Env): PunchOutAuthMode {
+  const value = required(env, "SAP_PUNCHOUT_AUTH_MODE");
+  if (value !== "preauthenticated" && value !== "fluid_exchange") {
+    throw new Error("SAP_PUNCHOUT_AUTH_MODE must be preauthenticated or fluid_exchange.");
+  }
+  if (value === "preauthenticated" && env.NODE_ENV === "production") {
+    throw new Error("SAP_PUNCHOUT_AUTH_MODE=preauthenticated is forbidden in production.");
+  }
   return value;
 }
 
@@ -95,13 +120,14 @@ function privateKeyPem(env: Env) {
 export function getPunchOutConfig(env: Env = process.env): PunchOutConfig {
   if (env.SAP_PUNCHOUT_ENABLED?.trim() !== "1") return { enabled: false };
 
+  const mode = authMode(env);
   const dbPath = required(env, "SAP_PUNCHOUT_SESSION_DB_PATH");
   if (!path.isAbsolute(dbPath)) throw new Error("SAP_PUNCHOUT_SESSION_DB_PATH must be an absolute path.");
 
   const storeCode = required(env, "SAP_PUNCHOUT_STORE_CODE");
   if (!/^[A-Za-z0-9_-]{1,32}$/.test(storeCode)) throw new Error("SAP_PUNCHOUT_STORE_CODE is invalid.");
 
-  return {
+  const base: PunchOutBaseConfig = {
     enabled: true,
     credentials: {
       from: { domain: required(env, "SAP_PUNCHOUT_FROM_DOMAIN"), identity: required(env, "SAP_PUNCHOUT_FROM_IDENTITY") },
@@ -118,6 +144,15 @@ export function getPunchOutConfig(env: Env = process.env): PunchOutConfig {
     maxClockSkewSeconds: positiveInteger(env, "SAP_PUNCHOUT_MAX_CLOCK_SKEW_SECONDS", 300, 15, 900),
     maxBodyBytes: positiveInteger(env, "SAP_PUNCHOUT_MAX_BODY_BYTES", 262144, 16384, 1048576),
     storeOrigin: storeOrigin(env),
+  };
+
+  if (mode === "preauthenticated") {
+    return { ...base, authMode: mode, assertion: null };
+  }
+
+  return {
+    ...base,
+    authMode: mode,
     assertion: {
       privateKeyPem: privateKeyPem(env),
       issuer: env.SAP_PUNCHOUT_ASSERTION_ISSUER?.trim() || "css-store-punchout",

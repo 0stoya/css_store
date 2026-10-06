@@ -15,6 +15,7 @@ const privateKeyPem = privateKey.export({ type: "pkcs8", format: "pem" }).toStri
 function config(overrides = {}) {
   return {
     enabled: true,
+    authMode: "fluid_exchange",
     credentials: {
       from: { domain: "NetworkID", identity: "buyer-test" },
       to: { domain: "NetworkID", identity: "supplier-test" },
@@ -101,6 +102,18 @@ for (const callback of ["http://buyer.test/return", "https://evil.test/return", 
   });
 }
 
+test("status response never needs to echo credential-bearing request XML", () => {
+  const response = cxml.buildPunchOutStatusResponse({
+    payloadId: "error-response",
+    timestamp: "2026-10-06T16:30:01Z",
+    code: 400,
+    text: "Bad Request",
+    message: "The PunchOut request was not accepted.",
+  });
+  assert.match(response, /code="400"/);
+  assert.doesNotMatch(response, /SharedSecret|synthetic-shared-secret/);
+});
+
 test("setup response XML escapes the fixed StartPage URL", () => {
   const response = cxml.buildPunchOutSetupResponse({
     payloadId: "response-1",
@@ -121,6 +134,54 @@ test("disabled PunchOut config requires no customer or SAP values", () => {
 test("enabled PunchOut config fails closed when exact customer mapping is absent", () => {
   const configModule = load(root, "lib/punchout/config.ts", { "node:path": nodePath });
   assert.throws(() => configModule.getPunchOutConfig({ SAP_PUNCHOUT_ENABLED: "1" }), /required/);
+});
+
+function preauthEnv(overrides = {}) {
+  return {
+    NODE_ENV: "development",
+    SAP_PUNCHOUT_ENABLED: "1",
+    SAP_PUNCHOUT_AUTH_MODE: "preauthenticated",
+    SAP_PUNCHOUT_FROM_DOMAIN: "NetworkID",
+    SAP_PUNCHOUT_FROM_IDENTITY: "buyer-test",
+    SAP_PUNCHOUT_TO_DOMAIN: "NetworkID",
+    SAP_PUNCHOUT_TO_IDENTITY: "supplier-test",
+    SAP_PUNCHOUT_SENDER_DOMAIN: "NetworkID",
+    SAP_PUNCHOUT_SENDER_IDENTITY: "sender-test",
+    SAP_PUNCHOUT_SHARED_SECRET: "synthetic-shared-secret",
+    SAP_PUNCHOUT_MAGENTO_CUSTOMER_ID: "42",
+    SAP_PUNCHOUT_COMPANY_ID: "5437",
+    SAP_PUNCHOUT_STORE_CODE: "default",
+    SAP_PUNCHOUT_ALLOWED_RETURN_HOSTS: "buyer.test",
+    SAP_PUNCHOUT_STORE_ORIGIN: "http://localhost:3000",
+    SAP_PUNCHOUT_SESSION_DB_PATH: "/tmp/css-store-punchout-test.sqlite",
+    ...overrides,
+  };
+}
+
+test("preauthenticated auth mode works in development without a Fluid signing key", () => {
+  const configModule = load(root, "lib/punchout/config.ts", { "node:path": nodePath });
+  const result = configModule.getPunchOutConfig(preauthEnv());
+  assert.equal(result.enabled, true);
+  assert.equal(result.authMode, "preauthenticated");
+  assert.equal(result.assertion, null);
+});
+
+test("preauthenticated auth mode is forbidden in production", () => {
+  const configModule = load(root, "lib/punchout/config.ts", { "node:path": nodePath });
+  assert.throws(
+    () => configModule.getPunchOutConfig(preauthEnv({ NODE_ENV: "production", SAP_PUNCHOUT_STORE_ORIGIN: "https://store.example.test" })),
+    /forbidden in production/,
+  );
+});
+
+test("fluid_exchange mode still requires the private signing key", () => {
+  const configModule = load(root, "lib/punchout/config.ts", { "node:path": nodePath });
+  assert.throws(
+    () => configModule.getPunchOutConfig({
+      ...preauthEnv({ SAP_PUNCHOUT_AUTH_MODE: "fluid_exchange" }),
+    }),
+    /SAP_PUNCHOUT_ASSERTION_PRIVATE_KEY_B64/,
+  );
 });
 
 test("durable session store enforces replay, one active cart principal, one-use entry and one return", () => {
@@ -178,6 +239,95 @@ test("effective SAP SupplierPartID is the configured variant SKU when present", 
   const order = load(root, "lib/punchout/order-message.ts");
   assert.equal(order.effectivePunchOutSku({ product: { sku: "PARENT" }, configured_variant: { sku: "CHILD" } }), "CHILD");
   assert.equal(order.effectivePunchOutSku({ product: { sku: "SIMPLE" }, configured_variant: null }), "SIMPLE");
+});
+
+test("preauthenticated customer verification requires exact selected company and empty cart", async () => {
+  const customer = load(root, "lib/punchout/customer-session.ts", {
+    "@/lib/magento/context": {
+      getCustomerContext: async () => ({
+        css_company_context: {
+          authenticated: true,
+          customer_id: 42,
+          selected_company_id: 5437,
+          companies: [{ company_id: 5437, active: true }],
+        },
+        css_ordering_capabilities: {
+          authenticated: true,
+          company_context: true,
+          company_id: 5437,
+          company_active: true,
+        },
+      }),
+    },
+    "@/lib/magento/cart": {
+      getCustomerCartSummary: async () => ({ total_quantity: 0, itemsV2: { items: [] } }),
+      cartHasItems: (cart) => cart.total_quantity > 0 || cart.itemsV2.items.length > 0,
+    },
+  });
+
+  await assert.doesNotReject(() =>
+    customer.verifyPunchOutCustomerToken(config(), "token", { requireEmptyCart: true }),
+  );
+});
+
+test("preauthenticated customer verification rejects a stale Magento basket", async () => {
+  const customer = load(root, "lib/punchout/customer-session.ts", {
+    "@/lib/magento/context": {
+      getCustomerContext: async () => ({
+        css_company_context: {
+          authenticated: true,
+          customer_id: 42,
+          selected_company_id: 5437,
+          companies: [{ company_id: 5437, active: true }],
+        },
+        css_ordering_capabilities: {
+          authenticated: true,
+          company_context: true,
+          company_id: 5437,
+          company_active: true,
+        },
+      }),
+    },
+    "@/lib/magento/cart": {
+      getCustomerCartSummary: async () => ({ total_quantity: 1, itemsV2: { items: [{ uid: "old-line" }] } }),
+      cartHasItems: (cart) => cart.total_quantity > 0 || cart.itemsV2.items.length > 0,
+    },
+  });
+
+  await assert.rejects(
+    () => customer.verifyPunchOutCustomerToken(config(), "token", { requireEmptyCart: true }),
+    /must be empty/,
+  );
+});
+
+test("preauthenticated customer verification rejects a different selected company", async () => {
+  const customer = load(root, "lib/punchout/customer-session.ts", {
+    "@/lib/magento/context": {
+      getCustomerContext: async () => ({
+        css_company_context: {
+          authenticated: true,
+          customer_id: 42,
+          selected_company_id: 9999,
+          companies: [{ company_id: 5437, active: true }],
+        },
+        css_ordering_capabilities: {
+          authenticated: true,
+          company_context: true,
+          company_id: 9999,
+          company_active: true,
+        },
+      }),
+    },
+    "@/lib/magento/cart": {
+      getCustomerCartSummary: async () => ({ total_quantity: 0, itemsV2: { items: [] } }),
+      cartHasItems: () => false,
+    },
+  });
+
+  await assert.rejects(
+    () => customer.verifyPunchOutCustomerToken(config(), "token", { requireEmptyCart: true }),
+    /does not match/,
+  );
 });
 
 test("PunchOut assertion is RS256 and bound to the configured principal", () => {
@@ -249,6 +399,151 @@ test("Fluid exchange verifies and selects the exact configured company", async (
   assert.equal(calls.length, 1);
   assert.match(calls[0].query, /css_punchout_customer_session/);
   assert.equal(reads, 2);
+});
+
+class MockNextResponse {
+  constructor(body = null, init = {}) {
+    this.body = body;
+    this.status = init.status ?? 200;
+    this.headers = new Headers(init.headers || {});
+  }
+}
+
+test("disabled setup route is not exposed", async () => {
+  const route = load(root, "app/api/punchout/cxml/route.ts", {
+    "node:crypto": crypto,
+    "next/server": { NextResponse: MockNextResponse },
+    "@/lib/punchout/cxml": cxml,
+    "@/lib/punchout/config": { getPunchOutConfig: () => ({ enabled: false }) },
+    "@/lib/punchout/security": security,
+    "@/lib/punchout/session": {
+      PunchOutReplayError: class extends Error {},
+      PunchOutSessionError: class extends Error {},
+      PunchOutSessionStore: class { constructor() { throw new Error("disabled route must not open storage"); } },
+    },
+  });
+  const response = await route.POST({
+    headers: new Headers({ "content-type": "text/xml" }),
+    text: async () => fixture,
+  });
+  assert.equal(response.status, 404);
+});
+
+test("development setup route returns a fixed-origin one-use StartPage", async () => {
+  const sessionModule = load(root, "lib/punchout/session.ts", {
+    "node:crypto": crypto,
+    "node:sqlite": { DatabaseSync },
+  });
+  const route = load(root, "app/api/punchout/cxml/route.ts", {
+    "node:crypto": crypto,
+    "next/server": { NextResponse: MockNextResponse },
+    "@/lib/punchout/cxml": cxml,
+    "@/lib/punchout/config": {
+      getPunchOutConfig: () => ({
+        ...config({
+          authMode: "preauthenticated",
+          assertion: null,
+          sessionDbPath: ":memory:",
+          storeOrigin: "http://localhost:3000",
+        }),
+      }),
+    },
+    "@/lib/punchout/security": security,
+    "@/lib/punchout/session": sessionModule,
+  });
+  const response = await route.POST({
+    headers: new Headers({ "content-type": "text/xml" }),
+    text: async () => fixture,
+  });
+  assert.equal(response.status, 200);
+  assert.match(response.body, /<PunchOutSetupResponse>/);
+  assert.match(response.body, /http:\/\/localhost:3000\/punchout\/session\/[A-Za-z0-9_-]{43}/);
+});
+
+test("preauthenticated StartPage does not consume its token before a login exists", async () => {
+  let storeConstructed = false;
+  const route = load(root, "app/punchout/session/[token]/route.ts", {
+    "next/server": { NextResponse: MockNextResponse },
+    "@/lib/session": {
+      getCustomerToken: async () => null,
+      setCustomerToken: async () => { throw new Error("must not set customer token"); },
+    },
+    "@/lib/punchout/browser-session": {
+      setPunchOutBrowserToken: async () => { throw new Error("must not bind PunchOut cookie"); },
+    },
+    "@/lib/punchout/config": {
+      getPunchOutConfig: () => config({ authMode: "preauthenticated", assertion: null }),
+    },
+    "@/lib/punchout/customer-session": {
+      verifyPunchOutCustomerToken: async () => { throw new Error("must not verify without login"); },
+    },
+    "@/lib/punchout/fluid-session": {
+      exchangePunchOutCustomerSession: async () => { throw new Error("must not call Fluid"); },
+    },
+    "@/lib/punchout/session": {
+      PunchOutSessionStore: class {
+        constructor() { storeConstructed = true; }
+      },
+    },
+  });
+  const response = await route.GET({}, {
+    params: Promise.resolve({ token: "a".repeat(43) }),
+  });
+  assert.equal(response.status, 401);
+  assert.equal(storeConstructed, false);
+});
+
+test("preauthenticated StartPage binds PunchOut only after exact customer verification", async () => {
+  let verified = 0;
+  let bound = null;
+  const route = load(root, "app/punchout/session/[token]/route.ts", {
+    "next/server": { NextResponse: MockNextResponse },
+    "@/lib/session": {
+      getCustomerToken: async () => "existing-customer-token",
+      setCustomerToken: async () => { throw new Error("preauthenticated mode must not replace customer token"); },
+    },
+    "@/lib/punchout/browser-session": {
+      setPunchOutBrowserToken: async (token, maxAge) => { bound = { token, maxAge }; },
+    },
+    "@/lib/punchout/config": {
+      getPunchOutConfig: () => config({ authMode: "preauthenticated", assertion: null }),
+    },
+    "@/lib/punchout/customer-session": {
+      verifyPunchOutCustomerToken: async (_config, token, options) => {
+        assert.equal(token, "existing-customer-token");
+        assert.equal(options.requireEmptyCart, true);
+        verified += 1;
+      },
+    },
+    "@/lib/punchout/fluid-session": {
+      exchangePunchOutCustomerSession: async () => { throw new Error("must not call Fluid"); },
+    },
+    "@/lib/punchout/session": {
+      PunchOutSessionStore: class {
+        consumeEntryToken(token) {
+          assert.equal(token, "b".repeat(43));
+          return {
+            browserToken: "c".repeat(43),
+            session: {
+              customerId: 42,
+              companyId: 5437,
+              storeCode: "default",
+              expiresAt: Date.now() + 600000,
+            },
+          };
+        }
+        close() {}
+      },
+    },
+  });
+  const response = await route.GET({}, {
+    params: Promise.resolve({ token: "b".repeat(43) }),
+  });
+  assert.equal(response.status, 303);
+  assert.equal(response.headers.get("Location"), "/catalogue");
+  assert.equal(verified, 1);
+  assert.equal(bound.token, "c".repeat(43));
+  assert.ok(bound.maxAge > 0);
 });
 
 class Navigation extends Error {

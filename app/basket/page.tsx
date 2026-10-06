@@ -8,6 +8,7 @@ import { SiteHeader } from "@/components/site-header";
 import { getBasketPageContext } from "@/lib/magento/basket-page";
 import { basketImageNeedsFallback } from "@/lib/magento/cart-images";
 import type { CartMoney } from "@/lib/magento/cart";
+import { getActivePunchOutSession } from "@/lib/punchout/active-session";
 import { requireCustomerToken } from "@/lib/session";
 import {
   assignBasketItemEmployeeAction,
@@ -32,9 +33,10 @@ export default async function BasketPage({
   searchParams: Promise<{ error?: string; notice?: string }>;
 }) {
   const token = await requireCustomerToken();
-  const [basket, messages] = await Promise.all([
+  const [basket, messages, punchOutSession] = await Promise.all([
     getBasketPageContext(token),
     searchParams,
+    getActivePunchOutSession(),
   ]);
   const { cart, ordering, selectedCompany: selected, customerName } = basket;
   const items = cart.itemsV2.items;
@@ -160,11 +162,23 @@ export default async function BasketPage({
             </dl>
 
             <div className="basket-checkout-action">
-              <p className="muted small">Choose order details and delivery, then review and submit.</p>
-              <Link className="button" href={checkoutHref}>
-                <span>Continue to checkout</span>
-                <ArrowRight size={18} aria-hidden="true"/>
-              </Link>
+              {punchOutSession ? <>
+                <p className="muted small">
+                  SAP PunchOut session active. Storefront checkout is disabled for this basket.
+                </p>
+                <button className="button" type="button" disabled>
+                  Return basket to SAP
+                </button>
+                <p className="muted small">
+                  Basket return will be enabled when the customer's SAP return-line profile is confirmed.
+                </p>
+              </> : <>
+                <p className="muted small">Choose order details and delivery, then review and submit.</p>
+                <Link className="button" href={checkoutHref}>
+                  <span>Continue to checkout</span>
+                  <ArrowRight size={18} aria-hidden="true"/>
+                </Link>
+              </>}
             </div>
           </section>
         </aside>

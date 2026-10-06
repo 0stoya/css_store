@@ -127,3 +127,21 @@ export function buildPunchOutSetupResponse(input: {
     "</URL></StartPage></PunchOutSetupResponse></Response></cXML>",
   ].join("");
 }
+
+export function buildPunchOutStatusResponse(input: {
+  payloadId: string;
+  timestamp: string;
+  code: number;
+  text: string;
+  message: string;
+  version?: string | null;
+}) {
+  const version = input.version ? " version=\"" + escapeXml(input.version) + "\"" : "";
+  return [
+    "<?xml version=\"1.0\" encoding=\"UTF-8\"?>",
+    "<cXML payloadID=\"" + escapeXml(input.payloadId) + "\" timestamp=\"" + escapeXml(input.timestamp) + "\"" + version + ">",
+    "<Response><Status code=\"" + String(input.code) + "\" text=\"" + escapeXml(input.text) + "\">",
+    escapeXml(input.message),
+    "</Status></Response></cXML>",
+  ].join("");
+}

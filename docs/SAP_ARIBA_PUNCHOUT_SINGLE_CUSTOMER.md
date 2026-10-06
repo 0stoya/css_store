@@ -41,7 +41,9 @@ PunchOut should reuse those paths rather than create a second catalogue, pricing
 
 Magento / Fluid remains the application/domain authority. The storefront must not call OGL directly and must not use Magento Admin APIs.
 
-The reviewed backend seam is a small additive Fluid customer-session exchange tracked in `0stoya/Fluid#108`. css_store signs a short-lived one-use RS256 assertion only after its PunchOut setup/session boundary has authenticated the request. Fluid verifies that assertion against a public key, binds it to one configured customer/company/store, revalidates that relationship, consumes the assertion replay ID, and reuses the existing customer-token issuer. The storefront never stores or replays a customer's Magento password.
+The reviewed production backend seam is a small additive Fluid customer-session exchange tracked in `0stoya/Fluid#108`. css_store signs a short-lived one-use RS256 assertion only after its PunchOut setup/session boundary has authenticated the request. Fluid verifies that assertion against a public key, binds it to one configured customer/company/store, revalidates that relationship, consumes the assertion replay ID, and reuses the existing customer-token issuer. The storefront never stores or replays a customer's Magento password.
+
+Fluid cannot currently be deployed, so development may temporarily use `SAP_PUNCHOUT_AUTH_MODE=preauthenticated`. In that mode the developer must first sign into css_store normally as the exact configured PunchOut test customer with the configured company already selected and an empty Magento cart. css_store verifies that existing customer token before consuming the StartPage token. This mode does not mint, impersonate or exchange a customer token and is rejected outright when `NODE_ENV=production`.
 
 ## Deliberately narrow launch scope
 
@@ -196,6 +198,7 @@ Configuration is intentionally single-customer and explicit.
 
 ```text
 SAP_PUNCHOUT_ENABLED
+SAP_PUNCHOUT_AUTH_MODE
 SAP_PUNCHOUT_FROM_DOMAIN
 SAP_PUNCHOUT_FROM_IDENTITY
 SAP_PUNCHOUT_TO_DOMAIN
@@ -220,6 +223,11 @@ SAP_PUNCHOUT_ASSERTION_TTL_SECONDS
 ```
 
 Secrets stay in protected production configuration and must never be committed.
+
+`SAP_PUNCHOUT_AUTH_MODE` has exactly two values:
+
+- `preauthenticated` — development bridge only; requires an existing exact Magento customer/company login and is forbidden in production;
+- `fluid_exchange` — intended production mode through Fluid PR #108; requires the RS256 private-key configuration on css_store.
 
 The return-host allowlist should be exact and HTTPS-only. Do not trust arbitrary `BrowserFormPost` destinations simply because the cXML credential matched.
 
@@ -316,7 +324,7 @@ No production PunchOut entry point is enabled in PUNCH.1.
 
 ### PUNCH.2 — cXML setup boundary
 
-Current draft implementation (not publicly routed):
+Current draft implementation:
 
 - strict SAX cXML parser using `saxes`, with bounded body/depth/node counts;
 - external cXML SYSTEM DTD declarations may be present but are never fetched/resolved;
@@ -329,17 +337,28 @@ Current draft implementation (not publicly routed):
 - `PunchOutSetupResponse` serializer;
 - synthetic accepted/rejected fixtures only;
 - signed Fluid customer-session exchange client for Fluid draft PR #108;
-- PunchOut checkout guard that blocks native `placeOrder` and `cssSubmitCreditOrder` submission whenever a PunchOut browser-session cookie is present.
+- PunchOut checkout guard that blocks native `placeOrder` and `cssSubmitCreditOrder` submission whenever a PunchOut browser-session cookie is present;
+- gated `POST /api/punchout/cxml` route returning 404 while PunchOut is disabled;
+- gated one-use `GET /punchout/session/[token]` StartPage route.
 
-The public `POST /api/punchout/cxml` route remains deliberately absent until this foundation passes the local/build/runtime gates and a real customer fixture is reviewed.
+Production still keeps `SAP_PUNCHOUT_ENABLED=0`, so no working production PunchOut entry point is exposed. The temporary `preauthenticated` bridge cannot be enabled under `NODE_ENV=production`.
 
 ### PUNCH.3 — storefront session
 
+Implemented foundation:
+
 - one-use StartPage token;
-- Fluid customer-token exchange if required;
-- company verification;
-- PunchOut-mode HttpOnly cookie;
-- catalogue entry using existing Magento / Fluid context.
+- `preauthenticated` development bridge while Fluid #108 is unavailable;
+- exact customer/company/selected-company verification before the development bridge consumes the StartPage token;
+- empty-cart requirement before a new PunchOut browser session can begin;
+- future `fluid_exchange` path retained for Fluid #108;
+- PunchOut-mode HttpOnly host-only cookie;
+- catalogue entry using the existing Magento / Fluid customer context;
+- logout/session-expiry clears the PunchOut cookie;
+- company switching and Store -> Portal app switching are blocked during PunchOut;
+- basket visibly enters PunchOut mode and no longer offers normal checkout.
+
+The Return basket button remains disabled until the customer's real SAP return-line/form-post contract is supplied.
 
 ### PUNCH.4 — basket return
 
@@ -375,6 +394,33 @@ Production enablement is a separate explicit decision after PUNCH.5 evidence is 
 ### Later — optional electronic PO
 
 If required, design cXML `OrderRequest` intake as a separate write boundary. Returning a PunchOut basket to SAP does not itself create a Magento / OGL order.
+
+## Development without Fluid #108
+
+This mode exists so PUNCH.2/PUNCH.3 can be exercised while Magento/Fluid deployment is frozen. It is not the launch authentication mechanism.
+
+Use a dedicated non-production Magento customer assigned to the intended test company. Do not use a real employee's normal storefront account.
+
+Development sequence:
+
+```text
+1. run css_store outside NODE_ENV=production
+2. SAP_PUNCHOUT_ENABLED=1
+3. SAP_PUNCHOUT_AUTH_MODE=preauthenticated
+4. configure synthetic cXML credentials + exact test customer/company/store
+5. sign into css_store normally as that exact test customer
+6. select the configured company and ensure customerCart is empty
+7. POST the synthetic PunchOutSetupRequest to /api/punchout/cxml
+8. open the returned StartPage URL
+9. shop through the normal catalogue/cart
+10. confirm Basket shows PunchOut mode and normal checkout/app-switch/company-switch paths are blocked
+```
+
+No Magento password is added to environment configuration. The password is entered only through the ordinary storefront login during the development test.
+
+If the current customer token is missing, belongs to another customer, has another selected company, has an inactive company context, or has a non-empty cart, the StartPage request fails before its one-use entry token is consumed.
+
+When Fluid #108 becomes deployable, switch to `SAP_PUNCHOUT_AUTH_MODE=fluid_exchange`; the SAP cXML/session boundary does not need to be redesigned.
 
 ## Required SAP/customer inputs
 
@@ -450,7 +496,7 @@ Once the real `PunchOutSetupRequest` arrives, use it to freeze rather than guess
 - any request `Extrinsic` elements;
 - any customer-specific fields that must be echoed or mapped into the return.
 
-CSS can provide the test PunchOut setup endpoint only after the PUNCH.2 boundary is implemented and explicitly enabled in a non-production environment. Do not expose a production PunchOut endpoint merely to obtain this information.
+The setup route now exists behind `SAP_PUNCHOUT_ENABLED` and can be exercised with synthetic credentials in a non-production development environment. Do not expose or enable the production PunchOut endpoint merely to obtain supplier information.
 
 ## Acceptance boundary
 

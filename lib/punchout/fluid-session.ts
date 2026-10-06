@@ -1,7 +1,7 @@
 import { createSign, randomBytes } from "node:crypto";
 import { magentoGraphQL } from "@/lib/magento/client";
 import { getCustomerContext, selectCompany } from "@/lib/magento/context";
-import type { EnabledPunchOutConfig } from "@/lib/punchout/config";
+import type { FluidExchangePunchOutConfig } from "@/lib/punchout/config";
 
 const EXCHANGE = [
   "mutation StorePunchOutCustomerSession($assertion: String!) {",
@@ -12,7 +12,7 @@ const EXCHANGE = [
 function base64Url(value: Buffer | string) { return Buffer.from(value).toString("base64url"); }
 
 export function createPunchOutCustomerAssertion(
-  config: EnabledPunchOutConfig,
+  config: FluidExchangePunchOutConfig,
   nowMs = Date.now(),
   jti = randomBytes(24).toString("base64url"),
 ) {
@@ -30,7 +30,7 @@ export function createPunchOutCustomerAssertion(
   return signingInput + "." + signer.sign(config.assertion.privateKeyPem).toString("base64url");
 }
 
-export async function exchangePunchOutCustomerSession(config: EnabledPunchOutConfig) {
+export async function exchangePunchOutCustomerSession(config: FluidExchangePunchOutConfig) {
   const assertion = createPunchOutCustomerAssertion(config);
   const data = await magentoGraphQL<{ css_punchout_customer_session: string }>(EXCHANGE, { assertion });
   const token = data.css_punchout_customer_session?.trim();
