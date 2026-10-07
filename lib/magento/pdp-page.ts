@@ -40,12 +40,7 @@ const CONFIGURABLE_CONFIGURATION_FIELDS = /* GraphQL */ `
   }
   variants {
     attributes { uid code label value_index }
-    product {
-      sku
-      name
-      stock_status
-      css_stock_info { available stock_status delivery_message }
-    }
+    product { sku name stock_status }
   }
 `;
 
