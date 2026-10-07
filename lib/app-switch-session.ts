@@ -3,8 +3,10 @@ import { cookies } from "next/headers";
 
 const STATE_COOKIE = "css_app_switch_state";
 const VERIFIER_COOKIE = "css_app_switch_verifier";
+const TARGET_COOKIE = "css_app_switch_target";
 const DEFAULT_COOKIE_PATH = "/api/auth/sso";
 const VALUE_PATTERN = /^[A-Za-z0-9_-]{43}$/;
+const TARGET_PATTERN = /^(\d+):(\d+)$/;
 
 function base64Url(value: Buffer) {
   return value.toString("base64url");
@@ -32,6 +34,47 @@ export async function beginAppSwitch(cookiePath = DEFAULT_COOKIE_PATH) {
   store.set(STATE_COOKIE, state, transientCookieOptions(cookiePath));
   store.set(VERIFIER_COOKIE, verifier, transientCookieOptions(cookiePath));
   return { state, challenge };
+}
+
+export async function rememberAppSwitchTarget(
+  companyId: number,
+  userId: number,
+  cookiePath = DEFAULT_COOKIE_PATH,
+) {
+  if (
+    !Number.isInteger(companyId)
+    || companyId <= 0
+    || !Number.isInteger(userId)
+    || userId <= 0
+  ) {
+    throw new Error("A valid app-switch target is required.");
+  }
+
+  const store = await cookies();
+  store.set(TARGET_COOKIE, `${companyId}:${userId}`, transientCookieOptions(cookiePath));
+}
+
+export async function consumeAppSwitchTarget(cookiePath = DEFAULT_COOKIE_PATH) {
+  const store = await cookies();
+  const rawTarget = store.get(TARGET_COOKIE)?.value ?? "";
+  const expired = { ...transientCookieOptions(cookiePath), maxAge: 0 };
+  store.set(TARGET_COOKIE, "", expired);
+
+  const match = TARGET_PATTERN.exec(rawTarget);
+  if (!match) return null;
+
+  const companyId = Number(match[1]);
+  const userId = Number(match[2]);
+  if (
+    !Number.isInteger(companyId)
+    || companyId <= 0
+    || !Number.isInteger(userId)
+    || userId <= 0
+  ) {
+    return null;
+  }
+
+  return { companyId, userId };
 }
 
 export async function consumeAppSwitchState(
