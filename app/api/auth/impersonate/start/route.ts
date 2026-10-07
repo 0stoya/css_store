@@ -1,8 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { beginAppSwitch, rememberAppSwitchTarget } from "@/lib/app-switch-session";
 import { getAdminPortalUrl } from "@/lib/config";
-import { revokeCustomerToken } from "@/lib/magento/auth";
-import { clearCustomerToken, getCustomerToken } from "@/lib/session";
+import { clearCustomerToken } from "@/lib/session";
 
 export const dynamic = "force-dynamic";
 
@@ -32,8 +31,8 @@ export async function GET(request: NextRequest) {
   const userId = positiveInteger(request.nextUrl.searchParams.get("userId"));
   if (!companyId || !userId) return localFailure();
 
-  const existingToken = await getCustomerToken();
-  if (existingToken) await revokeCustomerToken(existingToken);
+  // Replace only this browser's Store session. Magento's revokeCustomerToken is
+  // customer-wide and would invalidate the customer's other legitimate sessions.
   await clearCustomerToken();
 
   await rememberAppSwitchTarget(companyId, userId, COOKIE_PATH);
