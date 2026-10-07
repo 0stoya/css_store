@@ -1,6 +1,8 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { beginAppSwitch } from "@/lib/app-switch-session";
+import { beginAppSwitch, rememberAppSwitchTarget } from "@/lib/app-switch-session";
 import { getAdminPortalUrl } from "@/lib/config";
+import { revokeCustomerToken } from "@/lib/magento/auth";
+import { clearCustomerToken, getCustomerToken } from "@/lib/session";
 
 export const dynamic = "force-dynamic";
 
@@ -30,6 +32,11 @@ export async function GET(request: NextRequest) {
   const userId = positiveInteger(request.nextUrl.searchParams.get("userId"));
   if (!companyId || !userId) return localFailure();
 
+  const existingToken = await getCustomerToken();
+  if (existingToken) await revokeCustomerToken(existingToken);
+  await clearCustomerToken();
+
+  await rememberAppSwitchTarget(companyId, userId, COOKIE_PATH);
   const { state, challenge } = await beginAppSwitch(COOKIE_PATH);
   const authorizeUrl = new URL("/api/auth/impersonate/authorize", getAdminPortalUrl());
   authorizeUrl.searchParams.set("state", state);
