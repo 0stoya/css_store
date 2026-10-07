@@ -82,7 +82,7 @@ export function StarterKitBuilder({
   useEffect(() => {
     setQuantities(emptyQuantities(items));
     setSelections({});
-  }, [itemSignature]);
+  }, [itemSignature, items]);
 
   const progress = useMemo(() => {
     const selectedItems = items.filter((item) => item.available && (quantities[item.index] || 0) > 0);
