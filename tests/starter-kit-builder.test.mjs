@@ -43,7 +43,9 @@ test("Starter-kit PDP starts every available grouped item unselected", () => {
   assert.match(product, /small_image: \{ url: string; label: string \| null \} \| null/);
   assert.match(page, /image: child\.small_image \|\| null/);
   assert.doesNotMatch(page, /defaultQuantity/);
-  assert.match(builder, /items\.map\(\(item\) => \[item\.index, 0\]\)/);
+  assert.match(builder, /function emptyQuantities/);
+  assert.match(builder, /setQuantities\(emptyQuantities\(items\)\)/);
+  assert.match(builder, /setSelections\(\{\}\)/);
   assert.match(builder, /disabled=\{!item\.available \|\| !selected\}/);
   assert.match(page, /childPrice && childPrice\.value > 0/);
 });
