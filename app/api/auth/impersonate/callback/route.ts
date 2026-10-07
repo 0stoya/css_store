@@ -8,7 +8,6 @@ import {
   exchangeCustomerAppSwitch,
   getCustomerAppSwitchContext,
 } from "@/lib/magento/app-switch";
-import { revokeCustomerToken } from "@/lib/magento/auth";
 import { setCustomerImpersonation, setCustomerToken } from "@/lib/session";
 
 export const dynamic = "force-dynamic";
@@ -46,9 +45,10 @@ export async function GET(request: NextRequest) {
     return loginFailure();
   }
 
-  let token: string | null = null;
+  let stage = "exchange";
   try {
-    token = await exchangeCustomerAppSwitch(code, "STORE", verifier);
+    const token = await exchangeCustomerAppSwitch(code, "STORE", verifier);
+    stage = "context";
     const context = await getCustomerAppSwitchContext(token);
     const matches = context.authenticated
       && context.isCompanyCustomer
@@ -65,10 +65,10 @@ export async function GET(request: NextRequest) {
         authenticated: context.authenticated,
         isCompanyCustomer: context.isCompanyCustomer,
       });
-      await revokeCustomerToken(token);
       return loginFailure();
     }
 
+    stage = "session";
     await setCustomerToken(token);
     await setCustomerImpersonation();
 
@@ -82,9 +82,9 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.warn("[impersonation] callback failed", {
+      stage,
       error: error instanceof Error ? error.message : "unknown error",
     });
-    if (token) await revokeCustomerToken(token);
     return loginFailure();
   }
 }
