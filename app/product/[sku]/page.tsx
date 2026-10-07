@@ -211,7 +211,7 @@ export default async function ProductPage({
             <EmployeePicker employees={employeeOrdering.employees}/>
           </section> : null}
 
-          <StarterKitBuilder items={starterKitItems} canAdd={canAdd}/>
+          <StarterKitBuilder key={product.sku} items={starterKitItems} canAdd={canAdd}/>
 
           {employeeOrdering.usesEmployee && !employeeOrdering.multiEmployeeBasket ? <p className="pdp-checkout-note starter-kit-checkout-note">
             Employee selection happens at the start of checkout.
