@@ -72,8 +72,6 @@ export default async function ProductPage({
         const step = child.css_purchase_constraints?.increments_enforced
           ? child.css_purchase_constraints.quantity_increment
           : 1;
-        const configuredQuantity = Number(item.qty || 0);
-
         return {
           index: originalIndex,
           sku: child.sku,
@@ -88,7 +86,6 @@ export default async function ProductPage({
             : allowanceBlocked
               ? "No remaining purchase allowance."
               : null,
-          defaultQuantity: configuredQuantity > 0 ? configuredQuantity : 0,
           minPositive,
           max: child.css_purchase_constraints?.maximum_quantity ?? null,
           step,
