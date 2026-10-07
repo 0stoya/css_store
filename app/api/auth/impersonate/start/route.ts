@@ -31,8 +31,7 @@ export async function GET(request: NextRequest) {
   const userId = positiveInteger(request.nextUrl.searchParams.get("userId"));
   if (!companyId || !userId) return localFailure();
 
-  // Replace only this browser's Store session. Magento's revokeCustomerToken is
-  // customer-wide and would invalidate the customer's other legitimate sessions.
+  // Replace only this browser's Store session. Magento's customer-token revocation is\n  // customer-wide and would invalidate the customer's other legitimate sessions.
   await clearCustomerToken();
 
   await rememberAppSwitchTarget(companyId, userId, COOKIE_PATH);
