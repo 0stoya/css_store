@@ -21,7 +21,16 @@ const EXCHANGE_TICKET = /* GraphQL */ `
 const VALIDATE_CUSTOMER = /* GraphQL */ `
   query ValidateCustomerAppSwitch {
     customer { email }
-    css_company_context { authenticated is_company_customer }
+    css_company_context {
+      authenticated
+      is_company_customer
+      selected_company_id
+      companies {
+        company_id
+        company_user_id
+        selected
+      }
+    }
   }
 `;
 
@@ -92,13 +101,34 @@ export async function exchangeCustomerAppSwitch(
   return data.cssExchangeCustomerAppSwitch;
 }
 
-export async function validateCompanyCustomerToken(token: string) {
+export async function validateCompanyCustomerToken(
+  token: string,
+  expectedCompanyId?: number,
+  expectedUserId?: number,
+) {
   const data = await request<{
     customer: { email: string };
-    css_company_context: { authenticated: boolean; is_company_customer: boolean };
+    css_company_context: {
+      authenticated: boolean;
+      is_company_customer: boolean;
+      selected_company_id: number | null;
+      companies: Array<{
+        company_id: number;
+        company_user_id: number;
+        selected: boolean;
+      }>;
+    };
   }>(VALIDATE_CUSTOMER, {}, token);
+
+  const expectedMembership = expectedCompanyId
+    ? data.css_company_context.companies.find(
+        (company) => company.company_id === expectedCompanyId && company.selected,
+      )
+    : null;
 
   return data.css_company_context.authenticated
     && data.css_company_context.is_company_customer
-    && Boolean(data.customer.email);
+    && Boolean(data.customer.email)
+    && (!expectedCompanyId || data.css_company_context.selected_company_id === expectedCompanyId)
+    && (!expectedUserId || expectedMembership?.company_user_id === expectedUserId);
 }
