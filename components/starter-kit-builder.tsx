@@ -82,7 +82,10 @@ export function StarterKitBuilder({
   useEffect(() => {
     setQuantities(emptyQuantities(items));
     setSelections({});
-  }, [itemSignature, items]);
+    // Reset only when the actual kit composition changes. The serialized
+    // items array can receive a new identity during client renders.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [itemSignature]);
 
   const progress = useMemo(() => {
     const selectedItems = items.filter((item) => item.available && (quantities[item.index] || 0) > 0);
