@@ -35,6 +35,7 @@ test("Starter-kit items submit one grouped selection with the existing field con
 
 test("Starter-kit PDP starts every available grouped item unselected", () => {
   const page = source("app/product/[sku]/page.tsx");
+  const builder = source("components/starter-kit-builder.tsx");
   const pdp = source("lib/magento/pdp-page.ts");
   const product = source("lib/magento/product.ts");
 
