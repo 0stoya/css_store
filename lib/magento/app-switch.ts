@@ -25,11 +25,7 @@ const VALIDATE_CUSTOMER = /* GraphQL */ `
       authenticated
       is_company_customer
       selected_company_id
-      companies {
-        company_id
-        company_user_id
-        selected
-      }
+      selected_company_user_id
     }
   }
 `;
@@ -101,34 +97,35 @@ export async function exchangeCustomerAppSwitch(
   return data.cssExchangeCustomerAppSwitch;
 }
 
-export async function validateCompanyCustomerToken(
-  token: string,
-  expectedCompanyId?: number,
-  expectedUserId?: number,
-) {
+export async function getCustomerAppSwitchContext(token: string) {
   const data = await request<{
     customer: { email: string };
     css_company_context: {
       authenticated: boolean;
       is_company_customer: boolean;
       selected_company_id: number | null;
-      companies: Array<{
-        company_id: number;
-        company_user_id: number;
-        selected: boolean;
-      }>;
+      selected_company_user_id: number | null;
     };
   }>(VALIDATE_CUSTOMER, {}, token);
 
-  const expectedMembership = expectedCompanyId
-    ? data.css_company_context.companies.find(
-        (company) => company.company_id === expectedCompanyId && company.selected,
-      )
-    : null;
+  return {
+    email: data.customer.email.trim(),
+    authenticated: data.css_company_context.authenticated,
+    isCompanyCustomer: data.css_company_context.is_company_customer,
+    selectedCompanyId: data.css_company_context.selected_company_id,
+    selectedCompanyUserId: data.css_company_context.selected_company_user_id,
+  };
+}
 
-  return data.css_company_context.authenticated
-    && data.css_company_context.is_company_customer
-    && Boolean(data.customer.email)
-    && (!expectedCompanyId || data.css_company_context.selected_company_id === expectedCompanyId)
-    && (!expectedUserId || expectedMembership?.company_user_id === expectedUserId);
+export async function validateCompanyCustomerToken(
+  token: string,
+  expectedCompanyId?: number,
+  expectedUserId?: number,
+) {
+  const context = await getCustomerAppSwitchContext(token);
+  return context.authenticated
+    && context.isCompanyCustomer
+    && Boolean(context.email)
+    && (!expectedCompanyId || context.selectedCompanyId === expectedCompanyId)
+    && (!expectedUserId || context.selectedCompanyUserId === expectedUserId);
 }
