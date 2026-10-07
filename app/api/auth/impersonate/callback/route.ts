@@ -1,9 +1,14 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { consumeAppSwitchState, isAppSwitchValue } from "@/lib/app-switch-session";
+import {
+  consumeAppSwitchState,
+  consumeAppSwitchTarget,
+  isAppSwitchValue,
+} from "@/lib/app-switch-session";
 import {
   exchangeCustomerAppSwitch,
   validateCompanyCustomerToken,
 } from "@/lib/magento/app-switch";
+import { revokeCustomerToken } from "@/lib/magento/auth";
 import { setCustomerImpersonation, setCustomerToken } from "@/lib/session";
 
 export const dynamic = "force-dynamic";
@@ -30,11 +35,23 @@ export async function GET(request: NextRequest) {
     request.nextUrl.searchParams.get("state"),
     COOKIE_PATH,
   );
-  if (!isAppSwitchValue(code) || !verifier) return loginFailure();
+  const target = await consumeAppSwitchTarget(COOKIE_PATH);
+  if (!isAppSwitchValue(code) || !verifier || !target) return loginFailure();
 
+  let token: string | null = null;
   try {
-    const token = await exchangeCustomerAppSwitch(code, "STORE", verifier);
-    if (!(await validateCompanyCustomerToken(token))) return loginFailure();
+    token = await exchangeCustomerAppSwitch(code, "STORE", verifier);
+    if (
+      !(await validateCompanyCustomerToken(
+        token,
+        target.companyId,
+        target.userId,
+      ))
+    ) {
+      await revokeCustomerToken(token);
+      return loginFailure();
+    }
+
     await setCustomerToken(token);
     await setCustomerImpersonation();
 
@@ -47,6 +64,7 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch {
+    if (token) await revokeCustomerToken(token);
     return loginFailure();
   }
 }
