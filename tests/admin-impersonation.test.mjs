@@ -42,15 +42,16 @@ test("Shop consumes one-time app switch code into the exact requested company us
   assert.match(callback, /consumeAppSwitchState[\s\S]*COOKIE_PATH/);
   assert.match(callback, /consumeAppSwitchTarget\(COOKIE_PATH\)/);
   assert.match(callback, /exchangeCustomerAppSwitch\(code, "STORE", verifier\)/);
-  assert.match(
-    callback,
-    /validateCompanyCustomerToken\([\s\S]*token,[\s\S]*target\.companyId,[\s\S]*target\.userId/,
-  );
+  assert.match(callback, /getCustomerAppSwitchContext\(token\)/);
+  assert.match(callback, /context\.selectedCompanyId === target\.companyId/);
+  assert.match(callback, /context\.selectedCompanyUserId === target\.userId/);
   assert.match(callback, /revokeCustomerToken\(token\)/);
+  assert.match(callback, /\[impersonation\] callback preflight failed/);
+  assert.match(callback, /\[impersonation\] exchanged customer context mismatch/);
+  assert.match(callback, /\[impersonation\] callback failed/);
   assert.match(appSwitch, /selected_company_id/);
-  assert.match(appSwitch, /company_user_id/);
-  assert.match(appSwitch, /company\.company_id === expectedCompanyId && company\.selected/);
-  assert.match(appSwitch, /expectedMembership\?\.company_user_id === expectedUserId/);
+  assert.match(appSwitch, /selected_company_user_id/);
+  assert.match(appSwitch, /selectedCompanyUserId/);
   assert.match(callback, /setCustomerToken\(token\)/);
   assert.match(callback, /setCustomerImpersonation\(\)/);
   assert.match(session, /css_store_customer/);
