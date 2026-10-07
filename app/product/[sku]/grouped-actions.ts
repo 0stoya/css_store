@@ -33,7 +33,14 @@ function validateConfigurableSelection(
     selected.every((uid) => candidate.attributes.some((attribute) => attribute.uid === uid)),
   );
   if (!variant) throw new Error("That option combination is not available.");
-  if (variant.product.stock_status === "OUT_OF_STOCK") throw new Error("That option combination is out of stock.");
+  const variantAvailable = variant.product.css_stock_info?.available
+    ?? variant.product.stock_status === "IN_STOCK";
+  if (!variantAvailable) {
+    throw new Error(
+      variant.product.css_stock_info?.delivery_message
+      || "That option combination is unavailable.",
+    );
+  }
   return variant;
 }
 
