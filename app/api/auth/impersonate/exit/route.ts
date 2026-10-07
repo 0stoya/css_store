@@ -1,13 +1,12 @@
 import { NextResponse } from "next/server";
 import { getAdminPortalUrl } from "@/lib/config";
-import { revokeCustomerToken } from "@/lib/magento/auth";
-import { clearCustomerToken, getCustomerToken } from "@/lib/session";
+import { clearCustomerToken } from "@/lib/session";
 
 export const dynamic = "force-dynamic";
 
 export async function POST() {
-  const token = await getCustomerToken();
-  if (token) await revokeCustomerToken(token);
+  // Clear only the Store browser session. Magento customer-token revocation is
+  // customer-wide and must not log the real customer out of other sessions.
   await clearCustomerToken();
 
   const response = NextResponse.redirect(new URL("/companies", getAdminPortalUrl()), 303);
