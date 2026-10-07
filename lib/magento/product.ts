@@ -12,7 +12,12 @@ export type ConfigurableOption = {
 
 export type ConfigurableVariant = {
   attributes: Array<{ uid: string; code: string; label: string; value_index: number }>;
-  product: { sku: string; name: string; stock_status: string | null };
+  product: {
+    sku: string;
+    name: string;
+    stock_status: string | null;
+    css_stock_info: StockInfo;
+  };
 };
 
 export type ProductPriceRange = {
@@ -68,7 +73,12 @@ const CONFIGURABLE_CONFIGURATION_FIELDS = /* GraphQL */ `
   }
   variants {
     attributes { uid code label value_index }
-    product { sku name stock_status }
+    product {
+      sku
+      name
+      stock_status
+      css_stock_info { available stock_status delivery_message }
+    }
   }
 `;
 
