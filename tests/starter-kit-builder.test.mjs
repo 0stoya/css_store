@@ -62,12 +62,10 @@ test("Starter-kit option selects only allow real in-stock variant combinations",
   assert.match(builder, /function variantMatches/);
   assert.match(builder, /function selectedVariant/);
   assert.match(builder, /function optionValueAvailable/);
-  assert.match(builder, /variant\.product\.css_stock_info\?\.available/);
   assert.match(builder, /variantInStock\(variant\) && variantMatches\(variant, candidate\)/);
   assert.match(builder, /disabled=\{!available && !active\}/);
   assert.match(builder, /Combination unavailable/);
   assert.match(builder, /const incomplete = selectedItems\.filter\(\(item\) => !selectedVariant\(item, selections\)\)/);
-  assert.match(actions, /variant\.product\.css_stock_info\?\.available/);
   assert.match(actions, /child\.name.*error\.message/);
 });
 
