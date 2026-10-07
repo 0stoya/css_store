@@ -1,7 +1,7 @@
 "use client";
 
 import { CheckCircle2, Minus, PackageCheck, Plus } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { ConfigurableVariant } from "@/lib/magento/product";
 
 export type StarterKitBuilderItem = {
@@ -64,6 +64,10 @@ function selectedVariant(
   ) || null;
 }
 
+function emptyQuantities(items: StarterKitBuilderItem[]) {
+  return Object.fromEntries(items.map((item) => [item.index, 0]));
+}
+
 export function StarterKitBuilder({
   items,
   canAdd,
@@ -71,10 +75,14 @@ export function StarterKitBuilder({
   items: StarterKitBuilderItem[];
   canAdd: boolean;
 }) {
-  const [quantities, setQuantities] = useState<Record<number, number>>(() =>
-    Object.fromEntries(items.map((item) => [item.index, 0])),
-  );
+  const itemSignature = items.map((item) => `${item.index}:${item.sku}`).join("|");
+  const [quantities, setQuantities] = useState<Record<number, number>>(() => emptyQuantities(items));
   const [selections, setSelections] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    setQuantities(emptyQuantities(items));
+    setSelections({});
+  }, [itemSignature]);
 
   const progress = useMemo(() => {
     const selectedItems = items.filter((item) => item.available && (quantities[item.index] || 0) > 0);
