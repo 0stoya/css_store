@@ -12,7 +12,6 @@ export type StarterKitBuilderItem = {
   priceLabel: string | null;
   available: boolean;
   unavailableReason: string | null;
-  defaultQuantity: number;
   minPositive: number;
   max: number | null;
   step: number;
@@ -73,7 +72,7 @@ export function StarterKitBuilder({
   canAdd: boolean;
 }) {
   const [quantities, setQuantities] = useState<Record<number, number>>(() =>
-    Object.fromEntries(items.map((item) => [item.index, item.available ? item.defaultQuantity : 0])),
+    Object.fromEntries(items.map((item) => [item.index, 0])),
   );
   const [selections, setSelections] = useState<Record<string, string>>({});
 
@@ -215,7 +214,7 @@ export function StarterKitBuilder({
                       <select
                         name={`child_${item.index}_option`}
                         value={selections[key] || ""}
-                        disabled={!item.available}
+                        disabled={!item.available || !selected}
                         required={selected}
                         onChange={(event) => setSelections((current) => ({
                           ...current,
@@ -301,7 +300,11 @@ export function StarterKitBuilder({
         </div>
         <button className="button starter-kit-primary-action" type="submit" disabled={!canSubmit}>
           <PackageCheck size={18} aria-hidden="true" />
-          <span>{canAdd ? "Add starter kit to basket" : "Ordering unavailable"}</span>
+          <span>{canAdd
+            ? progress.selectedCount
+              ? `Add ${progress.selectedCount} item${progress.selectedCount === 1 ? "" : "s"} to basket`
+              : "Choose items to add"
+            : "Ordering unavailable"}</span>
         </button>
       </div>
     </div>
