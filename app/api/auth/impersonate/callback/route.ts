@@ -6,7 +6,7 @@ import {
 } from "@/lib/app-switch-session";
 import {
   exchangeCustomerAppSwitch,
-  validateCompanyCustomerToken,
+  getCustomerAppSwitchContext,
 } from "@/lib/magento/app-switch";
 import { revokeCustomerToken } from "@/lib/magento/auth";
 import { setCustomerImpersonation, setCustomerToken } from "@/lib/session";
@@ -36,18 +36,35 @@ export async function GET(request: NextRequest) {
     COOKIE_PATH,
   );
   const target = await consumeAppSwitchTarget(COOKIE_PATH);
-  if (!isAppSwitchValue(code) || !verifier || !target) return loginFailure();
+
+  if (!isAppSwitchValue(code) || !verifier || !target) {
+    console.warn("[impersonation] callback preflight failed", {
+      code: isAppSwitchValue(code),
+      verifier: Boolean(verifier),
+      target: Boolean(target),
+    });
+    return loginFailure();
+  }
 
   let token: string | null = null;
   try {
     token = await exchangeCustomerAppSwitch(code, "STORE", verifier);
-    if (
-      !(await validateCompanyCustomerToken(
-        token,
-        target.companyId,
-        target.userId,
-      ))
-    ) {
+    const context = await getCustomerAppSwitchContext(token);
+    const matches = context.authenticated
+      && context.isCompanyCustomer
+      && Boolean(context.email)
+      && context.selectedCompanyId === target.companyId
+      && context.selectedCompanyUserId === target.userId;
+
+    if (!matches) {
+      console.warn("[impersonation] exchanged customer context mismatch", {
+        expectedCompanyId: target.companyId,
+        actualCompanyId: context.selectedCompanyId,
+        expectedCompanyUserId: target.userId,
+        actualCompanyUserId: context.selectedCompanyUserId,
+        authenticated: context.authenticated,
+        isCompanyCustomer: context.isCompanyCustomer,
+      });
       await revokeCustomerToken(token);
       return loginFailure();
     }
@@ -63,7 +80,10 @@ export async function GET(request: NextRequest) {
         "Referrer-Policy": "no-referrer",
       },
     });
-  } catch {
+  } catch (error) {
+    console.warn("[impersonation] callback failed", {
+      error: error instanceof Error ? error.message : "unknown error",
+    });
     if (token) await revokeCustomerToken(token);
     return loginFailure();
   }
