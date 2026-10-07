@@ -22,16 +22,18 @@ test("Starter-kit items submit one grouped selection with the existing field con
   assert.match(builder, /name=\{\`child_\$\{item\.index\}_sku\`\}/);
   assert.match(builder, /name=\{\`child_\$\{item\.index\}_option\`\}/);
   assert.match(builder, /name=\{\`child_\$\{item\.index\}_quantity\`\}/);
-  assert.match(builder, /Add starter kit to basket/);
+  assert.match(builder, /Add \${progress\.selectedCount} item/);
+  assert.match(builder, /Choose items to add/);
   assert.doesNotMatch(builder, /grouped_child_sku/);
 
   assert.match(actions, /function groupedConfigurableSelections/);
   assert.match(actions, /const items = groupedConfigurableSelections\(product, formData\)/);
   assert.match(actions, /await addGroupedConfigurableProduct\(token, \{/);
   assert.match(actions, /items,/);
+  assert.match(actions, /if \(rawQuantity === 0\) continue;/);
 });
 
-test("Starter-kit PDP reuses Magento child images and grouped default quantities", () => {
+test("Starter-kit PDP starts every available grouped item unselected", () => {
   const page = source("app/product/[sku]/page.tsx");
   const pdp = source("lib/magento/pdp-page.ts");
   const product = source("lib/magento/product.ts");
@@ -39,8 +41,9 @@ test("Starter-kit PDP reuses Magento child images and grouped default quantities
   assert.match(pdp, /small_image \{ url label \}/);
   assert.match(product, /small_image: \{ url: string; label: string \| null \} \| null/);
   assert.match(page, /image: child\.small_image \|\| null/);
-  assert.match(page, /const configuredQuantity = Number\(item\.qty \|\| 0\)/);
-  assert.match(page, /defaultQuantity: configuredQuantity > 0 \? configuredQuantity : 0/);
+  assert.doesNotMatch(page, /defaultQuantity/);
+  assert.match(builder, /items\.map\(\(item\) => \[item\.index, 0\]\)/);
+  assert.match(builder, /disabled=\{!item\.available \|\| !selected\}/);
   assert.match(page, /childPrice && childPrice\.value > 0/);
 });
 
