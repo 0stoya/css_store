@@ -38,7 +38,8 @@ function variantMatches(
 }
 
 function variantInStock(variant: ConfigurableVariant) {
-  return variant.product.stock_status === "IN_STOCK";
+  return variant.product.css_stock_info?.available
+    ?? variant.product.stock_status === "IN_STOCK";
 }
 
 function selectedForItem(
