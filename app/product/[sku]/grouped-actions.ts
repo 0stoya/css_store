@@ -3,7 +3,7 @@
 import { redirect, unstable_rethrow } from "next/navigation";
 import {
   addGroupedConfigurableProduct,
-  addNativeProducts,
+  addNativeGroupedProducts,
   assignCartItemEmployee,
   getCustomerCartWriteContext,
 } from "@/lib/magento/cart";
@@ -130,7 +130,7 @@ export async function addGroupedChildToCartAction(formData: FormData) {
         }
       }
 
-      const after = await addNativeProducts(token, before.id, [{ sku: child.sku, quantity }]);
+      const after = await addNativeGroupedProducts(token, before.id, product.sku, [{ sku: child.sku, quantity }]);
       if (employeeId) {
         const previousUids = new Set(before.itemsV2.items.map((item) => item.uid));
         const added = after.itemsV2.items.filter((item) => !previousUids.has(item.uid));
