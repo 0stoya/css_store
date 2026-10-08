@@ -133,7 +133,7 @@ export async function addProductToCartAction(formData: FormData) {
         items,
       });
     } else if (product.__typename === "GroupedProduct") {
-      const items: Array<{ sku: string; quantity: number }> = [];
+      const items: Array<{ sku: string; quantity: number; parentSku: string }> = [];
       const childCount = product.items?.length || 0;
 
       for (let index = 0; index < childCount; index += 1) {
@@ -149,7 +149,7 @@ export async function addProductToCartAction(formData: FormData) {
         if (child.__typename !== "SimpleProduct") {
           throw new Error(`${child.name} is not a native simple child and cannot be added through Magento's grouped-product path.`);
         }
-        items.push({ sku: child.sku, quantity: rawQuantity });
+        items.push({ sku: child.sku, quantity: rawQuantity, parentSku: product.sku });
       }
 
       if (!items.length) throw new Error("Choose at least one grouped product quantity.");

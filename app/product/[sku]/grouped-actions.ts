@@ -130,7 +130,11 @@ export async function addGroupedChildToCartAction(formData: FormData) {
         }
       }
 
-      const after = await addNativeProducts(token, before.id, [{ sku: child.sku, quantity }]);
+      const after = await addNativeProducts(token, before.id, [{
+        sku: child.sku,
+        quantity,
+        parentSku: product.sku,
+      }]);
       if (employeeId) {
         const previousUids = new Set(before.itemsV2.items.map((item) => item.uid));
         const added = after.itemsV2.items.filter((item) => !previousUids.has(item.uid));
