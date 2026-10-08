@@ -107,6 +107,14 @@ Typical fields consumed include:
 - subtotal/grand total;
 - shipping/payment state during checkout.
 
+### CSS / Fluid native grouped add
+
+- `cssAddNativeGroupedProductsToCart(input: CssAddNativeGroupedProductsToCartInput!): Cart!`
+
+For Magento `GroupedProduct` pages, pass the **native grouped parent SKU** and selected simple child SKU/quantity pairs, not a direct native `addProductsToCart` request for a child that might also belong to a grouped-configurable entitlement. The Fluid mutation verifies the selected company, cart ownership, parent access and actual Magento grouped links. Its result is a **direct `Cart`**, with the usual `id` and `itemsV2` fields (there is no nested `cart` property).
+
+This mutation is for native grouped parents only. Unscoped simple adds still use normal Magento validation; Fluid grouped-configurable selections must use their dedicated mutation. The backend contract is introduced by Fluid PR #111 and must be deployed before this Store change.
+
 ### CSS / Fluid grouped/configurable add
 
 - `cssAddGroupedConfigurableProductsToCart`
