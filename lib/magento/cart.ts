@@ -275,6 +275,14 @@ const ADD_GROUPED_CONFIGURABLE = /* GraphQL */ `
   }
 `;
 
+const ADD_NATIVE_GROUPED = /* GraphQL */ `
+  mutation StoreAddNativeGrouped($input: CssAddNativeGroupedProductsToCartInput!) {
+    cssAddNativeGroupedProductsToCart(input: $input) {
+      cart { ${CART_WRITE_FIELDS} }
+    }
+  }
+`;
+
 const ASSIGN_CART_EMPLOYEE = /* GraphQL */ `
   mutation StoreAssignCartEmployee($cartId: String!, $employeeId: Int!) {
     cssAssignCartEmployee(cart_id: $cartId, employee_id: $employeeId) {
@@ -437,6 +445,32 @@ export async function addGroupedConfigurableProduct(
     );
   }
   return result.cart;
+}
+
+export async function addNativeGroupedProducts(
+  token: string,
+  input: {
+    cartId: string;
+    parentSku: string;
+    items: Array<{ sku: string; quantity: number }>;
+  },
+) {
+  if (!input.items.length) throw new Error("Choose at least one grouped product quantity.");
+
+  const data = await magentoGraphQL<{
+    cssAddNativeGroupedProductsToCart: { cart: CartWriteSnapshot };
+  }>(
+    ADD_NATIVE_GROUPED,
+    {
+      input: {
+        cart_id: input.cartId,
+        parent_sku: input.parentSku,
+        items: input.items,
+      },
+    },
+    token,
+  );
+  return data.cssAddNativeGroupedProductsToCart.cart;
 }
 
 export async function assignCartEmployee(token: string, cartId: string, employeeId: number) {
