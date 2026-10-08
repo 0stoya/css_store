@@ -10,6 +10,7 @@ import {
   type CheckoutContext,
 } from "@/lib/magento/checkout";
 import { getEmployeeOrdering } from "@/lib/magento/employee";
+import { assertNormalCheckoutSession } from "@/lib/punchout/browser-session";
 import { requireCustomerToken } from "@/lib/session";
 
 function paymentRedirect(kind: "error" | "notice", value: string): never {
@@ -76,6 +77,7 @@ export async function preparePaymentAction() {
   const token = await requireCustomerToken();
 
   try {
+    await assertNormalCheckoutSession();
     const [context, ordering] = await Promise.all([
       getCheckoutContext(token),
       getEmployeeOrdering(token),
@@ -95,6 +97,7 @@ export async function completeCheckoutAction(formData: FormData) {
   if (!paymentCode) paymentRedirect("error", "Choose a payment method.");
 
   try {
+    await assertNormalCheckoutSession();
     const [initial, ordering] = await Promise.all([
       getCheckoutContext(token),
       getEmployeeOrdering(token),

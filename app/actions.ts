@@ -6,15 +6,19 @@ import { clearCustomerToken, getCustomerToken, requireCustomerToken } from "@/li
 import { revokeCustomerToken } from "@/lib/magento/auth";
 import { cartHasItems, getCustomerCartSummary, type CartSummarySnapshot } from "@/lib/magento/cart";
 import { selectCompany } from "@/lib/magento/context";
+import { clearPunchOutBrowserToken, getPunchOutBrowserToken } from "@/lib/punchout/browser-session";
 
 export async function logoutAction() {
   const token = await getCustomerToken();
   if (token) await revokeCustomerToken(token);
-  await clearCustomerToken();
+  await Promise.all([clearCustomerToken(), clearPunchOutBrowserToken()]);
   redirect("/login");
 }
 
 export async function selectCompanyAction(formData: FormData) {
+  if (await getPunchOutBrowserToken()) {
+    redirect("/account?error=PunchOut%20sessions%20cannot%20switch%20company.");
+  }
   const companyId = Number(formData.get("companyId"));
   if (!Number.isInteger(companyId) || companyId <= 0) redirect("/account?error=Invalid%20company.");
   const token = await requireCustomerToken();

@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import { clearCustomerToken } from "@/lib/session";
+import { clearPunchOutBrowserToken } from "@/lib/punchout/browser-session";
 
 export async function GET() {
-  await clearCustomerToken();
+  await Promise.all([clearCustomerToken(), clearPunchOutBrowserToken()]);
 
   const params = new URLSearchParams({
     error: "Your session expired. Please sign in again.",
