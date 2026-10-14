@@ -63,3 +63,49 @@ test("overlay is positioned over but does not replace the product image", () => 
   assert.match(css, /pointer-events: none/);
   assert.match(gallery, /active && !failed \? overlay : null/);
 });
+
+test("Magento badge lookup loads the new attribute without changing delivery flags", async () => {
+  const requests = [];
+  const query = loadTypeScript(root, "lib/magento/product-badges.ts", {
+    "@/lib/magento/client": {
+      MagentoGraphQLError: class MagentoGraphQLError extends Error {},
+      magentoGraphQL: async (document, variables, token) => {
+        requests.push({ document, variables, token });
+        return { products: { items: [{
+          sku: "STOCK-YES", always_in_stock: 1, fast_delivery: 1, express_delivery: 0,
+        }] } };
+      },
+    },
+  });
+
+  const result = await query.getProductBadgeValues("customer-token", ["STOCK-YES"]);
+  assert.equal(requests.length, 1);
+  assert.match(requests[0].document, /always_in_stock/);
+  assert.equal(requests[0].token, "customer-token");
+  assert.equal(result.get("STOCK-YES")?.always_in_stock, 1);
+  assert.equal(result.get("STOCK-YES")?.fast_delivery, 1);
+});
+
+test("Magento schema missing always_in_stock preserves older badges by retrying", async () => {
+  class MagentoGraphQLError extends Error {}
+  const requests = [];
+  const query = loadTypeScript(root, "lib/magento/product-badges.ts", {
+    "@/lib/magento/client": {
+      MagentoGraphQLError,
+      magentoGraphQL: async (document) => {
+        requests.push(document);
+        if (document.includes("always_in_stock")) {
+          throw new MagentoGraphQLError('Cannot query field "always_in_stock" on type "ProductInterface".');
+        }
+        return { products: { items: [{ sku: "STOCK-LEGACY", fast_delivery: 1 }] } };
+      },
+    },
+  });
+
+  const result = await query.getProductBadgeValues("customer-token", ["STOCK-LEGACY"]);
+  assert.equal(requests.length, 2);
+  assert.match(requests[0], /always_in_stock/);
+  assert.doesNotMatch(requests[1], /always_in_stock/);
+  assert.equal(result.get("STOCK-LEGACY")?.fast_delivery, 1);
+  assert.equal(result.get("STOCK-LEGACY")?.always_in_stock, undefined);
+});
