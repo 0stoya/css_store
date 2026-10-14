@@ -109,3 +109,25 @@ test("Magento schema missing always_in_stock preserves older badges by retrying"
   assert.equal(result.get("STOCK-LEGACY")?.fast_delivery, 1);
   assert.equal(result.get("STOCK-LEGACY")?.always_in_stock, undefined);
 });
+
+test("Always in Stock overlay uses a legible top-left panel on cards and PDP", () => {
+  const css = source("app/product-badges.css");
+  const card = css.match(/\.always-in-stock-overlay\s*\{([^}]*)\}/)?.[1];
+  const gallery = css.match(/\.pdp-gallery-main \.always-in-stock-overlay\s*\{([^}]*)\}/)?.[1];
+  assert.ok(card, "catalogue overlay styles should exist");
+  assert.ok(gallery, "PDP overlay styles should exist");
+
+  assert.match(card, /\btop:\s*10px;/);
+  assert.match(card, /\bleft:\s*10px;/);
+  assert.doesNotMatch(card, /\b(?:right|bottom):/);
+  assert.match(card, /background:\s*rgb\(255 255 255 \/ 96%\)/);
+  assert.match(card, /border-radius:\s*10px/);
+  assert.match(card, /box-shadow:/);
+  assert.match(card, /pointer-events:\s*none/);
+
+  assert.match(gallery, /\btop:/);
+  assert.match(gallery, /\bleft:/);
+  assert.doesNotMatch(gallery, /\b(?:right|bottom):/);
+  assert.match(css, /\.always-in-stock-overlay::before\s*\{[^}]*aspect-ratio:\s*651 \/ 246;[^}]*background: url\("\/always-in-stock\.png"\)/);
+  assert.match(css, /@media \(max-width: 560px\)\s*\{\s*\.always-in-stock-overlay\s*\{[^}]*top:\s*8px;[^}]*left:\s*8px;/);
+});
