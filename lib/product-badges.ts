@@ -2,6 +2,7 @@ export const PRODUCT_BADGE_CODES = [
   "ppe_certified",
   "express_delivery",
   "fast_delivery",
+  "always_in_stock",
   "made_to_order",
   "company_logo",
   "embroidered",
@@ -27,13 +28,20 @@ function normalise(value: string | number | boolean | null | undefined) {
   return String(value).trim().toLowerCase();
 }
 
+export function isProductBadgeEnabled(
+  values: ProductBadgeValues | undefined,
+  code: ProductBadgeCode,
+): boolean {
+  return TRUTHY_ATTRIBUTE_VALUES.has(normalise(values?.[code]));
+}
+
 export function getActiveProductBadgeCodes(
   values: ProductBadgeValues | undefined,
 ): ProductBadgeCode[] {
   const enabled = new Set<ProductBadgeCode>();
 
   for (const code of PRODUCT_BADGE_CODES) {
-    if (TRUTHY_ATTRIBUTE_VALUES.has(normalise(values?.[code]))) {
+    if (isProductBadgeEnabled(values, code)) {
       enabled.add(code);
     }
   }

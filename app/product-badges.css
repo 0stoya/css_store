@@ -50,6 +50,40 @@
   color: #725a27;
 }
 
+.product-badge-always_in_stock {
+  border-color: #efdf7b;
+  background: #fffdf0;
+  color: #082b51;
+}
+
+.product-badge-always_in_stock > svg {
+  color: #0b59a1;
+}
+
+/* The supplied transparent artwork sits above the Magento product photo.
+   Background art avoids the normal product image hover/contain styles. */
+.product-media {
+  position: relative;
+}
+
+.always-in-stock-overlay {
+  position: absolute;
+  z-index: 1;
+  left: 10px;
+  bottom: 10px;
+  width: min(56%, 154px);
+  aspect-ratio: 651 / 246;
+  background: url("/always-in-stock.png") center / contain no-repeat;
+  filter: drop-shadow(0 2px 3px rgb(3 37 65 / 12%));
+  pointer-events: none;
+}
+
+.pdp-gallery-main .always-in-stock-overlay {
+  left: clamp(12px, 3%, 24px);
+  bottom: clamp(12px, 3%, 24px);
+  width: min(45%, 220px);
+}
+
 .product-badges.compact {
   min-height: 24px;
   gap: 5px;

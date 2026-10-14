@@ -5,10 +5,7 @@ type ProductBadgeRow = ProductBadgeValues & {
   sku: string;
 };
 
-const PRODUCT_BADGES = /* GraphQL */ `
-  query StoreProductBadgeValues($filter: ProductAttributeFilterInput!, $pageSize: Int!) {
-    products(filter: $filter, currentPage: 1, pageSize: $pageSize) {
-      items {
+const PRODUCT_BADGE_FIELDS = /* GraphQL */ `
         sku
         ppe_certified
         express_delivery
@@ -17,6 +14,26 @@ const PRODUCT_BADGES = /* GraphQL */ `
         company_logo
         embroidered
         printed
+`;
+
+const PRODUCT_BADGES = /* GraphQL */ `
+  query StoreProductBadgeValues($filter: ProductAttributeFilterInput!, $pageSize: Int!) {
+    products(filter: $filter, currentPage: 1, pageSize: $pageSize) {
+      items {
+        ${PRODUCT_BADGE_FIELDS}
+        always_in_stock
+      }
+    }
+  }
+`;
+
+// New Magento EAV attributes can exist before their GraphQL fields are exposed.
+// In that case preserve the established badges until Magento catches up.
+const LEGACY_PRODUCT_BADGES = /* GraphQL */ `
+  query StoreProductBadgeValuesLegacy($filter: ProductAttributeFilterInput!, $pageSize: Int!) {
+    products(filter: $filter, currentPage: 1, pageSize: $pageSize) {
+      items {
+        ${PRODUCT_BADGE_FIELDS}
       }
     }
   }
@@ -30,16 +47,21 @@ export async function getProductBadgeValues(
   if (!uniqueSkus.length) return new Map();
 
   try {
-    const data = await magentoGraphQL<{
-      products: { items: ProductBadgeRow[] };
-    }>(
-      PRODUCT_BADGES,
-      {
-        filter: { sku: { in: uniqueSkus } },
-        pageSize: Math.max(1, uniqueSkus.length),
-      },
-      token,
-    );
+    const variables = {
+      filter: { sku: { in: uniqueSkus } },
+      pageSize: Math.max(1, uniqueSkus.length),
+    };
+    let data: { products: { items: ProductBadgeRow[] } };
+
+    try {
+      data = await magentoGraphQL<typeof data>(PRODUCT_BADGES, variables, token);
+    } catch (error) {
+      if (!(error instanceof MagentoGraphQLError)
+        || !/Cannot query field ["']?always_in_stock["']?/i.test(error.message)) {
+        throw error;
+      }
+      data = await magentoGraphQL<typeof data>(LEGACY_PRODUCT_BADGES, variables, token);
+    }
 
     return new Map(
       (data.products.items || [])
@@ -50,6 +72,7 @@ export async function getProductBadgeValues(
             ppe_certified: item.ppe_certified,
             express_delivery: item.express_delivery,
             fast_delivery: item.fast_delivery,
+            always_in_stock: item.always_in_stock,
             made_to_order: item.made_to_order,
             company_logo: item.company_logo,
             embroidered: item.embroidered,

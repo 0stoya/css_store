@@ -35,7 +35,9 @@ test("native Magento grouped children are added using the real parent contract",
   assert.match(calls[0].query, /cssAddNativeGroupedProductsToCart\(input: \$input\)\s*\{\s*id\b/);
   assert.doesNotMatch(calls[0].query, /cssAddNativeGroupedProductsToCart\(input: \$input\)\s*\{\s*cart\s*\{/);
   assert.doesNotMatch(calls[0].query, /addProductsToCart\(cartId:/);
-  assert.deepEqual(calls[0].variables.input, {
+  // The GraphQL request is built inside a VM in this test; compare its JSON
+  // transport shape, not realm-specific object and array prototypes.
+  assert.deepEqual(JSON.parse(JSON.stringify(calls[0].variables.input)), {
     cart_id: "cart",
     parent_sku: "BCR528",
     items: [{ sku: "BCR528/03", quantity: 2 }],
