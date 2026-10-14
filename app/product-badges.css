@@ -66,22 +66,52 @@
   position: relative;
 }
 
+/* Contrast panel: keeps the transparent stock mark readable over all photos. */
 .always-in-stock-overlay {
   position: absolute;
   z-index: 1;
+  top: 10px;
   left: 10px;
-  bottom: 10px;
-  width: min(56%, 154px);
-  aspect-ratio: 651 / 246;
-  background: url("/always-in-stock.png") center / contain no-repeat;
-  filter: drop-shadow(0 2px 3px rgb(3 37 65 / 12%));
+  box-sizing: border-box;
+  display: block;
+  width: min(48%, 150px);
+  padding: 7px 8px;
+  border: 1px solid rgb(8 43 81 / 10%);
+  border-radius: 10px;
+  background: rgb(255 255 255 / 96%);
+  box-shadow: 0 2px 8px rgb(0 0 0 / 8%);
   pointer-events: none;
 }
 
+.always-in-stock-overlay::before {
+  content: "";
+  display: block;
+  width: 100%;
+  aspect-ratio: 651 / 246;
+  background: url("/always-in-stock.png") center / contain no-repeat;
+}
+
 .pdp-gallery-main .always-in-stock-overlay {
+  top: clamp(12px, 3%, 24px);
   left: clamp(12px, 3%, 24px);
-  bottom: clamp(12px, 3%, 24px);
-  width: min(45%, 220px);
+  width: min(42%, 208px);
+  padding: 8px 10px;
+}
+
+@media (max-width: 560px) {
+  .always-in-stock-overlay {
+    top: 8px;
+    left: 8px;
+    width: min(50%, 140px);
+    padding: 6px 7px;
+  }
+
+  .pdp-gallery-main .always-in-stock-overlay {
+    top: 12px;
+    left: 12px;
+    width: min(47%, 180px);
+    padding: 7px 9px;
+  }
 }
 
 .product-badges.compact {
