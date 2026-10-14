@@ -132,7 +132,7 @@ export default async function ProductPage({
             <ProductGallery
               images={gallery.map((image) => ({ url: image.url, label: image.label }))}
               productName={product.name}
-              overlay={<CatalogueStockOverlay sku={product.sku} initialValues={product}/>}
+              overlay={<CatalogueStockOverlay sku={product.sku}/>}
             />
           )}
         </div>
