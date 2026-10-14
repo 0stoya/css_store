@@ -2,7 +2,7 @@ import { ArrowRight, Hash, PackageCheck, PackageX, ShieldAlert, Truck } from "lu
 import Link from "next/link";
 import type { PurchaseAllowance, StockInfo } from "@/lib/magento/catalogue";
 import type { ProductBadgeValues } from "@/lib/product-badges";
-import { CatalogueProductBadges } from "./catalogue-badges";
+import { CatalogueProductBadges, CatalogueStockOverlay } from "./catalogue-badges";
 import { ProductImage } from "./product-image";
 
 function money(value: number, currency: string) {
@@ -36,6 +36,7 @@ export function ProductCard({ product, hidePrice }: { product: ProductCardProduc
     <Link className="product-link" href={`/product/${encodeURIComponent(product.sku)}`}>
       <div className="product-media">
         <ProductImage src={product.small_image?.url} alt={product.small_image?.label || product.name}/>
+        <CatalogueStockOverlay sku={product.sku} initialValues={product}/>
       </div>
       <div className="product-body">
         <div className="product-card-meta">

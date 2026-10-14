@@ -2,7 +2,7 @@
 
 import { ChevronLeft, ChevronRight, ImageOff } from "lucide-react";
 import Image from "next/image";
-import { useState } from "react";
+import { type ReactNode, useState } from "react";
 
 export type ProductGalleryImage = {
   url: string;
@@ -12,9 +12,11 @@ export type ProductGalleryImage = {
 export function ProductGallery({
   images,
   productName,
+  overlay,
 }: {
   images: ProductGalleryImage[];
   productName: string;
+  overlay?: ReactNode;
 }) {
   const [activeIndex, setActiveIndex] = useState(0);
   const [failedIndexes, setFailedIndexes] = useState<number[]>([]);
@@ -45,6 +47,8 @@ export function ProductGallery({
         <ImageOff size={42} strokeWidth={1.5}/>
         <span>Image unavailable</span>
       </div>}
+
+      {active && !failed ? overlay : null}
 
       {images.length > 1 ? <>
         <button className="pdp-gallery-nav prev" type="button" onClick={() => move(-1)} aria-label="Previous product image">

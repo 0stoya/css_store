@@ -14,6 +14,7 @@ import { ConfigurableProductControls } from "@/components/configurable-product-c
 import { EmployeePicker } from "@/components/employee-picker";
 import { GroupedQuantityControl } from "@/components/grouped-quantity-control";
 import { DeferredProductBadges } from "@/components/deferred-product-badges";
+import { CatalogueBadgeProvider, CatalogueStockOverlay } from "@/components/catalogue-badges";
 import { ProductGallery } from "@/components/product-gallery";
 import { QuantityStepper } from "@/components/quantity-stepper";
 import { SiteHeader } from "@/components/site-header";
@@ -115,6 +116,7 @@ export default async function ProductPage({
       {status.saved === "1" ? <p className="success pdp-message" role="status">Selection saved to your repeat-order list.</p> : null}
       {status.error ? <p className="error pdp-message" role="alert">{status.error}</p> : null}
 
+      <CatalogueBadgeProvider skus={[product.sku]}>
       <section className="pdp pdp-hero">
         <div className={`pdp-gallery card ${starterKit && !gallery.length ? "starter-kit-hero-card" : ""}`}>
           {starterKit && !gallery.length ? (
@@ -130,6 +132,7 @@ export default async function ProductPage({
             <ProductGallery
               images={gallery.map((image) => ({ url: image.url, label: image.label }))}
               productName={product.name}
+              overlay={<CatalogueStockOverlay sku={product.sku} initialValues={product}/>}
             />
           )}
         </div>
@@ -192,6 +195,7 @@ export default async function ProductPage({
           </details> : null}
         </div>
       </section>
+      </CatalogueBadgeProvider>
 
       {starterKit ? <section className="card starter-kit-order-panel">
         <div className="starter-kit-order-heading">

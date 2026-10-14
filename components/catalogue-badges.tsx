@@ -9,7 +9,7 @@ import {
   useState,
 } from "react";
 import { ProductBadges } from "@/components/product-badges";
-import type { ProductBadgeValues } from "@/lib/product-badges";
+import { isProductBadgeEnabled, type ProductBadgeValues } from "@/lib/product-badges";
 
 type BadgeMap = Record<string, ProductBadgeValues>;
 
@@ -75,14 +75,29 @@ export function CatalogueBadgeProvider({
 export function CatalogueProductBadges({
   sku,
   initialValues,
+  compact = true,
 }: {
   sku: string;
   initialValues?: ProductBadgeValues;
+  compact?: boolean;
 }) {
   const deferred = useContext(CatalogueBadgeContext)[sku];
 
   return <ProductBadges
     values={deferred || initialValues}
-    compact
+    compact={compact}
   />;
+}
+
+export function CatalogueStockOverlay({
+  sku,
+  initialValues,
+}: {
+  sku: string;
+  initialValues?: ProductBadgeValues;
+}) {
+  const deferred = useContext(CatalogueBadgeContext)[sku];
+  if (!isProductBadgeEnabled(deferred || initialValues, "always_in_stock")) return null;
+
+  return <span className="always-in-stock-overlay" role="img" aria-label="Always in stock"/>;
 }

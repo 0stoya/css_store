@@ -1,6 +1,7 @@
 import {
   BadgeCheck,
   Clock3,
+  PackageCheck,
   Printer,
   ShieldCheck,
   Sparkles,
@@ -20,6 +21,7 @@ const BADGES: Record<ProductBadgeCode, {
   ppe_certified: { label: "Certified PPE", Icon: ShieldCheck },
   express_delivery: { label: "Express delivery", Icon: Zap },
   fast_delivery: { label: "Fast delivery", Icon: Truck },
+  always_in_stock: { label: "Always in stock", Icon: PackageCheck },
   made_to_order: { label: "Made to order", Icon: Clock3 },
   company_logo: { label: "Company logo", Icon: BadgeCheck },
   embroidered: { label: "Embroidered", Icon: Sparkles },
@@ -34,7 +36,13 @@ export function ProductBadges({
   compact?: boolean;
 }) {
   const codes = getActiveProductBadgeCodes(values);
-  const visible = compact ? codes.slice(0, 2) : codes;
+  // Reserve both compact slots for delivery and Always in stock, if present.
+  const deliveryCode = codes.find((code) => code === "express_delivery" || code === "fast_delivery");
+  const visible = compact && codes.includes("always_in_stock")
+    ? deliveryCode
+      ? [deliveryCode, "always_in_stock" as const]
+      : ["always_in_stock" as const, ...codes.filter((code) => code !== "always_in_stock")].slice(0, 2)
+    : compact ? codes.slice(0, 2) : codes;
 
   if (!visible.length) return null;
 
