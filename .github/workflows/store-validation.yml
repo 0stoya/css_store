@@ -3,7 +3,7 @@ name: Store validation
 on:
   push:
     branches:
-      - feat/always-in-stock-overlay-20261014
+      - main
   pull_request:
     branches:
       - main
@@ -19,8 +19,8 @@ jobs:
       MAGENTO_GRAPHQL_URL: https://magento.example.invalid/graphql
       CSS_ADMIN_URL: https://admin.example.invalid
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: '22'
       - name: Install dependencies
