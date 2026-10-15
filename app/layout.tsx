@@ -9,6 +9,7 @@ import "./icon-system.css";
 import "./pdp.css";
 import "./pdp-simplified.css";
 import "./pdp-runtime-tuning.css";
+import "./product-specifications.css";
 import "./starter-kit.css";
 import "./configurable-product.css";
 import "./product-badges.css";

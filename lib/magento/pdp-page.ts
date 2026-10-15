@@ -1,9 +1,10 @@
-import { magentoGraphQL } from "@/lib/magento/client";
+import { MagentoGraphQLError, magentoGraphQL } from "@/lib/magento/client";
 import { getActiveEmployees, type EmployeeOrdering } from "@/lib/magento/employee";
 import { getRepeatOrderLists } from "@/lib/magento/repeat-orders";
 import type { ProductConfiguration } from "@/lib/magento/product";
+import { PRODUCT_SPECIFICATION_CODES, type ProductSpecificationValues } from "@/lib/product-specifications";
 
-type PdpProduct = Omit<ProductConfiguration, "uid" | "url_key" | "stock_status">;
+type PdpProduct = Omit<ProductConfiguration, "uid" | "url_key" | "stock_status"> & ProductSpecificationValues;
 
 type PdpPageQuery = {
   customer: {
@@ -76,6 +77,9 @@ const GROUPED_CHILD_FIELDS = /* GraphQL */ `
   }
 `;
 
+// Request only parent SKU attributes: no variant or grouped-child fanout.
+const PDP_SPECIFICATION_SELECTION = PRODUCT_SPECIFICATION_CODES.join("\n        ");
+
 const PDP_PAGE = /* GraphQL */ `
   query StorePdpPage($sku: String!) {
     customer {
@@ -108,6 +112,7 @@ const PDP_PAGE = /* GraphQL */ `
         sku
         name
         description { html }
+        ${PDP_SPECIFICATION_SELECTION}
         media_gallery { url label position }
         price_range {
           minimum_price {
@@ -155,6 +160,16 @@ const PDP_PAGE = /* GraphQL */ `
   }
 `;
 
+// If a Magento deployment lacks an optional EAV GraphQL field, the PDP must
+// remain orderable. Keep the old query as a strictly scoped fallback.
+const PDP_PAGE_WITHOUT_SPECIFICATIONS = PDP_PAGE.replace(PDP_SPECIFICATION_SELECTION, "");
+
+function isMissingSpecificationField(error: unknown): boolean {
+  if (!(error instanceof MagentoGraphQLError)) return false;
+  const missing = error.message.match(/Cannot query field ["']?([a-z_][a-z_0-9]*)["']?/i)?.[1];
+  return Boolean(missing && PRODUCT_SPECIFICATION_CODES.some((code) => code === missing));
+}
+
 export type PdpPageContext = {
   customerName: string;
   selectedCompany: {
@@ -178,11 +193,16 @@ export async function getPdpPageContext(
   token: string,
   sku: string,
 ): Promise<PdpPageContext> {
-  const data = await magentoGraphQL<PdpPageQuery>(
-    PDP_PAGE,
-    { sku },
-    token,
-  );
+  let data: PdpPageQuery;
+  try {
+    data = await magentoGraphQL<PdpPageQuery>(PDP_PAGE, { sku }, token);
+  } catch (error) {
+    if (!isMissingSpecificationField(error)) throw error;
+    // Only optional schema errors are retried; auth and other failures still
+    // use the existing Magento GraphQL error/redirect handling.
+    console.warn("[store:pdp] Optional specification field is missing in Magento GraphQL.");
+    data = await magentoGraphQL<PdpPageQuery>(PDP_PAGE_WITHOUT_SPECIFICATIONS, { sku }, token);
+  }
 
   const configuration = data.css_company_employee_configuration;
   const selectedCompany = data.css_company_context.companies.find((company) => company.selected) || null;
