@@ -112,7 +112,7 @@ function fakePdpData(typename, sku, attributes = {}) {
 
 function pdpModule(queryHandler) {
   class MagentoGraphQLError extends Error {}
-  const module = loadTypeScript(root, "lib/magento/pdp-page.ts", {
+  const pdpClient = loadTypeScript(root, "lib/magento/pdp-page.ts", {
     "@/lib/magento/client": {
       MagentoGraphQLError,
       magentoGraphQL: queryHandler,
@@ -127,12 +127,12 @@ function pdpModule(queryHandler) {
       PRODUCT_SPECIFICATION_CODES: specifications.PRODUCT_SPECIFICATION_CODES,
     },
   });
-  return { module, MagentoGraphQLError };
+  return { pdpClient, MagentoGraphQLError };
 }
 
 test("the one existing PDP query reads parent attributes for all product types", async () => {
   const requests = [];
-  const { module } = pdpModule(async (query, variables, token) => {
+  const { pdpClient } = pdpModule(async (query, variables, token) => {
     requests.push({ query, variables, token });
     return fakePdpData(variables.sku.split(":")[0], variables.sku, {
       safety_rating: "EN388:2016 - 3121X",
@@ -141,7 +141,7 @@ test("the one existing PDP query reads parent attributes for all product types",
   });
 
   for (const typename of ["SimpleProduct", "ConfigurableProduct", "GroupedProduct", "CssGroupedConfigurableProduct"]) {
-    const result = await module.getPdpPageContext("customer-token", typename + ":A880");
+    const result = await pdpClient.getPdpPageContext("customer-token", typename + ":A880");
     assert.equal(result.product.safety_rating, "EN388:2016 - 3121X");
     assert.equal(result.product.pack_qty, "10");
   }
@@ -157,7 +157,7 @@ test("the one existing PDP query reads parent attributes for all product types",
 
 test("an unavailable Magento specification field retries the original PDP without breaking ordering", async () => {
   let calls = 0;
-  const { module, MagentoGraphQLError } = pdpModule(async (query, variables) => {
+  const { pdpClient, MagentoGraphQLError } = pdpModule(async (query, variables) => {
     calls += 1;
     if (query.includes("safety_rating")) {
       throw new MagentoGraphQLError('Cannot query field "safety_rating" on type "ProductInterface".');
@@ -168,7 +168,7 @@ test("an unavailable Magento specification field retries the original PDP withou
   const originalWarn = console.warn;
   console.warn = () => {};
   try {
-    const result = await module.getPdpPageContext("customer-token", "A880");
+    const result = await pdpClient.getPdpPageContext("customer-token", "A880");
     assert.equal(calls, 2);
     assert.equal(result.product.sku, "A880");
     assert.equal(result.product.safety_rating, undefined);
@@ -180,10 +180,10 @@ test("an unavailable Magento specification field retries the original PDP withou
 
 test("unrelated Magento GraphQL failures are not masked by the optional attribute fallback", async () => {
   let calls = 0;
-  const { module, MagentoGraphQLError } = pdpModule(async () => {
+  const { pdpClient, MagentoGraphQLError } = pdpModule(async () => {
     calls += 1;
     throw new MagentoGraphQLError("Upstream service unavailable");
   });
-  await assert.rejects(module.getPdpPageContext("customer-token", "A880"), /Upstream service unavailable/);
+  await assert.rejects(pdpClient.getPdpPageContext("customer-token", "A880"), /Upstream service unavailable/);
   assert.equal(calls, 1);
 });
