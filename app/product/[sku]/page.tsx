@@ -16,6 +16,7 @@ import { GroupedQuantityControl } from "@/components/grouped-quantity-control";
 import { DeferredProductBadges } from "@/components/deferred-product-badges";
 import { CatalogueBadgeProvider, CatalogueStockOverlay } from "@/components/catalogue-badges";
 import { ProductGallery } from "@/components/product-gallery";
+import { ProductSpecifications } from "@/components/product-specifications";
 import { QuantityStepper } from "@/components/quantity-stepper";
 import { SiteHeader } from "@/components/site-header";
 import { StarterKitBuilder } from "@/components/starter-kit-builder";
@@ -349,6 +350,8 @@ export default async function ProductPage({
           </div>
         </form>
       </section> : null}
+
+      <ProductSpecifications values={product}/>
     </main>
   </>;
 }

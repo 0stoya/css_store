@@ -1,0 +1,111 @@
+/* Informational Magento specifications. Keep purchase controls above the section. */
+.pdp-specifications-section {
+  margin: clamp(28px, 4vw, 48px) 0 38px;
+}
+
+.pdp-specifications-heading {
+  margin-bottom: 16px;
+}
+
+.pdp-specifications-heading .eyebrow {
+  margin-bottom: 6px;
+}
+
+.pdp-specifications-heading h2 {
+  margin: 0;
+  color: var(--ink-strong);
+  font-size: clamp(1.4rem, 2.2vw, 1.85rem);
+  line-height: 1.2;
+}
+
+.pdp-specifications-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
+  gap: 16px;
+  align-items: start;
+}
+
+.pdp-specifications-card {
+  min-width: 0;
+  padding: 20px 22px;
+  border: 1px solid #dbe6ee;
+  border-radius: 16px;
+  background: #fff;
+}
+
+.pdp-specifications-card-heading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.pdp-specifications-icon {
+  width: 38px;
+  height: 38px;
+  flex: 0 0 38px;
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+  background: #edf5fb;
+  color: #21639a;
+}
+
+.pdp-specifications-card-heading h3 {
+  margin: 0;
+  color: var(--ink-strong);
+  font-size: 1rem;
+  line-height: 1.3;
+}
+
+.pdp-specifications-rows {
+  margin: 0;
+  display: grid;
+}
+
+.pdp-specifications-row {
+  padding: 10px 0;
+  display: grid;
+  grid-template-columns: minmax(100px, 38%) minmax(0, 1fr);
+  gap: 10px 14px;
+  align-items: start;
+  font-size: .87rem;
+  line-height: 1.5;
+}
+
+.pdp-specifications-row + .pdp-specifications-row {
+  border-top: 1px solid #edf1f4;
+}
+
+.pdp-specifications-row dt {
+  color: var(--muted);
+  font-weight: 650;
+}
+
+.pdp-specifications-row dd {
+  min-width: 0;
+  margin: 0;
+  color: var(--ink-strong);
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.pdp-specifications-note {
+  margin: 12px 0 0;
+  padding-top: 12px;
+  border-top: 1px solid #edf1f4;
+  color: var(--muted);
+  font-size: .76rem;
+  line-height: 1.45;
+}
+
+@media (max-width: 560px) {
+  .pdp-specifications-card {
+    padding: 17px;
+  }
+
+  .pdp-specifications-row {
+    grid-template-columns: 1fr;
+    gap: 2px;
+  }
+}
