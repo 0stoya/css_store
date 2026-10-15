@@ -32,9 +32,13 @@ potentially hundreds of variants to infer agreement. If the parent has no
 populated attributes, there is no Specifications section. Populate the
 Magento parent if parent-level specifications should appear.
 
-The ordering forms remain unchanged. Specifications sit below the order
-section and do not affect inventory, cart quantity increments, company
-entitlements, catalogue visibility, pricing, or purchase allowances.
+The ordering forms remain unchanged. Specifications now sit directly after
+the product introduction, **before** the long native grouped and CSS grouped-
+configurable order panels, so buyers can see safety information without
+scrolling through every size. Configurable option controls remain within their
+existing PDP hero. Specifications do not affect inventory, cart quantity
+increments, company entitlements, catalogue visibility, pricing, or purchase
+allowances.
 
 ## Formatting and safe degradation
 
