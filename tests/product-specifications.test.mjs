@@ -83,17 +83,29 @@ test("missing values, dropdown option IDs and arbitrary extra attributes do not 
   assert.doesNotMatch(view, /dangerouslySetInnerHTML/);
 });
 
-test("specifications are after the order form on grouped and configurable PDPs", () => {
+test("specifications render once between the product introduction and long ordering panels", () => {
   const page = source("app/product/[sku]/page.tsx");
-  const index = page.indexOf("<ProductSpecifications values={product}/>");
-  assert.ok(index > page.indexOf("StarterKitBuilder"));
-  assert.ok(index > page.indexOf("GroupedQuantityControl"));
-  assert.ok(index > page.indexOf("ConfigurableProductControls"));
-  assert.ok(index > page.lastIndexOf("</form>"));
+  const marker = "<ProductSpecifications values={product}/>";
+  const specsAt = page.indexOf(marker);
+  const introEnd = page.indexOf("</CatalogueBadgeProvider>");
+  const starterKitAt = page.indexOf('{starterKit ? <section className="card starter-kit-order-panel">');
+  const otherOrderAt = page.indexOf('{!starterKit && !configurable ? <section className="card order-panel pdp-order-panel">');
+
+  assert.ok(specsAt >= 0, "Specifications must render on PDP");
+  assert.equal(page.split(marker).length - 1, 1, "Render only one Specifications section");
+  assert.ok(specsAt > introEnd && introEnd >= 0, "Keep specifications below the PDP introduction");
+  assert.ok(specsAt < starterKitAt && starterKitAt >= 0, "Place specifications above starter-kit ordering");
+  assert.ok(specsAt < otherOrderAt && otherOrderAt >= 0, "Place specifications above grouped/simple ordering");
+
+  // Configurable option ordering remains within the hero; avoid moving its form.
+  assert.ok(page.indexOf("<ConfigurableProductControls") < specsAt);
+
   const layout = source("app/layout.tsx");
   assert.match(layout, /import "\.\/product-specifications\.css"/);
   const styles = source("app/product-specifications.css");
   assert.match(styles, /@media \(max-width: 560px\)/);
+  assert.match(styles, /\.pdp-specifications-section \+ \.pdp-order-panel,[\s\S]*?\.pdp-specifications-section \+ \.starter-kit-order-panel \{\s*margin-top: 0;/);
+  assert.match(styles, /\.pdp-specifications-section \{\s*margin: clamp\(28px, 4vw, 48px\) 0 38px;/);
 });
 
 function fakePdpData(typename, sku, attributes = {}) {

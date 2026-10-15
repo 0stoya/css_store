@@ -1,6 +1,13 @@
-/* Informational Magento specifications. Keep purchase controls above the section. */
+/* Parent specifications follow the product introduction, before long grouped ordering lists. */
 .pdp-specifications-section {
   margin: clamp(28px, 4vw, 48px) 0 38px;
+}
+
+/* Both panels already carry top margins. Avoid doubled whitespace when the
+   specifications section is visible; leave existing spacing unchanged if not. */
+.pdp-specifications-section + .pdp-order-panel,
+.pdp-specifications-section + .starter-kit-order-panel {
+  margin-top: 0;
 }
 
 .pdp-specifications-heading {

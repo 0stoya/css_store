@@ -198,6 +198,8 @@ export default async function ProductPage({
       </section>
       </CatalogueBadgeProvider>
 
+      <ProductSpecifications values={product}/>
+
       {starterKit ? <section className="card starter-kit-order-panel">
         <div className="starter-kit-order-heading">
           <div>
@@ -350,8 +352,6 @@ export default async function ProductPage({
           </div>
         </form>
       </section> : null}
-
-      <ProductSpecifications values={product}/>
     </main>
   </>;
 }
