@@ -11,6 +11,7 @@ import {
 } from "@/lib/magento/checkout";
 import { getEmployeeOrdering } from "@/lib/magento/employee";
 import { requireCustomerToken } from "@/lib/session";
+import { assertEmployeeDeliveryReviewComplete } from "@/lib/employee-delivery-review";
 
 function paymentRedirect(kind: "error" | "notice", value: string): never {
   redirect(`/checkout/payment?${kind}=${encodeURIComponent(value)}`);
@@ -81,6 +82,7 @@ export async function preparePaymentAction() {
       getEmployeeOrdering(token),
     ]);
     const cart = assertCheckoutReady(context, ordering);
+    await assertEmployeeDeliveryReviewComplete(cart.id);
     await setBillingSameAsShipping(token, cart.id);
   } catch (error) {
     deliveryRedirect(message(error));
@@ -90,6 +92,12 @@ export async function preparePaymentAction() {
 }
 
 export async function completeCheckoutAction(formData: FormData) {
+  // Explicitly block both native orders and credit-order submissions while
+  // testing address preselection against a live Magento test customer's cart.
+  // The flag is not enabled in production.
+  if (typeof process !== "undefined" && process.env.CSS_EMPLOYEE_ADDRESS_STAGING_NO_SUBMIT === "1") {
+    paymentRedirect("error", "Order placement is disabled on the Employee address staging instance.");
+  }
   const token = await requireCustomerToken();
   const paymentCode = String(formData.get("payment_method") || "").trim();
   if (!paymentCode) paymentRedirect("error", "Choose a payment method.");
@@ -100,6 +108,7 @@ export async function completeCheckoutAction(formData: FormData) {
       getEmployeeOrdering(token),
     ]);
     const initialCart = assertCheckoutReady(initial, ordering);
+    await assertEmployeeDeliveryReviewComplete(initialCart.id);
     const paymentMethod = initialCart.available_payment_methods.find((method) => method.code === paymentCode);
     if (!paymentMethod) throw new Error("That payment method is no longer available for this basket.");
 
@@ -112,6 +121,7 @@ export async function completeCheckoutAction(formData: FormData) {
     // cannot be decided from stale browser input.
     const current = await getCheckoutContext(token);
     const cart = assertCheckoutReady(current, ordering);
+    await assertEmployeeDeliveryReviewComplete(cart.id);
     if (cart.id !== initialCart.id) throw new Error("Your basket changed during checkout. Review it and try again.");
     if (!cart.available_payment_methods.some((method) => method.code === paymentMethod.code)) {
       throw new Error("That payment method is no longer available for this basket.");

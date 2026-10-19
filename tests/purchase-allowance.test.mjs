@@ -138,6 +138,7 @@ async function submitWithContexts(initial, current) {
       unstable_rethrow: (error) => { if (error instanceof Navigation) throw error; },
     },
     "@/lib/session": { requireCustomerToken: async () => "token" },
+    "@/lib/employee-delivery-review": { assertEmployeeDeliveryReviewComplete: async () => {} },
     "@/lib/magento/checkout": {
       getCheckoutContext: async () => { reads++; return reads === 1 ? initial : current; },
       setBillingSameAsShipping: async () => {}, setCheckoutPaymentMethod: async () => {},

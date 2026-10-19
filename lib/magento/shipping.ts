@@ -60,6 +60,8 @@ export type DeliveryCartItem = {
 export type DeliveryContext = {
   countries: Array<{ id: string; full_name_locale: string }>;
   css_company_context: {
+    customer_id: number | null;
+    selected_company_id: number | null;
     companies: Array<{
       company_id: number;
       name: string | null;
@@ -139,6 +141,8 @@ const DELIVERY_CONTEXT = /* GraphQL */ `
   query StoreDeliveryPage {
     countries { id full_name_locale }
     css_company_context {
+      customer_id
+      selected_company_id
       companies {
         company_id
         name

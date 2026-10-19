@@ -11,6 +11,7 @@ import {
   type ShippingCartAddress,
 } from "@/lib/magento/shipping";
 import { requireCustomerToken } from "@/lib/session";
+import { isEmployeeDeliveryReviewPending } from "@/lib/employee-delivery-review";
 import { selectCheckoutEmployeeAction } from "../employee/actions";
 import { preparePaymentAction } from "../payment/actions";
 import {
@@ -92,6 +93,9 @@ export default async function DeliveryPage({
     ? assignedIds[0]
     : null;
   const employeeReady = !singleEmployeeCheckout || currentEmployeeId !== null;
+  const deliveryReviewPending = singleEmployeeCheckout && currentEmployeeId !== null
+    ? await isEmployeeDeliveryReviewPending(cart.id)
+    : false;
 
   return <>
     <SiteHeader customerName={customerName} companyName={selectedCompany?.name} basketQuantity={cart.total_quantity}/>
@@ -138,6 +142,7 @@ export default async function DeliveryPage({
           </section> : null}
 
           <section className="card delivery-card delivery-address-card">
+            {deliveryReviewPending ? <p className="notice" role="status">Please confirm a delivery address for this Employee. The previous Employee’s address is not automatically confirmed.</p> : null}
             <div className="checkout-card-intro">
               <h2>Delivery address</h2>
               <p>Choose one of your saved addresses.</p>
@@ -182,8 +187,8 @@ export default async function DeliveryPage({
 
                   <form action={selectSavedShippingAddressAction}>
                     <input type="hidden" name="customer_address_id" value={address.id}/>
-                    <button className={`button ${selectedAddress ? "delivery-address-selected-button" : "secondary"}`} type="submit" disabled={selectedAddress || !canCheckout}>
-                      {selectedAddress ? <><Check size={16} aria-hidden="true"/><span>Selected</span></> : "Deliver here"}
+                    <button className={`button ${selectedAddress ? "delivery-address-selected-button" : "secondary"}`} type="submit" disabled={(selectedAddress && !deliveryReviewPending) || !canCheckout}>
+                      {selectedAddress && !deliveryReviewPending ? <><Check size={16} aria-hidden="true"/><span>Selected</span></> : selectedAddress ? "Confirm this address" : "Deliver here"}
                     </button>
                   </form>
                 </article>;
@@ -261,12 +266,12 @@ export default async function DeliveryPage({
               <div className="basket-grand-total"><dt>Grand total</dt><dd>{money(cart.prices?.grand_total)}</dd></div>
             </dl>
 
-            {singleEmployeeCheckout && !employeeReady ? <p className="muted small delivery-summary-hint">Choose an Employee to continue.</p> : selectedMethod ? <div className="delivery-summary-method">
+            {singleEmployeeCheckout && !employeeReady ? <p className="muted small delivery-summary-hint">Choose an Employee to continue.</p> : deliveryReviewPending ? <p className="muted small delivery-summary-hint">Confirm the delivery address above to continue.</p> : selectedMethod ? <div className="delivery-summary-method">
               <Truck size={17} aria-hidden="true"/>
               <span>{selectedMethod.carrier_title || selectedMethod.carrier_code} · {selectedMethod.method_title || selectedMethod.method_code}</span>
             </div> : <p className="muted small delivery-summary-hint">Choose a delivery address and method to continue.</p>}
 
-            {selectedMethod && canCheckout && employeeReady ? <form action={preparePaymentAction} className="delivery-summary-action">
+            {selectedMethod && canCheckout && employeeReady && !deliveryReviewPending ? <form action={preparePaymentAction} className="delivery-summary-action">
               <button className="button checkout-forward" type="submit">
                 <span>Review order</span>
                 <ArrowRight size={17} aria-hidden="true"/>
