@@ -8,6 +8,7 @@ import {
   setShippingMethod,
 } from "@/lib/magento/shipping";
 import { requireCustomerToken } from "@/lib/session";
+import { clearEmployeeDeliveryReview } from "@/lib/employee-delivery-review";
 
 function text(formData: FormData, key: string, required = true) {
   const value = String(formData.get(key) || "").trim();
@@ -49,6 +50,7 @@ export async function selectSavedShippingAddressAction(formData: FormData) {
     }
 
     await setSavedShippingAddress(token, cart.id, addressId);
+    await clearEmployeeDeliveryReview();
   } catch (error) {
     failure = message(error);
   }
@@ -80,6 +82,7 @@ export async function setNewShippingAddressAction(formData: FormData) {
       telephone: text(formData, "telephone"),
       save_in_address_book: saveInAddressBook,
     });
+    await clearEmployeeDeliveryReview();
   } catch (error) {
     failure = message(error);
   }
