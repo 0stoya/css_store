@@ -95,3 +95,15 @@ for (const [name, mappedId, ownedAddresses, expected] of [
     assert.deepEqual(calls, expected);
   });
 }
+
+test("isolated address staging blocks both native and credit-order submission", () => {
+  const sourceText = source("app/checkout/payment/actions.ts");
+  assert.match(sourceText, /CSS_EMPLOYEE_ADDRESS_STAGING_NO_SUBMIT/);
+  assert.match(sourceText, /Order placement is disabled on the Employee address staging instance/);
+  assert.match(sourceText, /if \(typeof process !== "undefined"/);
+  assert.ok(
+    sourceText.indexOf("CSS_EMPLOYEE_ADDRESS_STAGING_NO_SUBMIT")
+      < sourceText.indexOf("const token = await requireCustomerToken();", sourceText.indexOf("export async function completeCheckoutAction")),
+    "staging guard must precede any checkout action",
+  );
+});
