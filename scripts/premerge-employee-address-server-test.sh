@@ -27,7 +27,7 @@ die() { printf >&2 'PREMERGE_HOLD: %s\n' "$*"; exit 1; }
 [ "$EUID" -ne 0 ] || die "Do not run Node builds as root."
 [ -d "$repo/.git" ] || [ -f "$repo/.git" ] || die "Expected Git repository missing: $repo"
 [ "$(stat -c '%u' "$repo")" = "$(id -u)" ] || die "Run as Unix owner of $repo."
-for bin in git node npm df awk mktemp nice tr; do
+for bin in git node npm df awk mktemp nice tr timeout; do
   command -v "$bin" >/dev/null || die "Missing executable: $bin"
 done
 remote="$(git -C "$repo" remote get-url origin)"
@@ -43,7 +43,7 @@ scratch_root="${CSS_PREMERGE_SCRATCH_ROOT:-/tmp}"
 space_kb="$(df -Pk "$scratch_root" | awk 'NR==2 {print $4}')"
 [ "${space_kb:-0}" -ge 4194304 ] || die "At least 4 GiB scratch space is required."
 available_kb="$(awk '/^MemAvailable:/ {print $2}' /proc/meminfo)"
-[ "${available_kb:-0}" -ge 2621440 ] || die "Under 2.5 GiB available RAM; do not compete with PM2."
+[ "${available_kb:-0}" -ge 4194304 ] || die "Under 4 GiB available RAM; do not compete with PM2."
 
 prod_sha_before="$(git -C "$repo" rev-parse HEAD)"
 prod_branch_before="$(git -C "$repo" symbolic-ref --quiet --short HEAD || true)"
@@ -101,7 +101,7 @@ export NODE_OPTIONS="--max-old-space-size=2048"
 export npm_config_cache="$run_dir/npm-cache"
 
 printf 'Testing with isolated dependencies, static typecheck, lint, all unit tests and build...\n'
-nice -n 10 bash -e -c '
+timeout 900 nice -n 10 bash -e -c '
   npm install --no-audit --no-fund --no-save --package-lock=false
   npm run typecheck
   npm run lint
