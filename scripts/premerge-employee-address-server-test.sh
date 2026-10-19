@@ -86,10 +86,16 @@ finish() {
 }
 trap finish EXIT
 
-git -C "$repo" fetch --no-tags origin "$remote_ref"
-tested_sha="$(git -C "$repo" rev-parse 'FETCH_HEAD^{commit}')"
+# OFFLINE: no GitHub API calls, HTTPS prompts, git pull, or branch checkout.
+# The operator must have fetched the remote-tracking PR ref using their
+# already-configured Git shell before starting this runner.
+tracking_ref="refs/remotes/origin/${remote_ref#refs/heads/}"
+tested_sha="$(git -C "$repo" rev-parse --verify "${tracking_ref}^{commit}" 2>/dev/null)" ||
+  die "Local PR tracking ref is unavailable. Fetch it in your existing Git shell first."
 [ "$tested_sha" = "$expected_sha" ] ||
-  die "PR branch head changed: expected $expected_sha, got $tested_sha. Review before testing."
+  die "Cached PR head differs: expected $expected_sha, found $tested_sha. Inspect Git refs before testing."
+git -C "$repo" cat-file -e "${tested_sha}^{commit}" ||
+  die "Exact PR commit is not available in the local Git object store."
 
 mkdir -p "$source_dir" "$scratch/home" "$scratch/npm-cache" "$scratch/tmp"
 git -C "$repo" archive --format=tar "$tested_sha" |
