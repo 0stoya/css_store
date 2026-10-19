@@ -92,6 +92,12 @@ export async function preparePaymentAction() {
 }
 
 export async function completeCheckoutAction(formData: FormData) {
+  // Explicitly block both native orders and credit-order submissions while
+  // testing address preselection against a live Magento test customer's cart.
+  // The flag is not enabled in production.
+  if (typeof process !== "undefined" && process.env.CSS_EMPLOYEE_ADDRESS_STAGING_NO_SUBMIT === "1") {
+    paymentRedirect("error", "Order placement is disabled on the Employee address staging instance.");
+  }
   const token = await requireCustomerToken();
   const paymentCode = String(formData.get("payment_method") || "").trim();
   if (!paymentCode) paymentRedirect("error", "Choose a payment method.");
