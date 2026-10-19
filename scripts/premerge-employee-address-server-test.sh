@@ -5,6 +5,7 @@ set -Eeuo pipefail
 umask 077
 
 app="${1:-}"
+expected_sha="${2:-}"
 case "$app" in
   admin)
     repo="/srv/css/css_admin"
@@ -83,6 +84,9 @@ trap finish EXIT
 printf 'Testing PR branch %s (production checkout SHA %s)\n' "$ref" "$prod_sha_before"
 git -C "$repo" fetch --no-tags origin "$ref"
 tested_sha="$(git -C "$repo" rev-parse 'FETCH_HEAD^{commit}')"
+if [ -n "$expected_sha" ] && [ "$tested_sha" != "$expected_sha" ]; then
+  die "Branch head changed: expected $expected_sha, observed $tested_sha. Review before rerunning."
+fi
 printf 'PR_HEAD_SHA=%s\n' "$tested_sha"
 git -C "$repo" worktree add --detach "$worktree" "$tested_sha"
 worktree_attached=1
