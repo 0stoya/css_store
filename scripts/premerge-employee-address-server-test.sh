@@ -7,6 +7,11 @@ umask 077
 
 app="${1:-}"
 expected_sha="${2:-}"
+test_mode="${3:-full}"
+case "$test_mode" in
+  focused|full) ;;
+  *) printf >&2 "PREMERGE_HOLD: Test mode must be focused or full.\n"; exit 2 ;;
+esac
 die() { printf >&2 'PREMERGE_HOLD: %s\n' "$*"; exit 1; }
 
 case "$app" in
@@ -64,8 +69,8 @@ finish() {
 
   production_sha_after="$(git -C "$repo" rev-parse HEAD 2>/dev/null || echo UNKNOWN)"
   production_branch_after="$(git -C "$repo" symbolic-ref --quiet --short HEAD || true)"
-  printf 'APP=%s\nTESTED_SHA=%s\nPRODUCTION_SHA_BEFORE=%s\nPRODUCTION_SHA_AFTER=%s\n' \
-    "$app" "$tested_sha" "$production_sha_before" "$production_sha_after"
+  printf 'APP=%s\nTESTED_SHA=%s\nTEST_MODE=%s\nPRODUCTION_SHA_BEFORE=%s\nPRODUCTION_SHA_AFTER=%s\n' \
+    "$app" "$tested_sha" "$test_mode" "$production_sha_before" "$production_sha_after"
   if [ "$production_sha_after" != "$production_sha_before" ] ||
      [ "$production_branch_after" != "$production_branch_before" ]; then
     printf >&2 'PREMERGE_HOLD: Production Git checkout moved while testing.\n'
@@ -73,9 +78,9 @@ finish() {
   fi
 
   if [ "$status" -eq 0 ] && [ "$passed" -eq 1 ]; then
-    printf 'EMPLOYEE_ADDRESS_%s_OFFLINE_PREFLIGHT=PASS\n' "$(echo "$app" | tr '[:lower:]' '[:upper:]')"
+    printf 'EMPLOYEE_ADDRESS_%s_%s_OFFLINE_PREFLIGHT=PASS\n' "$(echo "$app" | tr '[:lower:]' '[:upper:]')" "$(echo "$test_mode" | tr '[:lower:]' '[:upper:]')"
   else
-    printf 'EMPLOYEE_ADDRESS_%s_OFFLINE_PREFLIGHT=FAIL\n' "$(echo "$app" | tr '[:lower:]' '[:upper:]')"
+    printf 'EMPLOYEE_ADDRESS_%s_%s_OFFLINE_PREFLIGHT=FAIL\n' "$(echo "$app" | tr '[:lower:]' '[:upper:]')" "$(echo "$test_mode" | tr '[:lower:]' '[:upper:]')"
     exit 1
   fi
 }
@@ -104,6 +109,8 @@ runuser -u nobody -- env -i \
   TMPDIR="$scratch/tmp" \
   npm_config_cache="$scratch/npm-cache" \
   WORKDIR="$source_dir" \
+  TEST_MODE="$test_mode" \
+  TEST_FILE="tests/employee-delivery-address.test.mjs" \
   NEXT_TELEMETRY_DISABLED=1 \
   NODE_OPTIONS=--max-old-space-size=1536 \
   MAGENTO_BASE_URL=https://magento.example.invalid \
@@ -118,7 +125,11 @@ runuser -u nobody -- env -i \
     npm install --no-audit --no-fund --no-save --package-lock=false
     npm run typecheck
     npm run lint
-    node --test tests/*.test.mjs
+    if [ "$TEST_MODE" = focused ]; then
+      node --test "$TEST_FILE"
+    else
+      node --test tests/*.test.mjs
+    fi
     npm run build
   '
 passed=1
