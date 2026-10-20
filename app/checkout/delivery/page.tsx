@@ -203,14 +203,14 @@ export default async function DeliveryPage({
                       />
                       <p className="muted small">
                         The name is added as the first street line on this order only.
-                        Your company's saved Magento address is not changed.
+                        Your company&apos;s saved Magento address is not changed.
                       </p>
                       <button className="button" type="submit" disabled={!canCheckout}>
                         {controlledReady ? "Update recipient" : "Confirm recipient and address"}
                       </button>
                     </form>
                     {controlled && !controlledReady ? (
-                      <p className="notice" role="status">Confirm the recipient's name before reviewing this order.</p>
+                      <p className="notice" role="status">Confirm the recipient&apos;s name before reviewing this order.</p>
                     ) : null}
                   </div>
                 )}
@@ -343,7 +343,7 @@ export default async function DeliveryPage({
               <div className="basket-grand-total"><dt>Grand total</dt><dd>{money(cart.prices?.grand_total)}</dd></div>
             </dl>
 
-            {singleEmployeeCheckout && !employeeReady ? <p className="muted small delivery-summary-hint">Choose an Employee to continue.</p> : controlled && !controlledReady ? <p className="muted small delivery-summary-hint">Confirm this Employee's assigned address and recipient before continuing.</p> : deliveryReviewPending ? <p className="muted small delivery-summary-hint">Confirm the delivery address above to continue.</p> : selectedMethod ? <div className="delivery-summary-method">
+            {singleEmployeeCheckout && !employeeReady ? <p className="muted small delivery-summary-hint">Choose an Employee to continue.</p> : controlled && !controlledReady ? <p className="muted small delivery-summary-hint">Confirm this Employee&apos;s assigned address and recipient before continuing.</p> : deliveryReviewPending ? <p className="muted small delivery-summary-hint">Confirm the delivery address above to continue.</p> : selectedMethod ? <div className="delivery-summary-method">
               <Truck size={17} aria-hidden="true"/>
               <span>{selectedMethod.carrier_title || selectedMethod.carrier_code} · {selectedMethod.method_title || selectedMethod.method_code}</span>
             </div> : <p className="muted small delivery-summary-hint">Choose a delivery address and method to continue.</p>}
