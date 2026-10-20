@@ -47,7 +47,7 @@ class Navigation extends Error {
   constructor(location) { super(location); this.location = location; }
 }
 
-function actionFixture(mappedId, ownedAddresses) {
+function actionFixture(mappedId, ownedAddresses, controlled = false) {
   const calls = [];
   const actions = load(root, "app/checkout/employee/actions.ts", {
     "next/navigation": {
@@ -71,7 +71,7 @@ function actionFixture(mappedId, ownedAddresses) {
       setSavedShippingAddress: async (_token, _cart, address) => { calls.push("ship:" + address); },
     },
     "@/lib/controlled-employee-delivery": {
-      controlledDeliveryApplies: async () => false,
+      controlledDeliveryApplies: async () => controlled,
     },
     "@/lib/employee-delivery-address": {
       employeeAddressMappingConfigured: () => true,
@@ -109,4 +109,20 @@ test("isolated address staging blocks both native and credit-order submission", 
       < sourceText.indexOf("const token = await requireCustomerToken();", sourceText.indexOf("export async function completeCheckoutAction")),
     "staging guard must precede any checkout action",
   );
+});
+
+test("controlled Employee selection preloads only the owned address but requires recipient confirmation", async () => {
+  const { actions, calls } = actionFixture(1000, [1000], true);
+  const data = new FormData();
+  data.set("employee_id", "1234");
+  await assert.rejects(() => actions.selectCheckoutEmployeeAction(data), Navigation);
+  assert.deepEqual(calls, ["assign", "pending", "ship:1000"]);
+});
+
+test("controlled Employee without an address keeps the pending-review guard", async () => {
+  const { actions, calls } = actionFixture(null, [1000], true);
+  const data = new FormData();
+  data.set("employee_id", "1234");
+  await assert.rejects(() => actions.selectCheckoutEmployeeAction(data), Navigation);
+  assert.deepEqual(calls, ["assign", "pending"]);
 });
