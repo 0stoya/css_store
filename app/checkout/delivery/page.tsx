@@ -45,12 +45,12 @@ function isSelectedSavedAddress(saved: CustomerShippingAddress, current: Shippin
   if (!current) return false;
   return normalise(saved.firstname) === normalise(current.firstname)
     && normalise(saved.lastname) === normalise(current.lastname)
-    && normalise(saved.company) === normalise(current.company)
     && streetKey(saved.street) === streetKey(current.street)
     && normalise(saved.city) === normalise(current.city)
     && normalise(saved.postcode) === normalise(current.postcode)
-    && normalise(saved.country_code) === normalise(current.country?.code)
-    && normalise(saved.telephone) === normalise(current.telephone);
+    // Magento may normalise company/telephone when copying saved addresses.
+    // The physical destination + recipient name is authoritative for UI.
+    && normalise(saved.country_code) === normalise(current.country?.code);
 }
 
 function assignedEmployeeId(item: {
@@ -113,6 +113,11 @@ export default async function DeliveryPage({
     ? confirmedCartRecipient(controlledAddress, shippingAddress)
     : null;
   const controlledReady = !controlled || (controlledRecipient !== null && !deliveryReviewPending);
+  // Only one saved-address card can be marked selected, even when the
+  // Magento address book contains duplicate identities/physical locations.
+  const selectedSavedId = delivery.customer.addresses.find((address) =>
+    isSelectedSavedAddress(address, shippingAddress),
+  )?.id ?? null;
 
   return <>
     <SiteHeader customerName={customerName} companyName={selectedCompany?.name} basketQuantity={cart.total_quantity}/>
@@ -219,7 +224,7 @@ export default async function DeliveryPage({
             </div>
             {delivery.customer.addresses.length ? <div className="address-grid delivery-address-grid">
               {delivery.customer.addresses.map((address) => {
-                const selectedAddress = isSelectedSavedAddress(address, shippingAddress);
+                const selectedAddress = address.id === selectedSavedId;
                 const countryName = delivery.countries.find((country) => country.id === address.country_code)?.full_name_locale || address.country_code;
                 return <article className={`address-card delivery-saved-address ${selectedAddress ? "selected" : ""}`} key={address.id}>
                   <div className="delivery-address-heading">
