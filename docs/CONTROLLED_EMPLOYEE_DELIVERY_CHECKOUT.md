@@ -54,7 +54,7 @@ when the flag is OFF.
 
 ## Release order (no unreviewed production activation)
 
-1. Accept Admin draft PR `0stoya/css_admin#148`, test, review migration 004,
+1. Accept Admin draft PR `0stoya/css_admin#148`, test, review migration 005,
    apply it to the actual `css_admin` Postgres database using the normal
    operator-governed DDL release.
 2. Grant the existing Store SELECT-only account access to **only** the
