@@ -39,7 +39,13 @@ export function isSingleEmployeeCompany(delivery: DeliveryContext) {
 export async function controlledDeliveryApplies(delivery: DeliveryContext) {
   if (!isSingleEmployeeCompany(delivery)) return false;
   const companyId = positive(delivery.css_company_context.selected_company_id);
-  return getControlledEmployeeDeliveryEnabled(companyId);
+  try {
+    return await getControlledEmployeeDeliveryEnabled(companyId);
+  } catch {
+    // This is a buyer-visible flow. Do not disclose database identifiers,
+    // connection details or upstream SQL errors in redirect messages.
+    throw new Error("Employee delivery settings are temporarily unavailable. Contact your company administrator.");
+  }
 }
 
 // Full-cart Employee attribution is required. Never trust form-submitted IDs.
