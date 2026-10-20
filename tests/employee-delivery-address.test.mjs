@@ -70,6 +70,9 @@ function actionFixture(mappedId, ownedAddresses) {
       }),
       setSavedShippingAddress: async (_token, _cart, address) => { calls.push("ship:" + address); },
     },
+    "@/lib/controlled-employee-delivery": {
+      controlledDeliveryApplies: async () => false,
+    },
     "@/lib/employee-delivery-address": {
       employeeAddressMappingConfigured: () => true,
       getAssignedEmployeeDeliveryAddress: async () => mappedId,
