@@ -154,3 +154,94 @@ test("controlled mode hides Magento address list and blocks all unapproved write
   assert.doesNotMatch(store, /\bINSERT INTO\b|\bUPDATE\s+css_admin\.|\bDELETE FROM\b/);
   assert.match(graphql, /save_in_address_book: boolean/);
 });
+
+class Navigation extends Error {
+  constructor(url) { super(url); this.url = url; }
+}
+
+function checkoutActionFixture() {
+  const calls = [];
+  const fixtureDelivery = {
+    ...delivery({ shipping: [cartShipping(SAVED.street)] }),
+    customerCart: { ...delivery().customerCart, total_quantity: 2 },
+    css_ordering_capabilities: {
+      authenticated: true, company_context: true,
+      company_active: true, can_checkout: true,
+    },
+  };
+  const actions = loadTypeScript(root, "app/checkout/delivery/actions.ts", {
+    "next/navigation": {
+      redirect: (url) => { throw new Navigation(url); },
+      unstable_rethrow: (error) => { if (error instanceof Navigation) throw error; },
+    },
+    "@/lib/magento/shipping": {
+      getDeliveryContext: async () => fixtureDelivery,
+      setSavedShippingAddress: async () => { calls.push("unrestricted-saved-write"); },
+      setNewShippingAddress: async (_token, _cart, address) => {
+        calls.push(["cart-only", address]);
+      },
+      setShippingMethod: async () => { calls.push("method"); },
+    },
+    "@/lib/session": { requireCustomerToken: async () => "customer-token" },
+    "@/lib/magento/employee": {
+      getEmployeeOrdering: async () => ({
+        usesEmployee: true, multiEmployeeBasket: false,
+        employees: [{ employee_id: 1008 }],
+      }),
+    },
+    "@/lib/controlled-employee-delivery": {
+      controlledDeliveryApplies: async () => true,
+      selectedCartEmployeeId: () => 1008,
+      assignedOwnedAddress: async () => SAVED,
+      cartOnlyRecipientAddress: (address, name) => ({
+        firstname: address.firstname,
+        lastname: address.lastname,
+        street: ["Attn: " + name, ...address.street],
+        city: address.city, postcode: address.postcode,
+        country_code: address.country_code,
+        telephone: address.telephone,
+        save_in_address_book: false,
+      }),
+      assertControlledCartReady: async () => ({
+        controlled: true, addressId: SAVED.id,
+      }),
+    },
+    "@/lib/employee-delivery-review": {
+      clearEmployeeDeliveryReview: async () => { calls.push("clear"); },
+    },
+  });
+  return { actions, calls };
+}
+
+test("direct posted manual saved/new address forms cannot bypass controlled policy", async () => {
+  const f = checkoutActionFixture();
+  const postedSaved = new FormData();
+  postedSaved.set("customer_address_id", String(SAVED.id));
+  await assert.rejects(
+    f.actions.selectSavedShippingAddressAction(postedSaved),
+    (e) => e instanceof Navigation && e.url.includes("/checkout/delivery?error="),
+  );
+  const postedCustom = new FormData();
+  postedCustom.set("street_1", "Unauthorised alternate delivery");
+  await assert.rejects(
+    f.actions.setNewShippingAddressAction(postedCustom),
+    (e) => e instanceof Navigation && e.url.includes("/checkout/delivery?error="),
+  );
+  assert.deepEqual(f.calls, []);
+});
+
+test("recipient form creates exactly one cart-only address and clears review only after verification", async () => {
+  const f = checkoutActionFixture();
+  const data = new FormData();
+  data.set("recipient_name", "John Smith");
+  data.set("street_1", "Ignored browser-supplied destination");
+  await assert.rejects(
+    f.actions.confirmControlledEmployeeDeliveryAction(data),
+    (e) => e instanceof Navigation && e.url.includes("/checkout/delivery?notice="),
+  );
+  assert.equal(f.calls.length, 2);
+  assert.equal(f.calls[0][0], "cart-only");
+  assert.deepEqual(Array.from(f.calls[0][1].street), ["Attn: John Smith", ...SAVED.street]);
+  assert.equal(f.calls[0][1].save_in_address_book, false);
+  assert.equal(f.calls[1], "clear");
+});
