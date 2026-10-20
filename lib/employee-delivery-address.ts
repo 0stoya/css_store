@@ -49,3 +49,21 @@ export async function getAssignedEmployeeDeliveryAddress(
   `;
   return rows[0] ? Number(rows[0].customer_address_id) : null;
 }
+
+// One opt-in company flag in Admin's existing PostgreSQL schema. Read with
+// the same restricted Store connection as the Employee-to-address mapping.
+// A missing row is OFF. Missing table/permission/connection throws and fails
+// closed instead of exposing unrestricted delivery.
+export async function getControlledEmployeeDeliveryEnabled(companyId: number): Promise<boolean> {
+  if (!Number.isSafeInteger(companyId) || companyId <= 0) {
+    throw new Error("Invalid company ID for controlled Employee delivery.");
+  }
+  const sql = getEmployeeAddressSql();
+  const rows = await sql`
+    SELECT controlled_delivery_enabled
+    FROM css_admin.company_employee_delivery_policy
+    WHERE company_id = ${companyId}
+    LIMIT 1
+  `;
+  return rows[0]?.controlled_delivery_enabled === true;
+}
