@@ -5,6 +5,7 @@ import {
   getCheckoutContext,
   placeCheckoutOrder,
   setBillingSameAsShipping,
+  setBillingSavedAddress,
   setCheckoutPaymentMethod,
   submitCreditOrder,
   type CheckoutContext,
@@ -12,6 +13,7 @@ import {
 import { getEmployeeOrdering } from "@/lib/magento/employee";
 import { requireCustomerToken } from "@/lib/session";
 import { assertEmployeeDeliveryReviewComplete } from "@/lib/employee-delivery-review";
+import { assertControlledCartReady } from "@/lib/controlled-employee-delivery";
 
 function paymentRedirect(kind: "error" | "notice", value: string): never {
   redirect(`/checkout/payment?${kind}=${encodeURIComponent(value)}`);
@@ -83,7 +85,12 @@ export async function preparePaymentAction() {
     ]);
     const cart = assertCheckoutReady(context, ordering);
     await assertEmployeeDeliveryReviewComplete(cart.id);
-    await setBillingSameAsShipping(token, cart.id);
+    const policy = await assertControlledCartReady(token, cart.id);
+    if (policy.controlled) {
+      await setBillingSavedAddress(token, cart.id, policy.addressId);
+    } else {
+      await setBillingSameAsShipping(token, cart.id);
+    }
   } catch (error) {
     deliveryRedirect(message(error));
   }
@@ -109,12 +116,18 @@ export async function completeCheckoutAction(formData: FormData) {
     ]);
     const initialCart = assertCheckoutReady(initial, ordering);
     await assertEmployeeDeliveryReviewComplete(initialCart.id);
+    const initialPolicy = await assertControlledCartReady(token, initialCart.id);
     const paymentMethod = initialCart.available_payment_methods.find((method) => method.code === paymentCode);
     if (!paymentMethod) throw new Error("That payment method is no longer available for this basket.");
 
-    // Keep billing aligned with the selected delivery address immediately before payment.
-    // This is cart-only and does not mutate the customer's saved Magento address book.
-    await setBillingSameAsShipping(token, initialCart.id);
+    // In controlled mode, the first shipping street line contains an
+    // order-only recipient; billing instead uses the original manager-owned
+    // saved Magento address, so invoices do not inherit "Attn:".
+    if (initialPolicy.controlled) {
+      await setBillingSavedAddress(token, initialCart.id, initialPolicy.addressId);
+    } else {
+      await setBillingSameAsShipping(token, initialCart.id);
+    }
     await setCheckoutPaymentMethod(token, initialCart.id, paymentMethod.code);
 
     // Re-read immediately before the irreversible submission so cart/company/payment state
@@ -122,6 +135,7 @@ export async function completeCheckoutAction(formData: FormData) {
     const current = await getCheckoutContext(token);
     const cart = assertCheckoutReady(current, ordering);
     await assertEmployeeDeliveryReviewComplete(cart.id);
+    await assertControlledCartReady(token, cart.id);
     if (cart.id !== initialCart.id) throw new Error("Your basket changed during checkout. Review it and try again.");
     if (!cart.available_payment_methods.some((method) => method.code === paymentMethod.code)) {
       throw new Error("That payment method is no longer available for this basket.");

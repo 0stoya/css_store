@@ -12,11 +12,17 @@ import {
 } from "@/lib/magento/shipping";
 import { requireCustomerToken } from "@/lib/session";
 import { isEmployeeDeliveryReviewPending } from "@/lib/employee-delivery-review";
+import {
+  assignedOwnedAddress,
+  confirmedCartRecipient,
+  controlledDeliveryApplies,
+} from "@/lib/controlled-employee-delivery";
 import { selectCheckoutEmployeeAction } from "../employee/actions";
 import { preparePaymentAction } from "../payment/actions";
 import {
   selectSavedShippingAddressAction,
   selectShippingMethodAction,
+  confirmControlledEmployeeDeliveryAction,
   setNewShippingAddressAction,
 } from "./actions";
 
@@ -39,12 +45,12 @@ function isSelectedSavedAddress(saved: CustomerShippingAddress, current: Shippin
   if (!current) return false;
   return normalise(saved.firstname) === normalise(current.firstname)
     && normalise(saved.lastname) === normalise(current.lastname)
-    && normalise(saved.company) === normalise(current.company)
     && streetKey(saved.street) === streetKey(current.street)
     && normalise(saved.city) === normalise(current.city)
     && normalise(saved.postcode) === normalise(current.postcode)
-    && normalise(saved.country_code) === normalise(current.country?.code)
-    && normalise(saved.telephone) === normalise(current.telephone);
+    // Magento may normalise company/telephone when copying saved addresses.
+    // The physical destination + recipient name is authoritative for UI.
+    && normalise(saved.country_code) === normalise(current.country?.code);
 }
 
 function assignedEmployeeId(item: {
@@ -82,6 +88,10 @@ export default async function DeliveryPage({
     || "GB";
   const employeeConfig = delivery.css_company_employee_configuration;
   const singleEmployeeCheckout = employeeConfig.uses_employee && !employeeConfig.multi_employee_basket;
+  // Read the company opt-in only for canonical single-Employee ordering.
+  // When the policy DB cannot be read, fail closed rather than showing the
+  // unrestricted Magento address book.
+  const controlled = singleEmployeeCheckout ? await controlledDeliveryApplies(delivery) : false;
   const employees = singleEmployeeCheckout ? await getActiveEmployees(token) : [];
   const activeEmployeeIds = new Set(employees.map((employee) => employee.employee_id));
   const assignedIds = cart.itemsV2.items.map(assignedEmployeeId).filter((id): id is number => id !== null);
@@ -96,6 +106,18 @@ export default async function DeliveryPage({
   const deliveryReviewPending = singleEmployeeCheckout && currentEmployeeId !== null
     ? await isEmployeeDeliveryReviewPending(cart.id)
     : false;
+  const controlledAddress = controlled && currentEmployeeId !== null
+    ? await assignedOwnedAddress(delivery, currentEmployeeId)
+    : null;
+  const controlledRecipient = controlledAddress
+    ? confirmedCartRecipient(controlledAddress, shippingAddress)
+    : null;
+  const controlledReady = !controlled || (controlledRecipient !== null && !deliveryReviewPending);
+  // Only one saved-address card can be marked selected, even when the
+  // Magento address book contains duplicate identities/physical locations.
+  const selectedSavedId = delivery.customer.addresses.find((address) =>
+    isSelectedSavedAddress(address, shippingAddress),
+  )?.id ?? null;
 
   return <>
     <SiteHeader customerName={customerName} companyName={selectedCompany?.name} basketQuantity={cart.total_quantity}/>
@@ -142,6 +164,59 @@ export default async function DeliveryPage({
           </section> : null}
 
           <section className="card delivery-card delivery-address-card">
+            {controlled ? (
+              <>
+                <div className="checkout-card-intro">
+                  <h2>Assigned Employee delivery</h2>
+                  <p>This company uses the address assigned to the selected Employee. Other saved and custom destinations are unavailable.</p>
+                </div>
+                {!employeeReady ? (
+                  <p className="notice">Choose an Employee to view their assigned destination.</p>
+                ) : !controlledAddress ? (
+                  <p className="error" role="alert">
+                    This Employee has no available assigned delivery address. Ask your company administrator to select an address in the Employee editor.
+                  </p>
+                ) : (
+                  <div className="delivery-controlled-destination">
+                    <div className="delivery-controlled-location">
+                      <MapPin size={19} aria-hidden="true"/>
+                      <div>
+                        <strong>{controlledAddress.company || selectedCompany?.name || "Delivery location"}</strong>
+                        {controlledAddress.street.filter(Boolean).map((line, index) => (
+                          <span key={index}>{line}</span>
+                        ))}
+                        <span>{controlledAddress.city}, {controlledAddress.postcode}</span>
+                      </div>
+                      {controlledReady ? <span className="badge">Confirmed</span> : null}
+                    </div>
+                    <form action={confirmControlledEmployeeDeliveryAction} className="delivery-controlled-recipient">
+                      <label htmlFor="controlled-delivery-recipient">Name of person receiving delivery</label>
+                      <input
+                        id="controlled-delivery-recipient"
+                        name="recipient_name"
+                        autoComplete="off"
+                        placeholder="e.g. John Smith"
+                        defaultValue={controlledRecipient ?? ""}
+                        minLength={2}
+                        maxLength={80}
+                        required
+                      />
+                      <p className="muted small">
+                        The name is added as the first street line on this order only.
+                        Your company&apos;s saved Magento address is not changed.
+                      </p>
+                      <button className="button" type="submit" disabled={!canCheckout}>
+                        {controlledReady ? "Update recipient" : "Confirm recipient and address"}
+                      </button>
+                    </form>
+                    {controlled && !controlledReady ? (
+                      <p className="notice" role="status">Confirm the recipient&apos;s name before reviewing this order.</p>
+                    ) : null}
+                  </div>
+                )}
+              </>
+            ) : (
+              <>
             {deliveryReviewPending ? <p className="notice" role="status">Please confirm a delivery address for this Employee. The previous Employee’s address is not automatically confirmed.</p> : null}
             <div className="checkout-card-intro">
               <h2>Delivery address</h2>
@@ -149,7 +224,7 @@ export default async function DeliveryPage({
             </div>
             {delivery.customer.addresses.length ? <div className="address-grid delivery-address-grid">
               {delivery.customer.addresses.map((address) => {
-                const selectedAddress = isSelectedSavedAddress(address, shippingAddress);
+                const selectedAddress = address.id === selectedSavedId;
                 const countryName = delivery.countries.find((country) => country.id === address.country_code)?.full_name_locale || address.country_code;
                 return <article className={`address-card delivery-saved-address ${selectedAddress ? "selected" : ""}`} key={address.id}>
                   <div className="delivery-address-heading">
@@ -226,9 +301,11 @@ export default async function DeliveryPage({
                 </form>
               </div>
             </details>
+              </>
+            )}
           </section>
 
-          {shippingAddress ? <section className="card delivery-card delivery-method-card">
+          {shippingAddress && controlledReady ? <section className="card delivery-card delivery-method-card">
             <div className="checkout-card-intro">
               <h2>Delivery method</h2>
               <p>Choose how you’d like this order delivered.</p>
@@ -266,12 +343,12 @@ export default async function DeliveryPage({
               <div className="basket-grand-total"><dt>Grand total</dt><dd>{money(cart.prices?.grand_total)}</dd></div>
             </dl>
 
-            {singleEmployeeCheckout && !employeeReady ? <p className="muted small delivery-summary-hint">Choose an Employee to continue.</p> : deliveryReviewPending ? <p className="muted small delivery-summary-hint">Confirm the delivery address above to continue.</p> : selectedMethod ? <div className="delivery-summary-method">
+            {singleEmployeeCheckout && !employeeReady ? <p className="muted small delivery-summary-hint">Choose an Employee to continue.</p> : controlled && !controlledReady ? <p className="muted small delivery-summary-hint">Confirm this Employee&apos;s assigned address and recipient before continuing.</p> : deliveryReviewPending ? <p className="muted small delivery-summary-hint">Confirm the delivery address above to continue.</p> : selectedMethod ? <div className="delivery-summary-method">
               <Truck size={17} aria-hidden="true"/>
               <span>{selectedMethod.carrier_title || selectedMethod.carrier_code} · {selectedMethod.method_title || selectedMethod.method_code}</span>
             </div> : <p className="muted small delivery-summary-hint">Choose a delivery address and method to continue.</p>}
 
-            {selectedMethod && canCheckout && employeeReady && !deliveryReviewPending ? <form action={preparePaymentAction} className="delivery-summary-action">
+            {selectedMethod && canCheckout && employeeReady && controlledReady && !deliveryReviewPending ? <form action={preparePaymentAction} className="delivery-summary-action">
               <button className="button checkout-forward" type="submit">
                 <span>Review order</span>
                 <ArrowRight size={17} aria-hidden="true"/>

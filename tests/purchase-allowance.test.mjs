@@ -139,6 +139,7 @@ async function submitWithContexts(initial, current) {
     },
     "@/lib/session": { requireCustomerToken: async () => "token" },
     "@/lib/employee-delivery-review": { assertEmployeeDeliveryReviewComplete: async () => {} },
+    "@/lib/controlled-employee-delivery": { assertControlledCartReady: async () => ({ controlled: false }) },
     "@/lib/magento/checkout": {
       getCheckoutContext: async () => { reads++; return reads === 1 ? initial : current; },
       setBillingSameAsShipping: async () => {}, setCheckoutPaymentMethod: async () => {},

@@ -14,6 +14,7 @@ import {
   markEmployeeDeliveryReviewPending,
 } from "@/lib/employee-delivery-review";
 import { requireCustomerToken } from "@/lib/session";
+import { controlledDeliveryApplies } from "@/lib/controlled-employee-delivery";
 
 function errorMessage(error: unknown) {
   unstable_rethrow(error);
@@ -46,6 +47,8 @@ export async function selectCheckoutEmployeeAction(formData: FormData) {
       throw new Error("Your basket changed during checkout. Review it and try again.");
     }
 
+    // If the policy cannot be read, do not fall back to open address selection.
+    const controlled = await controlledDeliveryApplies(delivery);
     await assignCartEmployee(token, cart.id, employeeId);
     // Changing beneficiary never silently approves the previous destination.
     await markEmployeeDeliveryReviewPending(cart.id);
@@ -61,13 +64,23 @@ export async function selectCheckoutEmployeeAction(formData: FormData) {
       );
       if (ownedId !== null) {
         await setSavedShippingAddress(token, cart.id, ownedId);
-        await clearEmployeeDeliveryReview();
-        notice = "Employee selected. Their saved delivery address has been preselected.";
+        if (controlled) {
+          // The location is assigned, but an actual recipient is mandatory.
+          // Do not clear the pending-review guard until the order-only
+          // recipient shipping address has been written and verified.
+          notice = "Employee selected. Enter the delivery recipient's name to confirm the assigned address.";
+        } else {
+          await clearEmployeeDeliveryReview();
+          notice = "Employee selected. Their saved delivery address has been preselected.";
+        }
+      } else if (controlled) {
+        notice = "This Employee has no assigned delivery address. Ask your company administrator to assign one.";
       }
     } catch {
-      // The Employee assignment succeeded, but auto-selection did not.
-      // Keep the buyer on Delivery until a native address choice is confirmed.
-      notice = "Employee selected. Automatic address selection is unavailable; please confirm a delivery address.";
+      // Fail closed for controlled companies; no manual destination fallback.
+      notice = controlled
+        ? "Employee selected. The assigned address is unavailable. Contact your company administrator."
+        : "Employee selected. Automatic address selection is unavailable; please confirm a delivery address.";
     }
   } catch (error) {
     failure = errorMessage(error);

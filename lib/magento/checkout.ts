@@ -162,6 +162,22 @@ const CHECKOUT_CONTEXT = /* GraphQL */ `
   }
 `;
 
+// Controlled Employee delivery modifies only the cart's shipping street to
+// include the recipient. Billing remains the manager's original saved Magento
+// address, never a copy of the order-only "Attn:" line.
+const SET_BILLING_SAVED_ADDRESS = /* GraphQL */ `
+  mutation StoreSetBillingSavedAddress($cartId: String!, $customerAddressId: Int!) {
+    setBillingAddressOnCart(
+      input: {
+        cart_id: $cartId
+        billing_address: { customer_address_id: $customerAddressId }
+      }
+    ) {
+      cart { id }
+    }
+  }
+`;
+
 const SET_BILLING_SAME_AS_SHIPPING = /* GraphQL */ `
   mutation StoreSetBillingSameAsShipping($cartId: String!) {
     setBillingAddressOnCart(
@@ -218,6 +234,13 @@ const SUBMIT_CREDIT_ORDER = /* GraphQL */ `
 
 export function getCheckoutContext(token: string) {
   return magentoGraphQL<CheckoutContext>(CHECKOUT_CONTEXT, {}, token);
+}
+
+export async function setBillingSavedAddress(token: string, cartId: string, customerAddressId: number) {
+  const data = await magentoGraphQL<{
+    setBillingAddressOnCart: { cart: { id: string } };
+  }>(SET_BILLING_SAVED_ADDRESS, { cartId, customerAddressId }, token);
+  return data.setBillingAddressOnCart.cart;
 }
 
 export async function setBillingSameAsShipping(token: string, cartId: string) {
