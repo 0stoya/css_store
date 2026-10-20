@@ -73,7 +73,7 @@ test("company flag is ignored unless canonical single-Employee ordering is enabl
 
 test("enabled company fails closed when its restricted policy read is unavailable", async () => {
   const { helpers } = fixture({ readError: true });
-  await assert.rejects(helpers.controlledDeliveryApplies(delivery()), /policy DB unavailable/);
+  await assert.rejects(helpers.controlledDeliveryApplies(delivery()), /delivery settings are temporarily unavailable/);
 });
 
 test("cart assignment verifies all lines belong to the same Employee", () => {
