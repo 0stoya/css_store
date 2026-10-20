@@ -8,6 +8,14 @@ import {
   setShippingMethod,
 } from "@/lib/magento/shipping";
 import { requireCustomerToken } from "@/lib/session";
+import { getEmployeeOrdering } from "@/lib/magento/employee";
+import {
+  assignedOwnedAddress,
+  assertControlledCartReady,
+  cartOnlyRecipientAddress,
+  controlledDeliveryApplies,
+  selectedCartEmployeeId,
+} from "@/lib/controlled-employee-delivery";
 import { clearEmployeeDeliveryReview } from "@/lib/employee-delivery-review";
 
 function text(formData: FormData, key: string, required = true) {
@@ -45,6 +53,9 @@ export async function selectSavedShippingAddressAction(formData: FormData) {
 
     const context = await getDeliveryContext(token);
     const cart = assertCheckoutContext(context);
+    if (await controlledDeliveryApplies(context)) {
+      throw new Error("This company requires the Employee's assigned address and a delivery recipient.");
+    }
     if (!context.customer.addresses.some((address) => address.id === addressId)) {
       throw new Error("That saved delivery address is not available to this customer.");
     }
@@ -65,6 +76,9 @@ export async function setNewShippingAddressAction(formData: FormData) {
   try {
     const context = await getDeliveryContext(token);
     const cart = assertCheckoutContext(context);
+    if (await controlledDeliveryApplies(context)) {
+      throw new Error("Custom delivery addresses are disabled for this company's Employee ordering.");
+    }
     const street = [text(formData, "street_1"), text(formData, "street_2", false)].filter(Boolean);
     const region = text(formData, "region", false);
     const company = text(formData, "company", false);
@@ -94,6 +108,47 @@ export async function setNewShippingAddressAction(formData: FormData) {
       ? "Delivery address selected. Magento will save it to your address book when the order is placed."
       : "Delivery address applied to this basket."),
   );
+}
+
+// One order-specific shipping address, created exclusively from the manager's
+// existing Magento address and a buyer-entered recipient. Browser inputs are
+// never trusted for the physical destination.
+export async function confirmControlledEmployeeDeliveryAction(formData: FormData) {
+  const token = await requireCustomerToken();
+  let failure: string | null = null;
+
+  try {
+    const [delivery, ordering] = await Promise.all([
+      getDeliveryContext(token),
+      getEmployeeOrdering(token),
+    ]);
+    const cart = assertCheckoutContext(delivery);
+    if (!await controlledDeliveryApplies(delivery)) {
+      throw new Error("Controlled Employee delivery is not enabled for this company.");
+    }
+    const employeeId = selectedCartEmployeeId(delivery);
+    if (!employeeId || !ordering.employees.some((employee) => employee.employee_id === employeeId)) {
+      throw new Error("Choose an active Employee for this order.");
+    }
+    const address = await assignedOwnedAddress(delivery, employeeId);
+    if (!address) {
+      throw new Error("No delivery address is assigned to this Employee. Contact your company administrator.");
+    }
+    const recipient = text(formData, "recipient_name");
+    await setNewShippingAddress(token, cart.id, cartOnlyRecipientAddress(address, recipient));
+    // Verify Magento retained the recipient and exact assigned physical
+    // destination before clearing the existing checkout review guard.
+    const confirmed = await assertControlledCartReady(token, cart.id);
+    if (!confirmed.controlled || confirmed.addressId !== address.id) {
+      throw new Error("Magento did not retain the assigned delivery destination.");
+    }
+    await clearEmployeeDeliveryReview();
+  } catch (error) {
+    failure = message(error);
+  }
+
+  deliveryRedirect(failure ? "error" : "notice",
+    failure || "Delivery recipient and assigned address confirmed for this order.");
 }
 
 export async function selectShippingMethodAction(formData: FormData) {
