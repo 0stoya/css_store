@@ -459,3 +459,69 @@
     grid-column: 1 / -1;
   }
 }
+
+/* Controlled Employee delivery: a single assigned destination, with an
+ * order-only recipient. This section appears only for opted-in companies. */
+.delivery-controlled-destination {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 1rem;
+  border: 1px solid var(--border, #d7e4ef);
+  border-radius: 12px;
+  padding: 1rem;
+  background: var(--surface, #f8fbfd);
+  min-width: 0;
+}
+.delivery-controlled-location {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.7rem;
+  min-width: 0;
+}
+.delivery-controlled-location > svg {
+  flex: none;
+  color: var(--primary, #0056a6);
+}
+.delivery-controlled-location > div {
+  flex: 1;
+  display: grid;
+  gap: 0.2rem;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.delivery-controlled-location > div > span {
+  display: block;
+  font-size: 0.88rem;
+  color: var(--muted, #516b81);
+}
+.delivery-controlled-recipient {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0.55rem;
+  min-width: 0;
+}
+.delivery-controlled-recipient label {
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+.delivery-controlled-recipient input {
+  display: block;
+  box-sizing: border-box;
+  min-width: 0;
+  max-width: 100%;
+  width: 100%;
+  padding: 0.75rem 0.85rem;
+  border: 1px solid var(--border-strong, #a9bfd1);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--text, #002b55);
+}
+.delivery-controlled-recipient p { margin: 0; }
+.delivery-controlled-recipient .button {
+  justify-self: start;
+}
+@media (max-width: 640px) {
+  .delivery-controlled-destination { padding: 0.8rem; }
+  .delivery-controlled-location { flex-wrap: wrap; }
+  .delivery-controlled-recipient .button { justify-self: stretch; }
+}
