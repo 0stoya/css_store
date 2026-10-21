@@ -140,7 +140,7 @@ export default async function ProductPage({
             <span className={`product-stock ${product.css_stock_info.available ? "available" : "unavailable"}`}>{stockLabel}</span>
           </div>
 
-          {!storefrontPolicy.hidePrice && price && (!starterKit || price.final_price.value > 0) ? <div className="pdp-price-card">
+          {!starterKit && !storefrontPolicy.hidePrice && price ? <div className="pdp-price-card">
             <div>
               <span className="pdp-price-label">Your price</span>
               <strong className="pdp-price-value">{money(price.final_price.value, price.final_price.currency)}</strong>
