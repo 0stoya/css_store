@@ -96,6 +96,8 @@ export default async function ProductPage({
         };
       })
     : [];
+  // Kit membership changes reset local quantities and options without a setState effect.
+  const starterKitBuilderKey = `${product.sku}:${starterKitItems.map((item) => `${item.index}:${item.sku}`).join("|")}`;
   const configurableOptions = product.configurable_options || [];
   const configurableOrderTitle = configurableOptions.length === 1
     ? `Choose your ${configurableOptions[0].label.toLowerCase()}`
@@ -218,7 +220,7 @@ export default async function ProductPage({
             <EmployeePicker employees={employeeOrdering.employees}/>
           </section> : null}
 
-          <StarterKitBuilder key={product.sku} items={starterKitItems} canAdd={canAdd}/>
+          <StarterKitBuilder key={starterKitBuilderKey} items={starterKitItems} canAdd={canAdd}/>
 
           {employeeOrdering.usesEmployee && !employeeOrdering.multiEmployeeBasket ? <p className="pdp-checkout-note starter-kit-checkout-note">
             Employee selection happens at the start of checkout.

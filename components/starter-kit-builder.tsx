@@ -1,7 +1,7 @@
 "use client";
 
-import { CheckCircle2, Minus, PackageCheck, Plus } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { CheckCircle2, Minus, PackageCheck, Plus, X } from "lucide-react";
+import { useMemo, useRef, useState } from "react";
 import type { ConfigurableVariant } from "@/lib/magento/product";
 
 export type StarterKitBuilderItem = {
@@ -75,17 +75,21 @@ export function StarterKitBuilder({
   items: StarterKitBuilderItem[];
   canAdd: boolean;
 }) {
-  const itemSignature = items.map((item) => `${item.index}:${item.sku}`).join("|");
+  // The PDP keys this builder by kit SKU and composition. React remounts it
+  // when the kit changes, so no effect is needed to reset local selections.
   const [quantities, setQuantities] = useState<Record<number, number>>(() => emptyQuantities(items));
   const [selections, setSelections] = useState<Record<string, string>>({});
+  const [previewItem, setPreviewItem] = useState<{
+    name: string;
+    image: NonNullable<StarterKitBuilderItem["image"]>;
+  } | null>(null);
+  const imageDialogRef = useRef<HTMLDialogElement>(null);
 
-  useEffect(() => {
-    setQuantities(emptyQuantities(items));
-    setSelections({});
-    // Reset only when the actual kit composition changes. The serialized
-    // items array can receive a new identity during client renders.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [itemSignature]);
+  function openImagePreview(item: StarterKitBuilderItem) {
+    if (!item.image?.url) return;
+    setPreviewItem({ name: item.name, image: item.image });
+    imageDialogRef.current?.showModal();
+  }
 
   const progress = useMemo(() => {
     const selectedItems = items.filter((item) => item.available && (quantities[item.index] || 0) > 0);
@@ -196,9 +200,17 @@ export function StarterKitBuilder({
 
               <div className="starter-kit-item-media">
                 {item.image?.url ? (
-                  // Product images are remote Magento media URLs already allowed by Next config.
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={item.image.url} alt={item.image.label || item.name} />
+                  <button
+                    type="button"
+                    className="starter-kit-thumbnail-button"
+                    aria-label={`View larger image of ${item.name}`}
+                    title="View larger image"
+                    onClick={() => openImagePreview(item)}
+                  >
+                    {/* Product image URLs come from Magento; no new image request endpoints. */}
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={item.image.url} alt="" />
+                  </button>
                 ) : (
                   <PackageCheck size={28} aria-hidden="true" />
                 )}
@@ -318,6 +330,34 @@ export function StarterKitBuilder({
             : "Ordering unavailable"}</span>
         </button>
       </div>
+
+      <dialog
+        className="starter-kit-image-dialog"
+        ref={imageDialogRef}
+        aria-label="Larger starter kit product image"
+        onClose={() => setPreviewItem(null)}
+        onClick={(event) => {
+          if (event.target === event.currentTarget) event.currentTarget.close();
+        }}
+      >
+        <div className="starter-kit-image-dialog-panel">
+          <button
+            type="button"
+            className="starter-kit-image-dialog-close"
+            aria-label="Close image preview"
+            onClick={() => imageDialogRef.current?.close()}
+          >
+            <X size={22} aria-hidden="true" />
+          </button>
+          {previewItem ? (
+            <figure className="starter-kit-image-dialog-figure">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={previewItem.image.url} alt={previewItem.image.label || previewItem.name} />
+              <figcaption>{previewItem.name}</figcaption>
+            </figure>
+          ) : null}
+        </div>
+      </dialog>
     </div>
   );
 }
