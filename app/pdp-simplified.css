@@ -327,3 +327,90 @@
     min-width: 86px;
   }
 }
+
+/* Native SimpleProduct only: keep quantity and the basket action beside the price.
+   Grouped, configurable and CSS starter-kit PDPs use their existing order forms. */
+.pdp-price-card > .pdp-simple-buy-form {
+  flex: 0 1 auto;
+  width: max-content;
+  max-width: 100%;
+  margin-left: auto;
+}
+
+.pdp-simple-buy-form {
+  min-width: 0;
+  display: grid;
+  gap: 10px;
+}
+
+.pdp-simple-buy-controls {
+  display: flex;
+  align-items: end;
+  gap: 12px;
+}
+
+.pdp-simple-buy-controls .quantity-control {
+  width: auto;
+  flex: 0 0 auto;
+  gap: 6px;
+}
+
+.pdp-simple-buy-controls .quantity-control > label {
+  font-size: .75rem;
+}
+
+.pdp-simple-buy-controls .quantity-stepper {
+  width: 144px;
+  grid-template-columns: 40px minmax(0, 1fr) 40px;
+}
+
+.pdp-simple-buy-controls .order-primary-action {
+  min-width: 178px;
+  min-height: 48px;
+  margin: 0;
+  white-space: nowrap;
+}
+
+.pdp-simple-buy-form .pdp-order-unavailable,
+.pdp-simple-buy-form .pdp-checkout-note {
+  margin: 0;
+  max-width: 380px;
+}
+
+.pdp-simple-buy-employee .employee-picker {
+  max-width: none;
+}
+
+.pdp-simple-buy-standalone {
+  margin: 0 0 18px;
+  padding: 18px 20px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: #fff;
+}
+
+@media (max-width: 720px) {
+  .pdp-price-card > .pdp-simple-buy-form,
+  .pdp-simple-buy-standalone .pdp-simple-buy-form {
+    width: 100%;
+    margin-left: 0;
+  }
+
+  .pdp-simple-buy-controls {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(165px, 1.1fr);
+  }
+
+  .pdp-simple-buy-controls .quantity-control,
+  .pdp-simple-buy-controls .quantity-stepper,
+  .pdp-simple-buy-controls .order-primary-action {
+    width: 100%;
+    min-width: 0;
+  }
+}
+
+@media (max-width: 420px) {
+  .pdp-simple-buy-controls {
+    grid-template-columns: 1fr;
+  }
+}
