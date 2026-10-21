@@ -52,6 +52,7 @@ export default async function ProductPage({
   const nativeGrouped = product.__typename === "GroupedProduct";
   const grouped = starterKit || nativeGrouped;
   const configurable = product.__typename === "ConfigurableProduct";
+  const simpleProduct = product.__typename === "SimpleProduct";
   const supported = ["SimpleProduct", "ConfigurableProduct", "CssGroupedConfigurableProduct", "GroupedProduct"].includes(product.__typename);
   const canAdd = !storefrontPolicy.hideAddToCart && product.css_stock_info.available && !allowanceBlocked && supported;
   const gallery = (product.media_gallery || []).filter((image) => Boolean(image.url)).sort((a, b) => (a.position || 0) - (b.position || 0));
@@ -103,6 +104,35 @@ export default async function ProductPage({
     ? `Choose your ${configurableOptions[0].label.toLowerCase()}`
     : "Choose your options";
 
+  // Keep the native simple-product cart contract and Employee assignment intact.
+  // The same form moves alongside the price, or stands alone when pricing is hidden.
+  const simpleBuyForm = simpleProduct ? <form action={addProductToCartAction} className="pdp-simple-buy-form">
+    <input type="hidden" name="product_sku" value={product.sku}/>
+    {employeeOrdering.usesEmployee && employeeOrdering.multiEmployeeBasket ? <div className="pdp-simple-buy-employee">
+      <EmployeePicker employees={employeeOrdering.employees} label="Who is this for?"/>
+    </div> : null}
+    <div className="pdp-simple-buy-controls">
+      <QuantityStepper
+        name="quantity"
+        defaultValue={Math.max(1, product.css_purchase_constraints?.minimum_quantity || 1)}
+        min={product.css_purchase_constraints?.minimum_quantity || 1}
+        max={product.css_purchase_constraints?.maximum_quantity ?? undefined}
+        step={product.css_purchase_constraints?.increments_enforced ? product.css_purchase_constraints.quantity_increment : "any"}
+      />
+      <button className="button order-primary-action" type="submit" disabled={!canAdd}>
+        <ShoppingCart size={19} aria-hidden="true"/>
+        <span>{canAdd ? addLabel : "Ordering unavailable"}</span>
+      </button>
+    </div>
+    {!canAdd ? <p className="pdp-order-unavailable">
+      <CircleAlert size={16} aria-hidden="true"/>
+      <span>This product can’t currently be added to the basket.</span>
+    </p> : null}
+    {employeeOrdering.usesEmployee && !employeeOrdering.multiEmployeeBasket ? <p className="pdp-checkout-note">
+      Employee selection happens at the start of checkout.
+    </p> : null}
+  </form> : null;
+
   return <>
     <SiteHeader customerName={customerName} companyName={selectedCompany?.name}/>
     <main className="shell pdp-page">
@@ -152,7 +182,8 @@ export default async function ProductPage({
               <strong className="pdp-price-value">{money(price.final_price.value, price.final_price.currency)}</strong>
               {price.regular_price.value > price.final_price.value ? <del>{money(price.regular_price.value, price.regular_price.currency)}</del> : null}
             </div>
-          </div> : null}
+            {simpleBuyForm}
+          </div> : simpleProduct ? <div className="pdp-simple-buy-standalone">{simpleBuyForm}</div> : null}
 
           <div className="pdp-status-grid">
             {product.css_stock_info.delivery_message ? <div className={`pdp-status-card ${product.css_stock_info.available ? "positive" : "blocked"}`}>
@@ -253,7 +284,7 @@ export default async function ProductPage({
         </form>
       </section> : null}
 
-      {!starterKit && !configurable ? <section className="card order-panel pdp-order-panel">
+      {!starterKit && !configurable && !simpleProduct ? <section className="card order-panel pdp-order-panel">
         <div className="order-panel-header">
           <div>
             <p className="eyebrow">Order this product</p>
@@ -277,16 +308,6 @@ export default async function ProductPage({
                 <strong>Who is this for?</strong>
               </div>
               <EmployeePicker employees={employeeOrdering.employees}/>
-            </section> : null}
-
-            {product.__typename === "SimpleProduct" ? <section className="pdp-option-section pdp-single-quantity-section">
-              <QuantityStepper
-                name="quantity"
-                defaultValue={Math.max(1, product.css_purchase_constraints?.minimum_quantity || 1)}
-                min={product.css_purchase_constraints?.minimum_quantity || 1}
-                max={product.css_purchase_constraints?.maximum_quantity ?? undefined}
-                step={product.css_purchase_constraints?.increments_enforced ? product.css_purchase_constraints.quantity_increment : "any"}
-              />
             </section> : null}
 
             {grouped ? <section className="pdp-option-section grouped-section">
