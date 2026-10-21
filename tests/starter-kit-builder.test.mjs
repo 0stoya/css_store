@@ -8,11 +8,20 @@ test("Css grouped configurable products use the dedicated starter-kit builder", 
   const page = source("app/product/[sku]/page.tsx");
 
   assert.match(page, /const starterKit = product\.__typename === "CssGroupedConfigurableProduct"/);
-  assert.match(page, /<StarterKitBuilder items=\{starterKitItems\} canAdd=\{canAdd\}\/>/);
+  assert.match(page, /<StarterKitBuilder key=\{product\.sku\} items=\{starterKitItems\} canAdd=\{canAdd\}\/>/);
   assert.match(page, /<form action=\{addProductToCartAction\} className="starter-kit-form">/);
   assert.match(page, /Build this starter kit/);
   assert.match(page, /Who is this kit for\?/);
   assert.match(page, /starterKit \? <section className="card starter-kit-order-panel">/);
+});
+
+test("Starter-kit parent pricing is hidden without removing child prices", () => {
+  const page = source("app/product/[sku]/page.tsx");
+
+  // A positive Magento parent min-price is not the price of a configurable kit selection.
+  assert.match(page, /!starterKit && !storefrontPolicy\.hidePrice && price \? <div className="pdp-price-card">/);
+  assert.doesNotMatch(page, /\(!starterKit \|\| price\.final_price\.value > 0\)/);
+  assert.match(page, /priceLabel: !storefrontPolicy\.hidePrice && childPrice && childPrice\.value > 0/);
 });
 
 test("Starter-kit items submit one grouped selection with the existing field contract", () => {
