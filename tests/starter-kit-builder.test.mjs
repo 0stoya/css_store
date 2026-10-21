@@ -8,11 +8,20 @@ test("Css grouped configurable products use the dedicated starter-kit builder", 
   const page = source("app/product/[sku]/page.tsx");
 
   assert.match(page, /const starterKit = product\.__typename === "CssGroupedConfigurableProduct"/);
-  assert.match(page, /<StarterKitBuilder items=\{starterKitItems\} canAdd=\{canAdd\}\/>/);
+  assert.match(page, /<StarterKitBuilder key=\{product\.sku\} items=\{starterKitItems\} canAdd=\{canAdd\}\/>/);
   assert.match(page, /<form action=\{addProductToCartAction\} className="starter-kit-form">/);
   assert.match(page, /Build this starter kit/);
   assert.match(page, /Who is this kit for\?/);
   assert.match(page, /starterKit \? <section className="card starter-kit-order-panel">/);
+});
+
+test("Starter-kit parent pricing is hidden without removing child prices", () => {
+  const page = source("app/product/[sku]/page.tsx");
+
+  // A positive Magento parent min-price is not the price of a configurable kit selection.
+  assert.match(page, /!starterKit && !storefrontPolicy\.hidePrice && price \? <div className="pdp-price-card">/);
+  assert.doesNotMatch(page, /\(!starterKit \|\| price\.final_price\.value > 0\)/);
+  assert.match(page, /priceLabel: !storefrontPolicy\.hidePrice && childPrice && childPrice\.value > 0/);
 });
 
 test("Starter-kit items submit one grouped selection with the existing field contract", () => {
@@ -22,25 +31,33 @@ test("Starter-kit items submit one grouped selection with the existing field con
   assert.match(builder, /name=\{\`child_\$\{item\.index\}_sku\`\}/);
   assert.match(builder, /name=\{\`child_\$\{item\.index\}_option\`\}/);
   assert.match(builder, /name=\{\`child_\$\{item\.index\}_quantity\`\}/);
-  assert.match(builder, /Add starter kit to basket/);
+  assert.match(builder, /Add \${progress\.selectedCount} item/);
+  assert.match(builder, /Choose items to add/);
   assert.doesNotMatch(builder, /grouped_child_sku/);
 
   assert.match(actions, /function groupedConfigurableSelections/);
   assert.match(actions, /const items = groupedConfigurableSelections\(product, formData\)/);
   assert.match(actions, /await addGroupedConfigurableProduct\(token, \{/);
   assert.match(actions, /items,/);
+  assert.match(actions, /if \(rawQuantity === 0\) continue;/);
 });
 
-test("Starter-kit PDP reuses Magento child images and grouped default quantities", () => {
+test("Starter-kit PDP starts every available grouped item unselected", () => {
   const page = source("app/product/[sku]/page.tsx");
+  const builder = source("components/starter-kit-builder.tsx");
   const pdp = source("lib/magento/pdp-page.ts");
   const product = source("lib/magento/product.ts");
 
   assert.match(pdp, /small_image \{ url label \}/);
   assert.match(product, /small_image: \{ url: string; label: string \| null \} \| null/);
   assert.match(page, /image: child\.small_image \|\| null/);
-  assert.match(page, /const configuredQuantity = Number\(item\.qty \|\| 0\)/);
-  assert.match(page, /defaultQuantity: configuredQuantity > 0 \? configuredQuantity : 0/);
+  assert.doesNotMatch(page, /defaultQuantity/);
+  assert.match(builder, /function emptyQuantities/);
+  assert.match(builder, /setQuantities\(emptyQuantities\(items\)\)/);
+  assert.match(builder, /setSelections\(\{\}\)/);
+  assert.match(builder, /\}, \[itemSignature\]\);/);
+  assert.doesNotMatch(builder, /\[itemSignature, items\]/);
+  assert.match(builder, /disabled=\{!item\.available \|\| !selected\}/);
   assert.match(page, /childPrice && childPrice\.value > 0/);
 });
 

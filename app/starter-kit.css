@@ -232,6 +232,10 @@
   background: #fafbfc;
 }
 
+.starter-kit-item.skipped .starter-kit-item-options {
+  opacity: .58;
+}
+
 .starter-kit-item.unavailable {
   background: #f8f8f8;
   color: var(--muted);

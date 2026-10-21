@@ -74,8 +74,6 @@ export default async function ProductPage({
         const step = child.css_purchase_constraints?.increments_enforced
           ? child.css_purchase_constraints.quantity_increment
           : 1;
-        const configuredQuantity = Number(item.qty || 0);
-
         return {
           index: originalIndex,
           sku: child.sku,
@@ -90,7 +88,6 @@ export default async function ProductPage({
             : allowanceBlocked
               ? "No remaining purchase allowance."
               : null,
-          defaultQuantity: configuredQuantity > 0 ? configuredQuantity : 0,
           minPositive,
           max: child.css_purchase_constraints?.maximum_quantity ?? null,
           step,
@@ -147,7 +144,7 @@ export default async function ProductPage({
             <span className={`product-stock ${product.css_stock_info.available ? "available" : "unavailable"}`}>{stockLabel}</span>
           </div>
 
-          {!storefrontPolicy.hidePrice && price && (!starterKit || price.final_price.value > 0) ? <div className="pdp-price-card">
+          {!starterKit && !storefrontPolicy.hidePrice && price ? <div className="pdp-price-card">
             <div>
               <span className="pdp-price-label">Your price</span>
               <strong className="pdp-price-value">{money(price.final_price.value, price.final_price.currency)}</strong>
@@ -221,7 +218,7 @@ export default async function ProductPage({
             <EmployeePicker employees={employeeOrdering.employees}/>
           </section> : null}
 
-          <StarterKitBuilder items={starterKitItems} canAdd={canAdd}/>
+          <StarterKitBuilder key={product.sku} items={starterKitItems} canAdd={canAdd}/>
 
           {employeeOrdering.usesEmployee && !employeeOrdering.multiEmployeeBasket ? <p className="pdp-checkout-note starter-kit-checkout-note">
             Employee selection happens at the start of checkout.
