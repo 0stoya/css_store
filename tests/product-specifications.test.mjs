@@ -83,19 +83,23 @@ test("missing values, dropdown option IDs and arbitrary extra attributes do not 
   assert.doesNotMatch(view, /dangerouslySetInnerHTML/);
 });
 
-test("specifications render once between the product introduction and long ordering panels", () => {
+test("specifications follow the hero and precede the remaining grouped and starter-kit order panels", () => {
   const page = source("app/product/[sku]/page.tsx");
   const marker = "<ProductSpecifications values={product}/>";
   const specsAt = page.indexOf(marker);
   const introEnd = page.indexOf("</CatalogueBadgeProvider>");
   const starterKitAt = page.indexOf('{starterKit ? <section className="card starter-kit-order-panel">');
-  const otherOrderAt = page.indexOf('{!starterKit && !configurable ? <section className="card order-panel pdp-order-panel">');
+  const otherOrderAt = page.indexOf('{!starterKit && !configurable && !simpleProduct ? <section className="card order-panel pdp-order-panel">');
+  const simplePriceAt = page.indexOf('!starterKit && !storefrontPolicy.hidePrice && price ? <div className="pdp-price-card">');
+  const simpleBuyAt = page.indexOf("{simpleBuyForm}", simplePriceAt);
 
   assert.ok(specsAt >= 0, "Specifications must render on PDP");
   assert.equal(page.split(marker).length - 1, 1, "Render only one Specifications section");
   assert.ok(specsAt > introEnd && introEnd >= 0, "Keep specifications below the PDP introduction");
   assert.ok(specsAt < starterKitAt && starterKitAt >= 0, "Place specifications above starter-kit ordering");
-  assert.ok(specsAt < otherOrderAt && otherOrderAt >= 0, "Place specifications above grouped/simple ordering");
+  assert.ok(specsAt < otherOrderAt && otherOrderAt >= 0, "Place specifications above remaining grouped ordering");
+  assert.ok(simplePriceAt >= 0 && simpleBuyAt > simplePriceAt && simpleBuyAt < introEnd,
+    "Simple-product purchasing now lives in the price hero, above specifications");
 
   // Configurable option ordering remains within the hero; avoid moving its form.
   assert.ok(page.indexOf("<ConfigurableProductControls") < specsAt);
