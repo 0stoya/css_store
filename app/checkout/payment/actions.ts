@@ -1,6 +1,7 @@
 "use server";
 
 import { redirect, unstable_rethrow } from "next/navigation";
+import { MagentoGraphQLError } from "@/lib/magento/client";
 import {
   getCheckoutContext,
   placeCheckoutOrder,
@@ -15,8 +16,10 @@ import { requireCustomerToken } from "@/lib/session";
 import { assertEmployeeDeliveryReviewComplete } from "@/lib/employee-delivery-review";
 import { assertControlledCartReady } from "@/lib/controlled-employee-delivery";
 
-function paymentRedirect(kind: "error" | "notice", value: string): never {
-  redirect(`/checkout/payment?${kind}=${encodeURIComponent(value)}`);
+function paymentRedirect(kind: "error" | "notice", value: string, poRequired = false): never {
+  const params = new URLSearchParams({ [kind]: value });
+  if (poRequired) params.set("po", "required");
+  redirect(`/checkout/payment?${params.toString()}`);
 }
 
 function deliveryRedirect(value: string): never {
@@ -109,12 +112,28 @@ export async function completeCheckoutAction(formData: FormData) {
   const paymentCode = String(formData.get("payment_method") || "").trim();
   if (!paymentCode) paymentRedirect("error", "Choose a payment method.");
 
+  // The Store has no trusted per-buyer PO-entry capability field. Only reveal
+  // the PO prompt after the existing Fluid submission validator requires one.
+  const poWasRequested = formData.get("po_requested") === "1";
+  const purchaseOrderNumber = String(formData.get("purchase_order_number") || "").trim();
+  let creditFlow = false;
+
   try {
     const [initial, ordering] = await Promise.all([
       getCheckoutContext(token),
       getEmployeeOrdering(token),
     ]);
     const initialCart = assertCheckoutReady(initial, ordering);
+    creditFlow = initial.css_ordering_capabilities.can_submit_credit_order;
+    if (purchaseOrderNumber && !creditFlow) {
+      throw new Error("PO entry is not available for this payment flow.");
+    }
+    if (poWasRequested && !purchaseOrderNumber) {
+      throw new Error("Enter a PO number before submitting.");
+    }
+    if (purchaseOrderNumber && !/^[A-Za-z0-9-]{1,16}$/.test(purchaseOrderNumber)) {
+      throw new Error("PO number must contain 1–16 letters, numbers or dashes.");
+    }
     await assertEmployeeDeliveryReviewComplete(initialCart.id);
     const initialPolicy = await assertControlledCartReady(token, initialCart.id);
     const paymentMethod = initialCart.available_payment_methods.find((method) => method.code === paymentCode);
@@ -128,7 +147,10 @@ export async function completeCheckoutAction(formData: FormData) {
     } else {
       await setBillingSameAsShipping(token, initialCart.id);
     }
-    await setCheckoutPaymentMethod(token, initialCart.id, paymentMethod.code);
+    await setCheckoutPaymentMethod(
+      token, initialCart.id, paymentMethod.code,
+      creditFlow ? purchaseOrderNumber || undefined : undefined,
+    );
 
     // Re-read immediately before the irreversible submission so cart/company/payment state
     // cannot be decided from stale browser input.
@@ -167,6 +189,10 @@ export async function completeCheckoutAction(formData: FormData) {
     const order = await placeCheckoutOrder(token, cart.id);
     redirect(confirmationUrl({ kind: "order", order: order.order_number }));
   } catch (error) {
-    paymentRedirect("error", message(error));
+    const poRequired = creditFlow && (
+      poWasRequested
+      || (error instanceof MagentoGraphQLError && /^PO Number is required\.?$/i.test(error.message.trim()))
+    );
+    paymentRedirect("error", message(error), poRequired);
   }
 }
