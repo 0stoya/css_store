@@ -42,7 +42,7 @@ export default async function ProductPage({
   const [{ sku: rawSku }, status] = await Promise.all([params, searchParams]);
   const sku = decodeURIComponent(rawSku);
   const pdp = await getPdpPageContext(token, sku);
-  const { product, selectedCompany, customerName, employeeOrdering, repeatLists, storefrontPolicy } = pdp;
+  const { product, selectedCompany, customerName, employeeOrdering, employeeOrderingBlocked, repeatLists, storefrontPolicy } = pdp;
   if (!product) notFound();
 
   const price = product.price_range?.minimum_price;
@@ -54,7 +54,7 @@ export default async function ProductPage({
   const configurable = product.__typename === "ConfigurableProduct";
   const simpleProduct = product.__typename === "SimpleProduct";
   const supported = ["SimpleProduct", "ConfigurableProduct", "CssGroupedConfigurableProduct", "GroupedProduct"].includes(product.__typename);
-  const canAdd = !storefrontPolicy.hideAddToCart && product.css_stock_info.available && !allowanceBlocked && supported;
+  const canAdd = !employeeOrderingBlocked && !storefrontPolicy.hideAddToCart && product.css_stock_info.available && !allowanceBlocked && supported;
   const gallery = (product.media_gallery || []).filter((image) => Boolean(image.url)).sort((a, b) => (a.position || 0) - (b.position || 0));
   const stockLabel = product.css_stock_info.stock_status || (product.css_stock_info.available ? "Available" : "Unavailable");
   const productTypeLabel = starterKit ? "Starter kit" : grouped ? "Product set" : "Product";
@@ -145,6 +145,9 @@ export default async function ProductPage({
       {status.added === "1" ? <p className="success pdp-message" role="status">Added to basket.</p> : null}
       {status.saved === "1" ? <p className="success pdp-message" role="status">Selection saved to your repeat-order list.</p> : null}
       {status.error ? <p className="error pdp-message" role="alert">{status.error}</p> : null}
+      {employeeOrderingBlocked ? <p className="error pdp-message" role="status">
+        You can view this product, but ordering is unavailable because your account cannot access the required company Employee ordering settings. Contact your company administrator.
+      </p> : null}
 
       <CatalogueBadgeProvider skus={[product.sku]}>
       <section className="pdp pdp-hero">
