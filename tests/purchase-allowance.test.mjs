@@ -138,6 +138,7 @@ async function submitWithContexts(initial, current) {
       unstable_rethrow: (error) => { if (error instanceof Navigation) throw error; },
     },
     "@/lib/session": { requireCustomerToken: async () => "token" },
+    "@/lib/magento/client": { MagentoGraphQLError: class MagentoGraphQLError extends Error {} },
     "@/lib/employee-delivery-review": { assertEmployeeDeliveryReviewComplete: async () => {} },
     "@/lib/controlled-employee-delivery": { assertControlledCartReady: async () => ({ controlled: false }) },
     "@/lib/magento/checkout": {
