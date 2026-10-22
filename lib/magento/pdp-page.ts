@@ -23,10 +23,6 @@ type PdpPageQuery = {
     hide_add_to_cart: boolean;
     add_to_cart_label: string | null;
   };
-  css_company_employee_configuration: {
-    uses_employee: boolean;
-    multi_employee_basket: boolean;
-  };
   products: {
     items: PdpProduct[];
   };
@@ -98,10 +94,6 @@ const PDP_PAGE = /* GraphQL */ `
       hide_add_to_cart
       add_to_cart_label
     }
-    css_company_employee_configuration {
-      uses_employee
-      multi_employee_basket
-    }
     products(
       filter: { sku: { eq: $sku } }
       pageSize: 1
@@ -164,6 +156,54 @@ const PDP_PAGE = /* GraphQL */ `
 // remain orderable. Keep the old query as a strictly scoped fallback.
 const PDP_PAGE_WITHOUT_SPECIFICATIONS = PDP_PAGE.replace(PDP_SPECIFICATION_SELECTION, "");
 
+const PDP_EMPLOYEE_ORDERING = /* GraphQL */ `
+  query StorePdpEmployeeOrdering {
+    css_company_employee_configuration {
+      uses_employee
+      multi_employee_basket
+    }
+  }
+`;
+
+function isEmployeeOrderingAuthorizationDenied(error: unknown) {
+  return error instanceof MagentoGraphQLError && error.category === "graphql-authorization";
+}
+
+async function getPdpEmployeeOrdering(token: string): Promise<{
+  ordering: EmployeeOrdering;
+  accessDenied: boolean;
+}> {
+  try {
+    const data = await magentoGraphQL<{
+      css_company_employee_configuration: {
+        uses_employee: boolean;
+        multi_employee_basket: boolean;
+      };
+    }>(PDP_EMPLOYEE_ORDERING, {}, token);
+    const configuration = data.css_company_employee_configuration;
+    const employees = configuration.uses_employee && configuration.multi_employee_basket
+      ? await getActiveEmployees(token)
+      : [];
+    return {
+      ordering: {
+        usesEmployee: configuration.uses_employee,
+        multiEmployeeBasket: configuration.multi_employee_basket,
+        employees,
+      },
+      accessDenied: false,
+    };
+  } catch (error) {
+    // Product browsing must not require Employee-management visibility.
+    // An unknown ordering mode must NEVER be interpreted as ordering disabled:
+    // explicitly block basket controls until authoritative access is restored.
+    if (!isEmployeeOrderingAuthorizationDenied(error)) throw error;
+    return {
+      ordering: { usesEmployee: false, multiEmployeeBasket: false, employees: [] },
+      accessDenied: true,
+    };
+  }
+}
+
 function isMissingSpecificationField(error: unknown): boolean {
   if (!(error instanceof MagentoGraphQLError)) return false;
   const missing = error.message.match(/Cannot query field ["']?([a-z_][a-z_0-9]*)["']?/i)?.[1];
@@ -182,6 +222,7 @@ export type PdpPageContext = {
     addToCartLabel: string | null;
   };
   employeeOrdering: EmployeeOrdering;
+  employeeOrderingBlocked: boolean;
   repeatLists: Array<{
     list_id: number;
     name: string;
@@ -204,14 +245,16 @@ export async function getPdpPageContext(
     data = await magentoGraphQL<PdpPageQuery>(PDP_PAGE_WITHOUT_SPECIFICATIONS, { sku }, token);
   }
 
-  const configuration = data.css_company_employee_configuration;
   const selectedCompany = data.css_company_context.companies.find((company) => company.selected) || null;
   const product = data.products.items.find((item) => item?.sku === sku) || null;
 
-  const [employees, repeatListData] = await Promise.all([
-    configuration.uses_employee && configuration.multi_employee_basket
-      ? getActiveEmployees(token)
-      : Promise.resolve([]),
+  const [employeeState, repeatListData] = await Promise.all([
+    product
+      ? getPdpEmployeeOrdering(token)
+      : Promise.resolve({
+          ordering: { usesEmployee: false, multiEmployeeBasket: false, employees: [] } as EmployeeOrdering,
+          accessDenied: false,
+        }),
     product?.__typename === "CssGroupedConfigurableProduct"
       ? getRepeatOrderLists(token)
       : Promise.resolve({ css_repeat_order_lists: [] }),
@@ -230,11 +273,8 @@ export async function getPdpPageContext(
       hideAddToCart: data.css_storefront_policy.hide_add_to_cart,
       addToCartLabel: data.css_storefront_policy.add_to_cart_label,
     },
-    employeeOrdering: {
-      usesEmployee: configuration.uses_employee,
-      multiEmployeeBasket: configuration.multi_employee_basket,
-      employees,
-    },
+    employeeOrdering: employeeState.ordering,
+    employeeOrderingBlocked: employeeState.accessDenied,
     repeatLists: repeatListData.css_repeat_order_lists.map((list) => ({ list_id: list.list_id, name: list.name })),
     product,
   };
