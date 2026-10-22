@@ -137,6 +137,7 @@ export default async function CreditOrderPage({
         <input type="hidden" name="action" value="approve"/>
         {approvalContext}
         <strong>Approve credit order</strong>
+        <p className="muted small">If your company needs a PO number, it can be entered by an authorised user once the required approvals are complete.</p>
         {order.actions.can_add_comment ? <textarea name="comment" placeholder="Optional approval comment"/> : null}
         <button className="button" type="submit">Approve</button>
       </form> : null}
@@ -163,7 +164,7 @@ export default async function CreditOrderPage({
         <input type="hidden" name="number" value={order.number}/>
         {approvalContext}
         <strong>Add purchase order number</strong>
-        <p className="muted small">A PO number may be needed before this approved order can continue.</p>
+        <p className="muted small">Only users granted Enter PO Numbers may complete this step. Once all approvals are complete, saving the PO can create the Magento sales order immediately.</p>
         <label className="field">
           <span>PO number</span>
           <input name="purchase_order_number" required maxLength={16} pattern="[A-Za-z0-9-]+" autoComplete="off"/>
