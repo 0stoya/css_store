@@ -16,9 +16,6 @@ export type CompanyOrderItem = {
   quantity_refunded: number;
   quantity_canceled: number;
   product_sale_price: CartMoney | null;
-  prices: {
-    row_total: CartMoney;
-  } | null;
   selected_options: OrderOption[] | null;
   entered_options: OrderOption[] | null;
   css_employee: {
@@ -109,7 +106,6 @@ const COMPANY_ORDERS = /* GraphQL */ `
           quantity_refunded
           quantity_canceled
           product_sale_price { value currency }
-          prices { row_total { value currency } }
           selected_options { label value }
           entered_options { label value }
           css_employee { employee_id employee_name employee_code }
