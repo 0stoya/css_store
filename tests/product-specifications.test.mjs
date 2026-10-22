@@ -236,7 +236,7 @@ test("Employee read ACL failure does not prevent product browsing and disables o
   assert.equal(result.product.sku, "A800");
   assert.equal(result.product.safety_rating, "EN388:2016 - 3121X");
   assert.equal(result.employeeOrderingBlocked, true);
-  assert.deepEqual(result.employeeOrdering.employees, []);
+  assert.equal(result.employeeOrdering.employees.length, 0);
   const page = source("app/product/[sku]/page.tsx");
   assert.match(page, /const canAdd = !employeeOrderingBlocked && !storefrontPolicy\.hideAddToCart/);
   assert.match(page, /You can view this product, but ordering is unavailable/);
