@@ -44,7 +44,7 @@ function assignedEmployeeId(item: {
 export default async function PaymentPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string; notice?: string }>;
+  searchParams: Promise<{ error?: string; notice?: string; po?: string }>;
 }) {
   const token = await requireCustomerToken();
   const [checkout, messages] = await Promise.all([
@@ -64,6 +64,7 @@ export default async function PaymentPage({
     && capabilities.company_active
     && capabilities.can_checkout;
   const usesCreditOrder = capabilities.can_submit_credit_order;
+  const poRequired = usesCreditOrder && messages.po === "required";
   const nativeApprovalAllowed = usesCreditOrder || cart.css_purchase_eligibility?.approval_status === "ALLOWED";
   const employeeConfig = checkout.css_company_employee_configuration;
   const singleEmployeeCheckout = employeeConfig.uses_employee && !employeeConfig.multi_employee_basket;
@@ -126,6 +127,29 @@ export default async function PaymentPage({
                 </label>;
               })}
             </div> : <p className="error" role="alert">No payment methods are currently available for this order.</p>}
+
+            {poRequired ? <section className="payment-po-required" aria-labelledby="payment-po-heading">
+              <input type="hidden" name="po_requested" value="1"/>
+              <h3 id="payment-po-heading">Purchase order number required</h3>
+              <p>Your company’s ordering rules require a PO number before this order can be submitted.
+                Enter the reference supplied by your company administrator.</p>
+              <label className="field" htmlFor="payment-purchase-order-number">
+                <span>PO number</span>
+                <input
+                  id="payment-purchase-order-number"
+                  name="purchase_order_number"
+                  type="text"
+                  required
+                  maxLength={16}
+                  pattern="[A-Za-z0-9-]{1,16}"
+                  autoComplete="off"
+                  spellCheck={false}
+                  aria-describedby="payment-po-format"
+                  placeholder="e.g. PO-12345"
+                />
+              </label>
+              <small id="payment-po-format">1–16 letters, numbers or dashes. This is checked by Magento when you submit.</small>
+            </section> : null}
 
             {shippingAddress ? <div className="payment-context-row">
               <ReceiptText size={17} aria-hidden="true"/>
