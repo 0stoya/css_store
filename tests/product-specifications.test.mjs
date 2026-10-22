@@ -127,7 +127,12 @@ function fakePdpData(typename, sku, attributes = {}) {
 }
 
 function pdpModule(queryHandler) {
-  class MagentoGraphQLError extends Error {}
+  class MagentoGraphQLError extends Error {
+    constructor(message, category) {
+      super(message);
+      this.category = category;
+    }
+  }
   const pdpClient = loadTypeScript(root, "lib/magento/pdp-page.ts", {
     "@/lib/magento/client": {
       MagentoGraphQLError,
@@ -150,6 +155,9 @@ test("the one existing PDP query reads parent attributes for all product types",
   const requests = [];
   const { pdpClient } = pdpModule(async (query, variables, token) => {
     requests.push({ query, variables, token });
+    if (query.includes("query StorePdpEmployeeOrdering")) {
+      return { css_company_employee_configuration: { uses_employee: false, multi_employee_basket: false } };
+    }
     return fakePdpData(variables.sku.split(":")[0], variables.sku, {
       safety_rating: "EN388:2016 - 3121X",
       pack_qty: "10",
@@ -161,12 +169,22 @@ test("the one existing PDP query reads parent attributes for all product types",
     assert.equal(result.product.safety_rating, "EN388:2016 - 3121X");
     assert.equal(result.product.pack_qty, "10");
   }
-  assert.equal(requests.length, 4);
-  for (const request of requests) {
+  assert.equal(requests.length, 8);
+  const productRequests = requests.filter((request) => request.query.includes("query StorePdpPage"));
+  const employeeRequests = requests.filter((request) => request.query.includes("query StorePdpEmployeeOrdering"));
+  assert.equal(productRequests.length, 4);
+  assert.equal(employeeRequests.length, 4);
+  for (const request of productRequests) {
     assert.match(request.query, /products\(/);
+    assert.doesNotMatch(request.query, /css_company_employee_configuration/);
     for (const code of specifications.PRODUCT_SPECIFICATION_CODES) {
       assert.ok(request.query.includes(code), code + " should be selected on parent SKU");
     }
+    assert.equal(request.token, "customer-token");
+  }
+  for (const request of employeeRequests) {
+    assert.doesNotMatch(request.query, /products\(/);
+    assert.match(request.query, /css_company_employee_configuration/);
     assert.equal(request.token, "customer-token");
   }
 });
@@ -175,6 +193,9 @@ test("an unavailable Magento specification field retries the original PDP withou
   let calls = 0;
   const { pdpClient, MagentoGraphQLError } = pdpModule(async (query, variables) => {
     calls += 1;
+    if (query.includes("query StorePdpEmployeeOrdering")) {
+      return { css_company_employee_configuration: { uses_employee: false, multi_employee_basket: false } };
+    }
     if (query.includes("safety_rating")) {
       throw new MagentoGraphQLError('Cannot query field "safety_rating" on type "ProductInterface".');
     }
@@ -185,13 +206,61 @@ test("an unavailable Magento specification field retries the original PDP withou
   console.warn = () => {};
   try {
     const result = await pdpClient.getPdpPageContext("customer-token", "A880");
-    assert.equal(calls, 2);
+    assert.equal(calls, 3);
     assert.equal(result.product.sku, "A880");
     assert.equal(result.product.safety_rating, undefined);
     assert.equal(result.storefrontPolicy.hideAddToCart, false);
   } finally {
     console.warn = originalWarn;
   }
+});
+
+test("Employee read ACL failure does not prevent product browsing and disables ordering", async () => {
+  let productCalls = 0;
+  let orderingCalls = 0;
+  const { pdpClient, MagentoGraphQLError } = pdpModule(async (query, variables) => {
+    if (query.includes("query StorePdpEmployeeOrdering")) {
+      orderingCalls += 1;
+      throw new MagentoGraphQLError(
+        "You are not allowed to manage employees for this company.",
+        "graphql-authorization",
+      );
+    }
+    productCalls += 1;
+    return fakePdpData("GroupedProduct", variables.sku, { safety_rating: "EN388:2016 - 3121X" });
+  });
+
+  const result = await pdpClient.getPdpPageContext("buyer-token", "A800");
+  assert.equal(productCalls, 1);
+  assert.equal(orderingCalls, 1);
+  assert.equal(result.product.sku, "A800");
+  assert.equal(result.product.safety_rating, "EN388:2016 - 3121X");
+  assert.equal(result.employeeOrderingBlocked, true);
+  assert.deepEqual(result.employeeOrdering.employees, []);
+  const page = source("app/product/[sku]/page.tsx");
+  assert.match(page, /const canAdd = !employeeOrderingBlocked && !storefrontPolicy\.hideAddToCart/);
+  assert.match(page, /You can view this product, but ordering is unavailable/);
+});
+
+test("Unrelated GraphQL failures in the isolated Employee request still propagate", async () => {
+  const { pdpClient, MagentoGraphQLError } = pdpModule(async (query, variables) => {
+    if (query.includes("query StorePdpEmployeeOrdering")) {
+      throw new MagentoGraphQLError("Magento GraphQL is unavailable.", "graphql-server");
+    }
+    return fakePdpData("SimpleProduct", variables.sku);
+  });
+  await assert.rejects(pdpClient.getPdpPageContext("buyer-token", "AR245G"), /Magento GraphQL is unavailable/);
+});
+
+test("Employee ordering flags and selector eligibility are preserved when authorised", async () => {
+  const { pdpClient } = pdpModule(async (query, variables) => query.includes("query StorePdpEmployeeOrdering")
+    ? { css_company_employee_configuration: { uses_employee: true, multi_employee_basket: true } }
+    : fakePdpData("GroupedProduct", variables.sku));
+
+  const result = await pdpClient.getPdpPageContext("manager-token", "A800");
+  assert.equal(result.employeeOrderingBlocked, false);
+  assert.equal(result.employeeOrdering.usesEmployee, true);
+  assert.equal(result.employeeOrdering.multiEmployeeBasket, true);
 });
 
 test("unrelated Magento GraphQL failures are not masked by the optional attribute fallback", async () => {
