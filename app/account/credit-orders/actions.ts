@@ -47,6 +47,7 @@ export async function creditOrderLifecycleAction(formData: FormData) {
     detailRedirect(number, "error", "Unknown credit-order action.", from);
   }
 
+  let approvalFollowup: string | null = null;
   try {
     const current = (await getCreditOrder(token, number)).css_credit_order;
     const allowed = action === "approve"
@@ -62,18 +63,28 @@ export async function creditOrderLifecycleAction(formData: FormData) {
       throw new Error("Comments are not available for your account on this credit order.");
     }
 
-    await performCreditOrderAction(
+    const result = await performCreditOrderAction(
       token,
       action as "approve" | "reject" | "cancel" | "place",
       number,
       comment || undefined,
     );
+    // A successful approval is not necessarily final in Fluid's multi-stage
+    // hierarchy. PO completion is deliberately a separate authorised step.
+    if (action === "approve") {
+      if (result.status === "approval_required" || result.status === "pending") {
+        approvalFollowup = "Approval recorded. This order is waiting for another approval.";
+      } else if (result.status === "approved" && !result.actions.can_place_order
+        && !result.actions.requires_payment_details) {
+        approvalFollowup = "Approval recorded. An authorised user can add a PO number below if required.";
+      }
+    }
   } catch (error) {
     detailRedirect(number, "error", errorMessage(error), from);
   }
 
   const label = action === "approve"
-    ? "Approval recorded."
+    ? approvalFollowup || "Approval recorded."
     : action === "reject"
       ? "Credit order rejected."
       : action === "cancel"

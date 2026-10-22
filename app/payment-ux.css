@@ -379,3 +379,58 @@
     display: none;
   }
 }
+
+/* PO entry is only revealed after the existing Fluid role validator requests it. */
+.payment-po-required {
+  display: grid;
+  gap: 10px;
+  padding: 18px;
+  margin-top: 18px;
+  border: 1px solid #b9d1e8;
+  border-radius: 12px;
+  background: #f5f9fd;
+}
+
+.payment-po-required h3,
+.payment-po-required p {
+  margin: 0;
+}
+
+.payment-po-required h3 {
+  font-size: 1rem;
+  font-weight: 800;
+  color: var(--ink-strong);
+}
+
+.payment-po-required p,
+.payment-po-required small {
+  color: var(--muted-strong);
+  font-size: .86rem;
+  line-height: 1.55;
+}
+
+.payment-po-required .field {
+  display: grid;
+  gap: 6px;
+  max-width: 300px;
+}
+
+.payment-po-required .field input {
+  width: 100%;
+  max-width: 300px;
+  padding: 10px 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: 9px;
+  background: #fff;
+}
+
+@media (max-width: 620px) {
+  .payment-po-required {
+    padding: 14px;
+  }
+
+  .payment-po-required .field,
+  .payment-po-required .field input {
+    max-width: none;
+  }
+}

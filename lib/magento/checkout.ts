@@ -207,6 +207,25 @@ const SET_PAYMENT_METHOD = /* GraphQL */ `
   }
 `;
 
+// Use Magento's native PaymentMethodInput.purchase_order_number only when
+// the backend has explicitly requested a PO during company credit checkout.
+// Keep the original mutation untouched for all standard payment flows.
+const SET_PAYMENT_METHOD_WITH_PO = /* GraphQL */ `
+  mutation StoreSetPaymentMethodWithPo($cartId: String!, $code: String!, $purchaseOrderNumber: String!) {
+    setPaymentMethodOnCart(
+      input: {
+        cart_id: $cartId
+        payment_method: { code: $code, purchase_order_number: $purchaseOrderNumber }
+      }
+    ) {
+      cart {
+        id
+        selected_payment_method { code title }
+      }
+    }
+  }
+`;
+
 const PLACE_ORDER = /* GraphQL */ `
   mutation StorePlaceOrder($cartId: String!) {
     placeOrder(input: { cart_id: $cartId }) {
@@ -250,12 +269,22 @@ export async function setBillingSameAsShipping(token: string, cartId: string) {
   return data.setBillingAddressOnCart.cart;
 }
 
-export async function setCheckoutPaymentMethod(token: string, cartId: string, code: string) {
+export async function setCheckoutPaymentMethod(
+  token: string,
+  cartId: string,
+  code: string,
+  purchaseOrderNumber?: string,
+) {
+  const withPo = Boolean(purchaseOrderNumber);
   const data = await magentoGraphQL<{
     setPaymentMethodOnCart: {
       cart: { id: string; selected_payment_method: CheckoutPaymentMethod | null };
     };
-  }>(SET_PAYMENT_METHOD, { cartId, code }, token);
+  }>(
+    withPo ? SET_PAYMENT_METHOD_WITH_PO : SET_PAYMENT_METHOD,
+    withPo ? { cartId, code, purchaseOrderNumber } : { cartId, code },
+    token,
+  );
   return data.setPaymentMethodOnCart.cart;
 }
 
