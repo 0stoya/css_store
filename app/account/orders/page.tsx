@@ -118,7 +118,6 @@ export default async function OrdersPage({
                   <dl className={styles.itemMoney}>
                     <div><dt>Quantity</dt><dd>{item.quantity_ordered}</dd></div>
                     <div><dt>Unit price</dt><dd>{money(item.product_sale_price)}</dd></div>
-                    <div><dt>Row total</dt><dd>{money(item.prices?.row_total)}</dd></div>
                   </dl>
                 </article>;
               })}
