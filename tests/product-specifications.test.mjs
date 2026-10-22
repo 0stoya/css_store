@@ -239,7 +239,7 @@ test("Employee read ACL failure does not prevent product browsing and disables o
   assert.equal(result.employeeOrdering.employees.length, 0);
   const page = source("app/product/[sku]/page.tsx");
   assert.match(page, /const canAdd = !employeeOrderingBlocked && !storefrontPolicy\.hideAddToCart/);
-  assert.match(page, /You can view this product, but ordering is unavailable/);
+  assert.match(page, /You can view this product, but you can’t order it with your current account permissions/);
 });
 
 test("Unrelated GraphQL failures in the isolated Employee request still propagate", async () => {

@@ -145,8 +145,8 @@ export default async function ProductPage({
       {status.added === "1" ? <p className="success pdp-message" role="status">Added to basket.</p> : null}
       {status.saved === "1" ? <p className="success pdp-message" role="status">Selection saved to your repeat-order list.</p> : null}
       {status.error ? <p className="error pdp-message" role="alert">{status.error}</p> : null}
-      {employeeOrderingBlocked ? <p className="error pdp-message" role="status">
-        You can view this product, but ordering is unavailable because your account cannot access the required company Employee ordering settings. Contact your company administrator.
+      {employeeOrderingBlocked ? <p className="error pdp-message" role="alert">
+        You can view this product, but you can’t order it with your current account permissions. Please ask your company administrator for help.
       </p> : null}
 
       <CatalogueBadgeProvider skus={[product.sku]}>

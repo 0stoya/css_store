@@ -1,0 +1,75 @@
+/* Branded fallback for unavailable Store routes; business decisions stay server-side. */
+.store-error-page {
+  min-height: min(78svh, 780px);
+  display: grid;
+  place-items: center;
+  padding-block: clamp(36px, 8vw, 88px);
+}
+
+.store-error-card {
+  width: min(100%, 580px);
+  padding: clamp(24px, 5vw, 42px);
+  text-align: left;
+}
+
+.store-error-symbol {
+  width: 52px;
+  height: 52px;
+  margin-bottom: 20px;
+  display: grid;
+  place-items: center;
+  border-radius: 15px;
+  background: #eaf3ff;
+  color: var(--blue);
+}
+
+.store-error-card .eyebrow {
+  margin: 0 0 8px;
+}
+
+.store-error-card h1 {
+  margin: 0 0 14px;
+  color: var(--ink-strong);
+  font-size: clamp(1.75rem, 4vw, 2.5rem);
+  line-height: 1.15;
+}
+
+.store-error-description {
+  margin: 0;
+  max-width: 52ch;
+  color: var(--muted-strong);
+  line-height: 1.6;
+}
+
+.store-error-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 26px;
+}
+
+.store-error-actions .button {
+  min-height: 46px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  text-decoration: none;
+}
+
+.store-error-reference {
+  margin: 22px 0 0;
+  color: var(--muted);
+  font-size: .82rem;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 560px) {
+  .store-error-actions {
+    flex-direction: column;
+  }
+
+  .store-error-actions .button {
+    width: 100%;
+  }
+}
