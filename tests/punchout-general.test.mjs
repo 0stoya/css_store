@@ -194,3 +194,59 @@ test("store checkout source keeps both irrevocable submit branches behind a serv
   }
   assert.match(fs.readFileSync(path.join(root, "lib/punchout/guard.ts"), "utf8"), /getReservedPunchOutCustomerIds/);
 });
+
+
+test("reserved technical customer cannot checkout when browser PunchOut cookie expires", async () => {
+  const build = (customerId, cookie=null) => load(root, "lib/punchout/guard.ts", {
+    "@/lib/session": {getCustomerToken: async () => "customer-token"},
+    "@/lib/magento/context": {getCustomerContext: async () => ({
+      css_company_context: {customer_id: customerId},
+    })},
+    "@/lib/punchout/config": {getReservedPunchOutCustomerIds: () => [101, 102, 201]},
+    "@/lib/punchout/browser-session": {getPunchOutBrowserToken: async () => cookie},
+  });
+  await assert.rejects(build(101).assertNormalCheckoutSession(), /reserved for PunchOut/i);
+  await assert.doesNotReject(build(999).assertNormalCheckoutSession());
+  await assert.rejects(build(999,"active-cookie").assertNormalCheckoutSession(), /purchasing system/i);
+});
+test("basket return rejects wrong origin before Magento reads and returns only to retained callback", async () => {
+  const calls = [];
+  class NextResponse {
+    constructor(body, options={}) { this.body=body; this.status=options.status||200; this.headers=options.headers||{}; }
+  }
+  const partner = {...config.profiles[0],requireUnspsc:true, browserFormField:"cXML-base64"};
+  const s = {
+    profileId:"alpha", customerId:101, companyId:50, storeCode:"default",
+    browserFormPost:"https://alpha.buyer.test/return",payloadId:"setup-id",buyerCookie:"cookie",
+  };
+  const runtime = load(root, "app/api/punchout/return/route.ts", {
+    "node:crypto": {randomUUID: () => "reply-id"},
+    "next/server": {NextResponse},
+    "@/lib/session": {getCustomerToken: async () => "token"},
+    "@/lib/magento/cart": {getCustomerCart: async () => {calls.push("cart");return cart([item()]);}},
+    "@/lib/punchout/active-session": {getActivePunchOutSession: async () => ({
+      config: {...config,storeOrigin:"https://store.example.test",sessionDbPath:"unused"},
+      profile:partner,session:s,browserToken:"browser-token",
+    })},
+    "@/lib/punchout/customer-session": {verifyPunchOutCustomerToken: async () => calls.push("verify")},
+    "@/lib/punchout/order-message": {buildPunchOutOrderMessage: (args) => message.buildPunchOutOrderMessage(args)},
+    "@/lib/punchout/security": {validateBrowserFormPost: security.validateBrowserFormPost},
+    "@/lib/punchout/session": {PunchOutSessionStore: class {
+      markReturned() {calls.push("returned");}
+      close() {}
+    }},
+  });
+  const request = (origin) => ({headers:{get: (key) => key==="origin"?origin:null}});
+  const denied = await runtime.POST(request("https://evil.buyer.test"));
+  assert.equal(denied.status,403);
+  assert.deepEqual(calls,[]);
+  const response = await runtime.POST(request("https://store.example.test"));
+  assert.equal(response.status,200);
+  assert.deepEqual(calls,["verify","cart","returned"]);
+  assert.match(response.body, /action="https:\/\/alpha\.buyer\.test\/return"/);
+  assert.match(response.body, /name="cXML-base64"/);
+  const encoded = response.body.match(/name="cXML-base64" value="([^"]+)"/)?.[1];
+  assert.ok(encoded);
+  assert.match(Buffer.from(encoded,"base64").toString("utf8"), /<PunchOutOrderMessage>/);
+  assert.doesNotMatch(response.body, /evil\.buyer\.test/);
+});
