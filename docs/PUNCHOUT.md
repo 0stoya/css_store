@@ -64,7 +64,7 @@ The current app has a single PM2 fork. A private local SQLite session database i
 - Block native Magento placeOrder and Fluid cssSubmitCreditOrder for all dedicated technical PunchOut principals **at the backend**. Frontend/server-action guards cannot secure raw Magento GraphQL requests.
 - Obtain real non-production PunchOutSetupRequest, BrowserFormPost and returned basket requirements from each distinct buyer platform; verify buyer identity, actual UOM/classification, tax basis, discounts, callback field and requisition acceptance.
 - Test multiple buyers with different company prices, simultaneous buyers using different principals, pool exhaustion, replay, session expiry, wrong credential/callback, grouped and configurable items, return parity, plus absence of Magento order writes.
-- Verify operational DB permissions and Node 22.x sqlite support on the deployment host. If multiple hosts, move the session store before activation.
+- Verify operational DB permissions and Node 22.5+ sqlite support on the deployment host. If multiple hosts, move the session store before activation.
 - Confirm incoming PO intake requirements separately. Level 1 PunchOut return is not PO import.
 
 Run npm run typecheck, npm run lint, node --test tests/*.test.mjs, npm run test:punchout and npm run build. Leave all production flags OFF, and do not merge/deploy based on static tests alone.
