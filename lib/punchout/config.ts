@@ -18,6 +18,8 @@ export type PunchOutProfile = {
   defaultUom?: string;
   requireUnspsc: boolean;
   priceTaxBasis: "EX_VAT" | "INC_VAT";
+  deploymentMode: "test" | "production";
+  browserFormField: "cXML-urlencoded" | "cXML-base64";
   lineMetadata: Record<string, PunchOutLineMetadata>;
 };
 export type PunchOutAuthMode = "preauthenticated" | "fluid_exchange";
@@ -165,6 +167,12 @@ function parseProfiles(env: Env): PunchOutProfile[] {
     if (p.priceTaxBasis !== "EX_VAT" && p.priceTaxBasis !== "INC_VAT") {
       throw new Error("Profile must explicitly declare the verified Magento unit-price tax basis.");
     }
+    if (p.deploymentMode !== "test" && p.deploymentMode !== "production") {
+      throw new Error("Profile must specify the buyer deployment mode.");
+    }
+    if (p.browserFormField !== undefined && p.browserFormField !== "cXML-urlencoded" && p.browserFormField !== "cXML-base64") {
+      throw new Error("Profile has an unsupported BrowserFormPost field.");
+    }
     if (p.requireUnspsc !== undefined && typeof p.requireUnspsc !== "boolean") {
       throw new Error("Profile requireUnspsc must be a boolean.");
     }
@@ -174,6 +182,8 @@ function parseProfiles(env: Env): PunchOutProfile[] {
       defaultUom: textOptional(p.defaultUom, 32, "profile.defaultUom"),
       requireUnspsc: p.requireUnspsc === true,
       priceTaxBasis: p.priceTaxBasis,
+      deploymentMode: p.deploymentMode,
+      browserFormField: p.browserFormField || "cXML-urlencoded",
       lineMetadata: lineMetadata(p.lineMetadata, "profile[" + index + "].lineMetadata"),
     };
   });

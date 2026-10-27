@@ -27,6 +27,8 @@ PUNCHOUT_PROFILES_JSON is a protected server environment JSON array, for example
     "customerIds": [1101, 1102],
     "allowedReturnHosts": ["buyer-test.example.com"],
     "priceTaxBasis": "EX_VAT",
+    "deploymentMode": "test",
+    "browserFormField": "cXML-urlencoded",
     "defaultUom": "EA",
     "requireUnspsc": false,
     "lineMetadata": {
@@ -41,7 +43,7 @@ PUNCHOUT_PROFILES_JSON is a protected server environment JSON array, for example
 ]
 ~~~
 
-**Do not assume the example UOM, UNSPSC, Auxiliary ID, tax basis or extrinsic is right for a real buyer.** They must be confirmed from a buyer's test profile. Where UOM or required UNSPSC is absent, return is blocked. Magento pricing is never reconstructed or discounted in the adapter.
+The buyer profile must also select the cXML deployment mode (test or production) and supported BrowserFormPost field (cXML-urlencoded or cXML-base64).\n\n**Do not assume the example UOM, UNSPSC, Auxiliary ID, tax basis or extrinsic is right for a real buyer.** They must be confirmed from a buyer's test profile. Where UOM or required UNSPSC is absent, return is blocked. Magento pricing is never reconstructed or discounted in the adapter.
 
 PUNCHOUT_RESERVED_CUSTOMER_IDS must include each technical Magento customer ID, even when PUNCHOUT_ENABLED=0, so losing a PunchOut browser cookie does not turn that account into a checkout-capable store user. Assigning the same Magento principal to two buyer profiles is prohibited.
 

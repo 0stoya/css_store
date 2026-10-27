@@ -41,12 +41,13 @@ export async function POST(request: NextRequest) {
     const db = new PunchOutSessionStore(config.sessionDbPath);
     try { db.markReturned(browserToken); } finally { db.close(); }
     const url = new URL(callback);
+    const encoded = profile.browserFormField === "cXML-base64" ? Buffer.from(payload, "utf8").toString("base64") : payload;
     const page = [
       "<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\">",
       "<meta name=\"referrer\" content=\"no-referrer\"><title>Return to purchasing</title></head><body>",
       "<main><h1>Returning your basket</h1>",
       '<form method="POST" action="' + htmlEscape(callback) + '">',
-      '<input type="hidden" name="cXML-urlencoded" value="' + htmlEscape(payload) + '">',
+      '<input type="hidden" name="' + htmlEscape(profile.browserFormField) + '" value="' + htmlEscape(encoded) + '">',
       '<button type="submit">Continue to purchasing system</button></form></main>',
       "<script>document.forms[0].submit();</script></body></html>",
     ].join("");

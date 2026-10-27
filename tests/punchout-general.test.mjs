@@ -29,6 +29,7 @@ function partner(id, from, companyId, customerIds) {
     companyId, customerIds, storeCode: "default",
     allowedReturnHosts: [id + ".buyer.test"],
     defaultUom: "EA", priceTaxBasis: "EX_VAT",
+    deploymentMode: "test", browserFormField: "cXML-urlencoded",
     requireUnspsc: true,
     lineMetadata: {"SKU-A": {uom: "EA", unspsc: "46181504"}},
   };
@@ -160,6 +161,7 @@ test("cXML return emits authoritative line/variant SKU, purchaser cookie, UOM, U
     timestamp: "2026-10-27T14:40:00Z",
   });
   assert.match(result, /<SupplierPartID>SKU-B<\/SupplierPartID>/);
+  assert.match(result, /deploymentMode="test"/);
   assert.doesNotMatch(result, /<SupplierPartID>parent<\/SupplierPartID>/);
   assert.match(result, /<BuyerCookie>cookie&lt;&amp;&gt;<\/BuyerCookie>/);
   assert.match(result, /<SupplierPartAuxiliaryID>AUX&lt;&amp;&gt;<\/SupplierPartAuxiliaryID>/);

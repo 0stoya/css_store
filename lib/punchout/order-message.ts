@@ -75,7 +75,7 @@ export function buildPunchOutOrderMessage(input: {
   return [
     '<?xml version="1.0" encoding="UTF-8"?>',
     '<cXML payloadID="' + xml(input.payloadId) + '" timestamp="' + xml(input.timestamp) + '">',
-    '<Message deploymentMode="production" inReplyTo="' + xml(input.session.payloadId) + '">',
+    '<Message deploymentMode="' + xml(input.profile.deploymentMode) + '" inReplyTo="' + xml(input.session.payloadId) + '">',
     '<PunchOutOrderMessage><BuyerCookie>' + xml(input.session.buyerCookie) + '</BuyerCookie>',
     '<PunchOutOrderMessageHeader operationAllowed="create"><Total><Money currency="' + xml(currency) + '">' +
       xml(total.toFixed(2)) + '</Money></Total></PunchOutOrderMessageHeader>',
