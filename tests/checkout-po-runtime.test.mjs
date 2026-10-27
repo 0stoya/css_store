@@ -50,6 +50,7 @@ async function simulate({
   const calls = [];
   const context = checkoutContext(creditEnabled);
   const actions = loadTypeScript(root, "app/checkout/payment/actions.ts", {
+    "@/lib/punchout/guard": { assertNormalCheckoutSession: async () => {} },
     "next/navigation": {
       redirect: (url) => { throw new Navigation(url); },
       unstable_rethrow: (error) => { if (error instanceof Navigation) throw error; },

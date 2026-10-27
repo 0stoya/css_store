@@ -13,6 +13,7 @@ import {
 } from "@/lib/magento/checkout";
 import { getEmployeeOrdering } from "@/lib/magento/employee";
 import { requireCustomerToken } from "@/lib/session";
+import { assertNormalCheckoutSession } from "@/lib/punchout/guard";
 import { assertEmployeeDeliveryReviewComplete } from "@/lib/employee-delivery-review";
 import { assertControlledCartReady } from "@/lib/controlled-employee-delivery";
 
@@ -80,6 +81,8 @@ function confirmationUrl(params: Record<string, string | number | boolean | null
 
 export async function preparePaymentAction() {
   const token = await requireCustomerToken();
+  try { await assertNormalCheckoutSession(); }
+  catch { redirect("/basket?error=This%20basket%20must%20be%20returned%20through%20your%20purchasing%20system."); }
 
   try {
     const [context, ordering] = await Promise.all([
@@ -109,6 +112,8 @@ export async function completeCheckoutAction(formData: FormData) {
     paymentRedirect("error", "Order placement is disabled on the Employee address staging instance.");
   }
   const token = await requireCustomerToken();
+  try { await assertNormalCheckoutSession(); }
+  catch { redirect("/basket?error=This%20basket%20must%20be%20returned%20through%20your%20purchasing%20system."); }
   const paymentCode = String(formData.get("payment_method") || "").trim();
   if (!paymentCode) paymentRedirect("error", "Choose a payment method.");
 

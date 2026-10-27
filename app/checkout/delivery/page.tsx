@@ -11,6 +11,8 @@ import {
   type ShippingCartAddress,
 } from "@/lib/magento/shipping";
 import { requireCustomerToken } from "@/lib/session";
+import { redirect } from "next/navigation";
+import { assertNormalCheckoutSession } from "@/lib/punchout/guard";
 import { isEmployeeDeliveryReviewPending } from "@/lib/employee-delivery-review";
 import {
   assignedOwnedAddress,
@@ -66,6 +68,8 @@ export default async function DeliveryPage({
   searchParams: Promise<{ error?: string; notice?: string }>;
 }) {
   const token = await requireCustomerToken();
+  try { await assertNormalCheckoutSession(); }
+  catch { redirect("/basket?error=This%20basket%20must%20be%20returned%20through%20your%20purchasing%20system."); }
   const [delivery, messages] = await Promise.all([
     getDeliveryContext(token),
     searchParams,

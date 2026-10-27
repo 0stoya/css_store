@@ -9,6 +9,7 @@ import {
   getCustomerAppSwitchContext,
 } from "@/lib/magento/app-switch";
 import { setCustomerImpersonation, setCustomerToken } from "@/lib/session";
+import { clearPunchOutBrowserToken } from "@/lib/punchout/browser-session";
 
 export const dynamic = "force-dynamic";
 
@@ -69,6 +70,7 @@ export async function GET(request: NextRequest) {
     }
 
     stage = "session";
+    await clearPunchOutBrowserToken();
     await setCustomerToken(token);
     await setCustomerImpersonation();
 

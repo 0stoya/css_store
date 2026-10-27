@@ -3,6 +3,7 @@ import { isAppSwitchValue } from "@/lib/app-switch-session";
 import { getAdminPortalUrl } from "@/lib/config";
 import { createCustomerAppSwitch } from "@/lib/magento/app-switch";
 import { getCustomerToken } from "@/lib/session";
+import { assertNormalCheckoutSession } from "@/lib/punchout/guard";
 
 export const dynamic = "force-dynamic";
 
@@ -25,6 +26,8 @@ function localRedirect(location: string) {
 }
 
 export async function GET(request: NextRequest) {
+  try { await assertNormalCheckoutSession(); }
+  catch { return localRedirect("/basket?error=PunchOut%20sessions%20cannot%20switch%20apps."); }
   const state = request.nextUrl.searchParams.get("state");
   const challenge = request.nextUrl.searchParams.get("code_challenge");
   const token = await getCustomerToken();

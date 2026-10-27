@@ -4,6 +4,7 @@ import { redirect, unstable_rethrow } from "next/navigation";
 import { loginCustomer } from "@/lib/magento/auth";
 import { getCustomerContext } from "@/lib/magento/context";
 import { setCustomerToken } from "@/lib/session";
+import { clearPunchOutBrowserToken } from "@/lib/punchout/browser-session";
 
 export async function loginAction(formData: FormData) {
   const email = String(formData.get("email") || "").trim();
@@ -13,6 +14,7 @@ export async function loginAction(formData: FormData) {
     const token = await loginCustomer(email, password);
     const context = await getCustomerContext(token);
     if (!context.css_company_context.authenticated) throw new Error("Customer context was not authenticated.");
+    await clearPunchOutBrowserToken();
     await setCustomerToken(token);
   } catch (error) {
     unstable_rethrow(error);

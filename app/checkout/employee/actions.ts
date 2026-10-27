@@ -14,6 +14,7 @@ import {
   markEmployeeDeliveryReviewPending,
 } from "@/lib/employee-delivery-review";
 import { requireCustomerToken } from "@/lib/session";
+import { assertNormalCheckoutSession } from "@/lib/punchout/guard";
 import { controlledDeliveryApplies } from "@/lib/controlled-employee-delivery";
 
 function errorMessage(error: unknown) {
@@ -22,6 +23,7 @@ function errorMessage(error: unknown) {
 }
 
 export async function selectCheckoutEmployeeAction(formData: FormData) {
+  await assertNormalCheckoutSession();
   const token = await requireCustomerToken();
   let failure: string | null = null;
   let notice = "Employee selected. Please confirm the delivery address.";

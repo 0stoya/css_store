@@ -5,6 +5,7 @@ import {
   validateCompanyCustomerToken,
 } from "@/lib/magento/app-switch";
 import { setCustomerToken } from "@/lib/session";
+import { clearPunchOutBrowserToken } from "@/lib/punchout/browser-session";
 
 export const dynamic = "force-dynamic";
 
@@ -27,6 +28,7 @@ export async function GET(request: NextRequest) {
   try {
     const token = await exchangeCustomerAppSwitch(code, "STORE", verifier);
     if (!(await validateCompanyCustomerToken(token))) return loginFailure();
+    await clearPunchOutBrowserToken();
     await setCustomerToken(token);
     return new NextResponse(null, {
       status: 303,
