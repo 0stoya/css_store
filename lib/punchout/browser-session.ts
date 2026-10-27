@@ -8,8 +8,7 @@ export async function getPunchOutBrowserToken() {
 }
 export async function setPunchOutBrowserToken(token: string, maxAgeSeconds: number) {
   if (!TOKEN_PATTERN.test(token)) throw new Error("Invalid PunchOut browser token.");
-  (await cookies()).set(COOKIE, {
-    value: token, httpOnly: true, secure: process.env.NODE_ENV === "production",
+  (await cookies()).set(COOKIE, token, { httpOnly: true, secure: process.env.NODE_ENV === "production",
     sameSite: "lax", path: "/", maxAge: maxAgeSeconds,
   });
 }

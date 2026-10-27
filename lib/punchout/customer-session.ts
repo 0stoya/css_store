@@ -1,13 +1,28 @@
 import { cartHasItems, getCustomerCartSummary, removeCartItem } from "@/lib/magento/cart";
-import { getCustomerContext } from "@/lib/magento/context";
+import { magentoGraphQL } from "@/lib/magento/client";
+import type { CustomerContext } from "@/lib/magento/context";
 import type { PunchOutSession } from "@/lib/punchout/session";
+
+const PUNCHOUT_CONTEXT = [
+  "query PunchOutFreshCustomerContext {",
+  "  customer { firstname lastname email }",
+  "  css_company_context { authenticated customer_id selected_company_id",
+  "    companies { company_id company_user_id name reference active selected } }",
+  "  css_ordering_capabilities { authenticated company_context company_id company_user_id company_active }",
+  "  css_storefront_policy { authenticated hide_price hide_add_to_cart add_to_cart_label }",
+  "}",
+].join("\n");
+export function getFreshPunchOutContext(token: string) {
+  // Do not use React cache after a company-switch mutation within one request.
+  return magentoGraphQL<CustomerContext>(PUNCHOUT_CONTEXT, {}, token);
+}
 
 export async function verifyPunchOutCustomerToken(
   session: Pick<PunchOutSession, "customerId" | "companyId">,
   token: string,
   options: { requireEmptyCart?: boolean } = {},
 ) {
-  const context = await getCustomerContext(token);
+  const context = await getFreshPunchOutContext(token);
   const company = context.css_company_context.companies.find(
     (candidate) => candidate.company_id === session.companyId,
   );

@@ -1,6 +1,7 @@
 import { createSign, randomBytes } from "node:crypto";
 import { magentoGraphQL } from "@/lib/magento/client";
-import { getCustomerContext, selectCompany } from "@/lib/magento/context";
+import { selectCompany } from "@/lib/magento/context";
+import { getFreshPunchOutContext } from "@/lib/punchout/customer-session";
 import type { PunchOutConfig } from "@/lib/punchout/config";
 import type { PunchOutSession } from "@/lib/punchout/session";
 
@@ -35,7 +36,7 @@ export async function exchangePunchOutCustomerSession(
   const response = await magentoGraphQL<{css_punchout_customer_session:string}>(EXCHANGE, {assertion});
   const token = response.css_punchout_customer_session?.trim();
   if (!token) throw new Error("Fluid did not issue a PunchOut customer token.");
-  const context = await getCustomerContext(token);
+  const context = await getFreshPunchOutContext(token);
   const member = context.css_company_context.companies.find(
     (p) => p.company_id === session.companyId,
   );
@@ -46,7 +47,7 @@ export async function exchangePunchOutCustomerSession(
   if (context.css_company_context.selected_company_id !== session.companyId) {
     await selectCompany(token, session.companyId);
   }
-  const verified = await getCustomerContext(token);
+  const verified = await getFreshPunchOutContext(token);
   if (verified.css_company_context.customer_id !== session.customerId ||
       verified.css_company_context.selected_company_id !== session.companyId ||
       verified.css_ordering_capabilities.company_id !== session.companyId ||
