@@ -8,6 +8,7 @@ import {
   setShippingMethod,
 } from "@/lib/magento/shipping";
 import { requireCustomerToken } from "@/lib/session";
+import { assertNormalCheckoutSession } from "@/lib/punchout/guard";
 import { getEmployeeOrdering } from "@/lib/magento/employee";
 import {
   assignedOwnedAddress,
@@ -44,6 +45,7 @@ function assertCheckoutContext(context: Awaited<ReturnType<typeof getDeliveryCon
 }
 
 export async function selectSavedShippingAddressAction(formData: FormData) {
+  await assertNormalCheckoutSession();
   const token = await requireCustomerToken();
   let failure: string | null = null;
 
@@ -70,6 +72,7 @@ export async function selectSavedShippingAddressAction(formData: FormData) {
 }
 
 export async function setNewShippingAddressAction(formData: FormData) {
+  await assertNormalCheckoutSession();
   const token = await requireCustomerToken();
   let failure: string | null = null;
 
@@ -114,6 +117,7 @@ export async function setNewShippingAddressAction(formData: FormData) {
 // existing Magento address and a buyer-entered recipient. Browser inputs are
 // never trusted for the physical destination.
 export async function confirmControlledEmployeeDeliveryAction(formData: FormData) {
+  await assertNormalCheckoutSession();
   const token = await requireCustomerToken();
   let failure: string | null = null;
 
@@ -152,6 +156,7 @@ export async function confirmControlledEmployeeDeliveryAction(formData: FormData
 }
 
 export async function selectShippingMethodAction(formData: FormData) {
+  await assertNormalCheckoutSession();
   const token = await requireCustomerToken();
   let failure: string | null = null;
 

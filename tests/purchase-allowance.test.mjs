@@ -133,6 +133,7 @@ async function submitWithContexts(initial, current) {
   const calls = [];
   let reads = 0;
   const actions = load(root, "app/checkout/payment/actions.ts", {
+    "@/lib/punchout/guard": { assertNormalCheckoutSession: async () => {} },
     "next/navigation": {
       redirect: (location) => { throw new Navigation(location); },
       unstable_rethrow: (error) => { if (error instanceof Navigation) throw error; },

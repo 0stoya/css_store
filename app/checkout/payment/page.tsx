@@ -18,6 +18,8 @@ import { SiteHeader } from "@/components/site-header";
 import type { CartMoney } from "@/lib/magento/cart";
 import { getCheckoutContext } from "@/lib/magento/checkout";
 import { requireCustomerToken } from "@/lib/session";
+import { redirect } from "next/navigation";
+import { assertNormalCheckoutSession } from "@/lib/punchout/guard";
 import { completeCheckoutAction } from "./actions";
 
 export const metadata = { title: "Review & submit" };
@@ -47,6 +49,8 @@ export default async function PaymentPage({
   searchParams: Promise<{ error?: string; notice?: string; po?: string }>;
 }) {
   const token = await requireCustomerToken();
+  try { await assertNormalCheckoutSession(); }
+  catch { redirect("/basket?error=This%20basket%20must%20be%20returned%20through%20your%20purchasing%20system."); }
   const [checkout, messages] = await Promise.all([
     getCheckoutContext(token),
     searchParams,

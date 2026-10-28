@@ -50,3 +50,7 @@ yarn build
 ```
 
 A successful frontend build does not replace the real Magento/Fluid GraphQL journey for transactional acceptance.
+
+## General PunchOut (draft)
+
+A reusable multi-buyer **cXML Level 1** PunchOut integration is tracked in [Store PR #94](https://github.com/0stoya/css_store/pull/94) and companion [Fluid PR #115](https://github.com/0stoya/Fluid/pull/115). It remains disabled; see [docs/PUNCHOUT.md](docs/PUNCHOUT.md) for buyer configuration, security constraints and acceptance gates. This draft is not production-ready and does not import approved procurement purchase orders.

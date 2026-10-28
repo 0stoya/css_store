@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { beginAppSwitch, rememberAppSwitchTarget } from "@/lib/app-switch-session";
 import { getAdminPortalUrl } from "@/lib/config";
 import { clearCustomerToken } from "@/lib/session";
+import { clearPunchOutBrowserToken } from "@/lib/punchout/browser-session";
 
 export const dynamic = "force-dynamic";
 
@@ -34,6 +35,7 @@ export async function GET(request: NextRequest) {
   // Replace only this browser's Store session. Magento's customer-token revocation is
   // customer-wide and would invalidate the customer's other legitimate sessions.
   await clearCustomerToken();
+  await clearPunchOutBrowserToken();
 
   await rememberAppSwitchTarget(companyId, userId, COOKIE_PATH);
   const { state, challenge } = await beginAppSwitch(COOKIE_PATH);
