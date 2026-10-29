@@ -58,6 +58,29 @@ A cart-level CSS company discount currently blocks basket return rather than exp
 
 The current app has a single PM2 fork. A private local SQLite session database is used for durable replay/lease/one-use state. Scale-out across hosts requires a shared transactional store first.
 
+## StartPage failures and buyer return recovery
+
+The production `fluid_exchange` StartPage now makes an anonymous, read-only
+Magento GraphQL readiness query **before** consuming its one-use entry token.
+If Magento is unavailable or its GraphQL schema will not compile, the same
+StartPage URL may be retried while the CREATED session remains within its TTL.
+This check does not sign an assertion, create a Magento customer session,
+touch the basket, or consume the entry token.
+
+A failure *after* one-use entry consumption is still an ambiguous session
+exchange: Magento may already have issued a token. The technical customer
+lease is intentionally **not** automatically released, and the StartPage
+token must not be reused. Wait for normal lease expiry and start a fresh
+buyer request after reconciliation; do not hand that principal to another
+buyer while its outcome is unknown. This is an explicit go-live acceptance
+case, not an indication that all failures are automatically recoverable.
+
+For basket return, Magento does not receive an order. The server marks the
+PunchOut session RETURNED before the browser posts the cXML form to the
+buyer. If the browser POST fails or the buyer rejects the payload, do not
+automatically resend it with a fresh payload ID: confirm with the buyer
+whether the requisition was accepted before starting a new session.
+
 ## Go-live blockers (must be closed before enablement)
 
 - Generalise the single-customer Fluid #108 assertion verifier to accept ONLY explicitly allowlisted (partner_id, customer_id, company_id, store_code) pairs, with expiry, signature, issuer/audience and replay validation.
