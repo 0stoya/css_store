@@ -29,6 +29,21 @@ export function createPunchOutCustomerAssertion(
   signer.end();
   return signingInput + "." + signer.sign(config.assertion.privateKeyPem).toString("base64url");
 }
+/**
+ * Read-only Magento GraphQL health gate before consuming a one-use StartPage
+ * token. This catches broken Commerce schemas (including the 27 Oct 2026
+ * kiosk/PunchOut SDL regression) without creating an assertion or customer
+ * token. It cannot guarantee that a later session exchange will succeed.
+ */
+export async function assertPunchOutMagentoGraphQlReady(): Promise<void> {
+  const response = await magentoGraphQL<{__typename: string}>(
+    "query PunchOutStartPageReadiness { __typename }",
+  );
+  if (typeof response.__typename !== "string" || !response.__typename) {
+    throw new Error("Magento GraphQL readiness response is invalid.");
+  }
+}
+
 export async function exchangePunchOutCustomerSession(
   config: Extract<PunchOutConfig, {enabled:true}>, session: PunchOutSession,
 ) {
