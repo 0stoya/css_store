@@ -71,6 +71,7 @@ export type DeliveryContext = {
   css_company_employee_configuration: {
     uses_employee: boolean;
     multi_employee_basket: boolean;
+    open_employee_purchasing: boolean;
   };
   customer: {
     firstname: string;
@@ -152,6 +153,7 @@ const DELIVERY_CONTEXT = /* GraphQL */ `
     css_company_employee_configuration {
       uses_employee
       multi_employee_basket
+      open_employee_purchasing
     }
     customer {
       firstname
