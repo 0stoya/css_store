@@ -10,7 +10,7 @@ import {
 import { getEmployeeOrdering } from "@/lib/magento/employee";
 import { getProduct, type ProductConfiguration } from "@/lib/magento/product";
 import { requireCustomerToken } from "@/lib/session";
-import { assertEmployeeCatalogueProduct } from "@/lib/employee-catalogue";
+import { assertEmployeeCatalogueProduct, assignSelectedCatalogueEmployeeToBasket } from "@/lib/employee-catalogue";
 
 function selectedUids(formData: FormData, name: string) {
   return formData.getAll(name).map(String).map((value) => value.trim()).filter(Boolean);
@@ -146,6 +146,7 @@ export async function addGroupedChildToCartAction(formData: FormData) {
         }
       }
     }
+    await assignSelectedCatalogueEmployeeToBasket(token);
   } catch (error) {
     failure = message(error);
   }
