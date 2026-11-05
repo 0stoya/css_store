@@ -42,7 +42,9 @@ private signing key, never the CSS Admin writer. The opted-in Store mode
 requires both environment values:
 \`CSS_STORE_EMPLOYEE_CATALOGUE_ENABLED=1\` and
 \`CSS_STORE_EMPLOYEE_CATALOGUE_SOURCE=ROLE_CATALOGUE_V2\`.
-Both are OFF or absent by default.
+Both are OFF or absent by default. In addition, only companies explicitly listed in
+\`CSS_STORE_EMPLOYEE_CATALOGUE_COMPANY_IDS\` are eligible. A blank list means
+no companies participate; other Employee Ordering companies remain unchanged.
 
 Within this new mode, Store filters SKUs **inside Magento GraphQL**
 before pagination, checks PDP and cart writes, and validates the actual
