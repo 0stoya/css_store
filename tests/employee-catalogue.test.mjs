@@ -116,3 +116,9 @@ test("Final native and credit checkout both revalidate qualified membership befo
     assert.match(source(action), /if \(await getEmployeeCatalogueMode\(token\)\)/);
   }
 });
+
+test("Employee catalogue reader uses CSS Admin's own PostgreSQL projection, never an unrelated database", () => {
+  const reader = source("lib/employee-catalogue-db.ts");
+  assert.ok(reader.includes("SELECT css_admin.read_employee_catalogue_v1("));
+  assert.equal(reader.includes("SELECT storefront.read_employee_catalogue_v1("), false);
+});
