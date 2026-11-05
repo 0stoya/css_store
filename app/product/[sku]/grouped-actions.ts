@@ -10,7 +10,7 @@ import {
 import { getEmployeeOrdering } from "@/lib/magento/employee";
 import { getProduct, type ProductConfiguration } from "@/lib/magento/product";
 import { requireCustomerToken } from "@/lib/session";
-import { assertEmployeeCatalogueProduct, assignSelectedCatalogueEmployeeToBasket } from "@/lib/employee-catalogue";
+import { assertEmployeeCatalogueProduct, assignSelectedCatalogueEmployeeToBasket, getEmployeeCatalogueMode } from "@/lib/employee-catalogue";
 
 function selectedUids(formData: FormData, name: string) {
   return formData.getAll(name).map(String).map((value) => value.trim()).filter(Boolean);
@@ -50,11 +50,11 @@ function cartItemSku(item: {
   return item.configured_variant?.sku || item.product.sku;
 }
 
-function assertGroupedChildAvailable(child: NonNullable<ProductConfiguration["items"]>[number]["product"]) {
+function assertGroupedChildAvailable(child: NonNullable<ProductConfiguration["items"]>[number]["product"], employeeCatalogueMode = false) {
   if (!child.css_stock_info.available) {
     throw new Error(child.css_stock_info.delivery_message || `${child.name} is unavailable.`);
   }
-  if (child.css_purchase_allowance?.has_active_restriction && child.css_purchase_allowance.remaining_quantity <= 0) {
+  if (!employeeCatalogueMode && child.css_purchase_allowance?.has_active_restriction && child.css_purchase_allowance.remaining_quantity <= 0) {
     throw new Error(`${child.name} has no remaining purchase allowance.`);
   }
 }
@@ -77,6 +77,7 @@ export async function addGroupedChildToCartAction(formData: FormData) {
     ]);
 
     if (!product) throw new Error("Product could not be found.");
+    const employeeCatalogueMode = Boolean(await getEmployeeCatalogueMode(token));
     if (!product.css_stock_info.available) throw new Error(product.css_stock_info.delivery_message || "Product is unavailable.");
     if (product.__typename !== "CssGroupedConfigurableProduct" && product.__typename !== "GroupedProduct") {
       throw new Error("This product is not a grouped product.");
@@ -90,7 +91,7 @@ export async function addGroupedChildToCartAction(formData: FormData) {
     const quantity = Number(formData.get(`child_${childIndex}_quantity`));
     if (!Number.isFinite(quantity) || quantity <= 0) throw new Error(`Enter a quantity greater than zero for ${child.name}.`);
 
-    assertGroupedChildAvailable(child);
+    assertGroupedChildAvailable(child, employeeCatalogueMode);
 
     let employeeId: number | undefined;
     if (employees.usesEmployee && employees.multiEmployeeBasket) {
