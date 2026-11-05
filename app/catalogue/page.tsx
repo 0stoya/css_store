@@ -3,6 +3,12 @@ import { CatalogueBadgeProvider } from "@/components/catalogue-badges";
 import { CataloguePagination } from "@/components/catalogue-pagination";
 import { ProductCard } from "@/components/product-card";
 import { SiteHeader } from "@/components/site-header";
+import { EmployeePicker } from "@/components/employee-picker";
+import { getActiveEmployees } from "@/lib/magento/employee";
+import { getCustomerContext } from "@/lib/magento/context";
+import { getEmployeeCatalogueMode, getSelectedEmployee } from "@/lib/employee-catalogue";
+import { getEmployeeCataloguePolicy } from "@/lib/employee-catalogue-db";
+import { selectEmployeeCatalogueAction, changeEmployeeCatalogueAction } from "./actions";
 import { getCataloguePageContext } from "@/lib/magento/catalogue-page";
 import { requireCustomerToken } from "@/lib/session";
 
@@ -19,18 +25,59 @@ function pageHref(page: number, q: string) {
 export default async function CataloguePage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; page?: string }>;
+  searchParams: Promise<{ q?: string; page?: string; choose?: string; error?: string }>;
 }) {
   const token = await requireCustomerToken();
-  const { q = "", page: rawPage = "1" } = await searchParams;
+  const { q = "", page: rawPage = "1", choose, error } = await searchParams;
   const page = Math.max(1, Math.trunc(Number(rawPage) || 1));
   const searchTerm = q.trim();
-  const catalogue = await getCataloguePageContext(token, searchTerm, page);
+
+  // Global OFF or Magento Employees OFF: exact existing catalogue behaviour.
+  // No css_app reads, cookies or Employee list queries are required.
+  const mode = await getEmployeeCatalogueMode(token);
+  const selectedEmployee = mode ? await getSelectedEmployee(mode) : null;
+  if (mode && (!selectedEmployee || choose === "1")) {
+    const [context, employees] = await Promise.all([
+      getCustomerContext(token), getActiveEmployees(token),
+    ]);
+    const selectedCompany = context.css_company_context.companies.find((company) => company.selected);
+    return <>
+      <SiteHeader customerName={`${context.customer.firstname} ${context.customer.lastname}`.trim()}
+        companyName={selectedCompany?.name}/>
+      <main className="shell catalogue-page">
+        <section className="card stack" aria-label="Select employee for purchasing">
+          <p className="eyebrow">Employee purchasing</p>
+          <h1>Who are you shopping for?</h1>
+          <p className="muted">Select an active Employee before browsing their permitted catalogue. Your own checkout and approval permissions still apply.</p>
+          {error ? <p className="error" role="alert">{error}</p> : null}
+          {employees.length ? <form action={selectEmployeeCatalogueAction} className="stack">
+            <EmployeePicker employees={employees} defaultSelectedId={selectedEmployee?.employeeId ?? null}/>
+            <div><button className="button" type="submit">Shop for this Employee</button></div>
+          </form> : <p className="error">No active Employees are available for purchasing.</p>}
+        </section>
+      </main>
+    </>;
+  }
+
+  const policy = mode && selectedEmployee
+    ? await getEmployeeCataloguePolicy(mode.companyId, selectedEmployee.employeeId)
+    : null;
+  const catalogue = await getCataloguePageContext(token, searchTerm, page, 24, policy?.skus ?? null);
   const { products, selectedCompany: selected, customerName: name, hidePrice } = catalogue;
 
   return <>
     <SiteHeader customerName={name} companyName={selected?.name}/>
     <main className="shell catalogue-page">
+      {mode && selectedEmployee ? <section className="card" aria-label="Selected Employee">
+        <div className="row">
+          <div><strong>Shopping for {selectedEmployee.name}</strong>
+            <p className="muted small-text">Showing this Employee's permitted catalogue. Magento buyer permissions still apply.</p>
+          </div>
+          <form action={changeEmployeeCatalogueAction}>
+            <button type="submit" className="button secondary">Change Employee</button>
+          </form>
+        </div>
+      </section> : null}
       <header className="catalogue-page-heading">
         <div>
           <p className="eyebrow">Catalogue</p>
