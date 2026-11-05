@@ -4,6 +4,7 @@ import { redirect, unstable_rethrow } from "next/navigation";
 import { getCustomerCartWriteContext } from "@/lib/magento/cart";
 import { repeatGroupedConfigurableOrder } from "@/lib/magento/repeat-orders";
 import { requireCustomerToken } from "@/lib/session";
+import { getEmployeeCatalogueMode } from "@/lib/employee-catalogue";
 
 function message(error: unknown) {
   unstable_rethrow(error);
@@ -22,6 +23,9 @@ export async function repeatOrderAction(formData: FormData) {
   if (!orderNumber) ordersRedirect(page, "error", "Missing order number.");
 
   try {
+    if (await getEmployeeCatalogueMode(token)) {
+      throw new Error("Repeat-order additions are unavailable in Employee Catalogue mode. Add products from the selected Employee catalogue.");
+    }
     const cart = await getCustomerCartWriteContext(token);
     const result = await repeatGroupedConfigurableOrder(token, cart.id, orderNumber);
     const skipped = result.skipped_items.map((item) => `${item.sku}: ${item.reason}`);
