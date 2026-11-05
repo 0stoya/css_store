@@ -71,7 +71,7 @@ export default async function CataloguePage({
       {mode && selectedEmployee ? <section className="card" aria-label="Selected Employee">
         <div className="row">
           <div><strong>Shopping for {selectedEmployee.name}</strong>
-            <p className="muted small-text">Showing this Employee's permitted catalogue. Magento buyer permissions still apply.</p>
+            <p className="muted small-text">Showing this Employee&apos;s permitted catalogue. Magento buyer permissions still apply.</p>
           </div>
           <form action={changeEmployeeCatalogueAction}>
             <button type="submit" className="button secondary">Change Employee</button>
