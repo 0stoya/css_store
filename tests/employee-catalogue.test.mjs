@@ -137,3 +137,13 @@ test("Employee-first single-Employee cart carries selection into checkout", () =
   assert.match(delivery,/selectedCatalogueEmployee/);
   assert.match(delivery,/currentEmployeeId === selectedCatalogueEmployee\?\.employeeId/);
 });
+
+test("Employee-first pilot is company-specific: all other Employee companies retain standard purchasing",()=>{
+  assert.equal(policy.employeeCatalogueCompanyEnabled(undefined,20),false);
+  assert.equal(policy.employeeCatalogueCompanyEnabled("",20),false);
+  assert.equal(policy.employeeCatalogueCompanyEnabled("19,21",20),false);
+  assert.equal(policy.employeeCatalogueCompanyEnabled("19,20,21",20),true);
+  assert.equal(policy.employeeCatalogueCompanyEnabled("20",21),false);
+  assert.throws(()=>policy.employeeCatalogueCompanyEnabled("all",20),/invalid/);
+  assert.throws(()=>policy.employeeCatalogueCompanyEnabled("20, 21",20),/invalid/);
+});
