@@ -64,7 +64,7 @@ test("Per-Employee cart permission accepts qualified logical parent and rejects 
 
 test("Legacy Magento browse operation stays exactly unfiltered while Employee query filters before paging", async () => {
   const calls = [];
-  const module = load(root, "lib/magento/catalogue-page.ts", {
+  const catalogueReader = load(root, "lib/magento/catalogue-page.ts", {
     "@/lib/magento/client": { magentoGraphQL: async (query, variables) => {
       calls.push({ query, variables });
       return {
@@ -77,9 +77,9 @@ test("Legacy Magento browse operation stays exactly unfiltered while Employee qu
     } },
     "@/lib/magento/catalogue-prices": { getResilientCataloguePrices: async () => new Map() },
   });
-  await module.getCataloguePageContext("token", "", 1);
-  await module.getCataloguePageContext("token", "", 1, 24, ["KIT/AA"]);
-  await module.getCataloguePageContext("token", "Kit", 1, 24, ["KIT/AA"]);
+  await catalogueReader.getCataloguePageContext("token", "", 1);
+  await catalogueReader.getCataloguePageContext("token", "", 1, 24, ["KIT/AA"]);
+  await catalogueReader.getCataloguePageContext("token", "Kit", 1, 24, ["KIT/AA"]);
   assert.equal(calls[0].variables.filter.sku, undefined);
   assert.deepEqual(Array.from(calls[1].variables.filter.sku.in), ["KIT/AA"]);
   assert.match(calls[2].query, /products\(\s*filter: \$filter\s*search: \$search/);
@@ -87,7 +87,7 @@ test("Legacy Magento browse operation stays exactly unfiltered while Employee qu
 
 test("Zero permitted SKUs must not send empty-in filter to Magento", async () => {
   const calls = [];
-  const module = load(root, "lib/magento/catalogue-page.ts", {
+  const catalogueReader = load(root, "lib/magento/catalogue-page.ts", {
     "@/lib/magento/client": { magentoGraphQL: async (query, variables) => {
       calls.push({ query, variables });
       return { customer: { firstname: "User", lastname: "B" },
@@ -96,7 +96,7 @@ test("Zero permitted SKUs must not send empty-in filter to Magento", async () =>
     } },
     "@/lib/magento/catalogue-prices": { getResilientCataloguePrices: async () => new Map() },
   });
-  const result = await module.getCataloguePageContext("token", "", 1, 24, []);
+  const result = await catalogueReader.getCataloguePageContext("token", "", 1, 24, []);
   assert.equal(result.products.total_count, 0);
   assert.equal(result.products.items.length, 0);
   assert.equal(calls.length, 1);
