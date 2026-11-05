@@ -23,11 +23,11 @@ Admin writer credential or an unrelated application's database.
 1. Employee Ordering OFF: normal email/password login, catalogue, PDP,
    basket, purchase controls, PO and checkout are unchanged. No new
    database lookup occurs.
-2. Employee Ordering ON + Open Purchasing OFF: existing manager-restricted
+2. Employee Ordering ON + Employee catalogue switch OFF: existing manager-restricted
    Employee purchasing is unchanged.
-3. Open Purchasing ON + global Store catalogue switch OFF: existing Open
+3. Employees ON + global Store catalogue switch OFF: existing Open
    Purchasing behaviour unchanged, with no new database dependency.
-4. Both Open Purchasing and global Store catalogue switch ON: buyer
+4. Employees ON + global Store catalogue switch ON: buyer
    selects an active Employee before browsing; Store applies a qualified
    Employee SKU filter **inside Magento GraphQL, before pagination**, and
    revalidates product selection, cart attribution and native/credit-order

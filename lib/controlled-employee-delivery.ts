@@ -41,7 +41,7 @@ export async function controlledDeliveryApplies(delivery: DeliveryContext) {
   const companyId = positive(delivery.css_company_context.selected_company_id);
   try {
     const controlled = await getControlledEmployeeDeliveryEnabled(companyId);
-    if (controlled && delivery.css_company_employee_configuration.open_employee_purchasing) {
+    if (controlled && delivery.css_company_employee_configuration.open_employee_purchasing === true) {
       // Delegated buyers cannot use another customer's saved Magento address.
       // Staff Admin must disable one of these mutually incompatible policies.
       throw new Error("Open employee purchasing is incompatible with Controlled Employee delivery. Contact your company administrator.");

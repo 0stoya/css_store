@@ -23,12 +23,12 @@ const EMPLOYEE_CONFIGURATION = /* GraphQL */ `
   }
 `;
 
-// This purchase-only query is independently checked by Magento. Do not use
-// the HR-oriented css_company_employees directory for buyer selection.
-const BUYABLE_EMPLOYEES = /* GraphQL */ `
-  query StoreBuyableEmployees($page: Int!) {
-    css_company_buyable_employees(currentPage: $page, pageSize: 200) {
-      items { employee_id employee_code full_name department }
+// Live Magento supports the manager-scoped Employee directory, not
+// css_company_buyable_employees. Reuse the existing scoped contract.
+const ACTIVE_EMPLOYEES = /* GraphQL */ `
+  query StoreActiveEmployees($page: Int!) {
+    css_company_employees(currentPage: $page, pageSize: 200, active: true) {
+      items { employee_id employee_code full_name department active }
       page_info { current_page total_pages }
     }
   }
@@ -40,12 +40,12 @@ export async function getActiveEmployees(token: string): Promise<StoreEmployee[]
   // the first page (the former Store request asked for 250 but got only 200).
   for (let page = 1; page <= 50; page += 1) {
     const data = await magentoGraphQL<{
-      css_company_buyable_employees: {
-        items: StoreEmployee[];
+      css_company_employees: {
+        items: Array<StoreEmployee & { active: boolean }>;
         page_info: { current_page: number; total_pages: number };
       };
-    }>(BUYABLE_EMPLOYEES, { page }, token);
-    const result = data.css_company_buyable_employees;
+    }>(ACTIVE_EMPLOYEES, { page }, token);
+    const result = data.css_company_employees;
     if (
       result.page_info.current_page !== page
       || result.page_info.total_pages > 50
@@ -54,7 +54,7 @@ export async function getActiveEmployees(token: string): Promise<StoreEmployee[]
     ) {
       throw new Error("The Employee list is too large or its pagination changed. Contact your account administrator.");
     }
-    employees.push(...result.items);
+    employees.push(...result.items.filter((employee) => employee.active));
     if (page >= result.page_info.total_pages) return employees;
   }
   throw new Error("The Employee list could not be loaded completely.");
