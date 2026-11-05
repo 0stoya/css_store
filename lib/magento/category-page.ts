@@ -124,6 +124,24 @@ const CATEGORY_PRODUCTS = /* GraphQL */ `
   }
 `;
 
+const CATEGORY_PRODUCTS_EMPLOYEE = /* GraphQL */ `
+  query StoreEmployeeCategoryProducts(
+    $categoryUid: String!
+    $skuFilter: [String]!
+    $page: Int!
+    $pageSize: Int!
+  ) {
+    products(
+      filter: { category_uid: { eq: $categoryUid }, sku: { in: $skuFilter } }
+      currentPage: $page
+      pageSize: $pageSize
+      sort: { name: ASC }
+    ) {
+      ${PRODUCT_CARD_SELECTION}
+    }
+  }
+`;
+
 export type CategoryPageContext = {
   customerName: string;
   selectedCompany: {
@@ -144,6 +162,7 @@ export async function getCategoryPageContext(
   key: string,
   page = 1,
   pageSize = 24,
+  allowedSkus: string[] | null = null,
 ): Promise<CategoryPageContext> {
   const route = await magentoGraphQL<CategoryRouteQuery>(
     isCategoryUid(key) ? CATEGORY_ROUTE_BY_UID : CATEGORY_ROUTE_BY_URL,
@@ -168,15 +187,27 @@ export async function getCategoryPageContext(
 
   const safePage = Math.max(1, Math.trunc(page));
   const safePageSize = Math.max(1, Math.min(48, Math.trunc(pageSize)));
-  const data = await magentoGraphQL<CategoryProductsQuery>(
-    CATEGORY_PRODUCTS,
-    {
-      categoryUid: category.uid,
-      page: safePage,
-      pageSize: safePageSize,
-    },
-    token,
-  );
+  if (allowedSkus !== null && (allowedSkus.length > 2000
+    || allowedSkus.some((sku) => typeof sku !== "string" || !sku))) {
+    throw new Error("Employee catalogue membership is invalid.");
+  }
+  const data: CategoryProductsQuery = allowedSkus !== null && allowedSkus.length === 0
+    ? { products: {
+        total_count: 0, page_info: { current_page: 1, total_pages: 0 }, items: [],
+      } }
+    : await magentoGraphQL<CategoryProductsQuery>(
+        allowedSkus === null ? CATEGORY_PRODUCTS : CATEGORY_PRODUCTS_EMPLOYEE,
+        {
+          categoryUid: category.uid,
+          ...(allowedSkus === null ? {} : { skuFilter: allowedSkus }),
+          page: safePage,
+          pageSize: safePageSize,
+        },
+        token,
+      );
+  if (allowedSkus !== null && data.products.items.some((item) => !allowedSkus.includes(item.sku))) {
+    throw new Error("Magento returned a category product outside the Employee catalogue.");
+  }
 
   const hidePrice = route.css_storefront_policy.hide_price;
   const prices = hidePrice
