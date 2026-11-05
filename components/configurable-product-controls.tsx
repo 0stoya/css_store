@@ -29,6 +29,7 @@ export function ConfigurableProductControls({
   canAdd,
   addLabel,
   employeeOrdering,
+  defaultEmployeeId = null,
 }: {
   options: ConfigurableOption[];
   variants: ConfigurableVariant[];
@@ -36,6 +37,7 @@ export function ConfigurableProductControls({
   canAdd: boolean;
   addLabel: string;
   employeeOrdering: EmployeeOrdering;
+  defaultEmployeeId?: number | null;
 }) {
   const [selected, setSelected] = useState<Record<string, string>>({});
 
@@ -145,7 +147,7 @@ export function ConfigurableProductControls({
     </p>}
 
     {employeeOrdering.usesEmployee && employeeOrdering.multiEmployeeBasket ? <div className="configurable-employee">
-      <EmployeePicker employees={employeeOrdering.employees}/>
+      <EmployeePicker employees={employeeOrdering.employees} defaultSelectedId={defaultEmployeeId}/>
     </div> : null}
 
     <div className="configurable-order-actions">

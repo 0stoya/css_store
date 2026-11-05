@@ -10,6 +10,7 @@ import {
 } from "@/lib/magento/cart";
 import { getEmployeeOrdering } from "@/lib/magento/employee";
 import { requireCustomerToken } from "@/lib/session";
+import { assertEmployeeCatalogueAssignment } from "@/lib/employee-catalogue";
 
 function message(error: unknown) {
   unstable_rethrow(error);
@@ -78,6 +79,7 @@ export async function assignBasketEmployeeAction(formData: FormData) {
     if (ordering.multiEmployeeBasket) throw new Error("This company assigns Employees per basket line.");
     if (!ordering.employees.some((employee) => employee.employee_id === id)) throw new Error("Choose an active Employee from this company.");
     if (!cart.itemsV2.items.length) throw new Error("The basket is empty.");
+    await assertEmployeeCatalogueAssignment(token, id, cart.id);
     await assignCartEmployee(token, cart.id, id);
   } catch (error) {
     failure = message(error);
@@ -98,6 +100,7 @@ export async function assignBasketItemEmployeeAction(formData: FormData) {
     if (!ordering.multiEmployeeBasket) throw new Error("This company uses one Employee for the whole basket.");
     if (!ordering.employees.some((employee) => employee.employee_id === id)) throw new Error("Choose an active Employee from this company.");
     if (!cart.itemsV2.items.some((item) => item.uid === uid)) throw new Error("That basket item is no longer available.");
+    await assertEmployeeCatalogueAssignment(token, id, cart.id, uid);
     await assignCartItemEmployee(token, cart.id, uid, id);
   } catch (error) {
     failure = message(error);

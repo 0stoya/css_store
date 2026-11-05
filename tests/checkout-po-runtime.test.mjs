@@ -59,6 +59,7 @@ async function simulate({
     "@/lib/session": { requireCustomerToken: async () => "test-customer-token" },
     "@/lib/employee-delivery-review": { assertEmployeeDeliveryReviewComplete: async () => {} },
     "@/lib/controlled-employee-delivery": { assertControlledCartReady: async () => ({ controlled: false }) },
+    "@/lib/employee-catalogue": { assertEmployeeCatalogueCartReady: async () => {} },
     "@/lib/magento/employee": {
       getEmployeeOrdering: async () => ({
         usesEmployee: false, multiEmployeeBasket: false, employees: [],

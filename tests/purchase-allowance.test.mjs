@@ -142,6 +142,7 @@ async function submitWithContexts(initial, current) {
     "@/lib/magento/client": { MagentoGraphQLError: class MagentoGraphQLError extends Error {} },
     "@/lib/employee-delivery-review": { assertEmployeeDeliveryReviewComplete: async () => {} },
     "@/lib/controlled-employee-delivery": { assertControlledCartReady: async () => ({ controlled: false }) },
+    "@/lib/employee-catalogue": { assertEmployeeCatalogueCartReady: async () => {} },
     "@/lib/magento/checkout": {
       getCheckoutContext: async () => { reads++; return reads === 1 ? initial : current; },
       setBillingSameAsShipping: async () => {}, setCheckoutPaymentMethod: async () => {},

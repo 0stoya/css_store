@@ -1,11 +1,13 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { CatalogueBadgeProvider } from "@/components/catalogue-badges";
 import { CataloguePagination } from "@/components/catalogue-pagination";
 import { ProductCard } from "@/components/product-card";
 import { SiteHeader } from "@/components/site-header";
 import { getCategoryPageContext } from "@/lib/magento/category-page";
 import { requireCustomerToken } from "@/lib/session";
+import { getEmployeeCatalogueMode, getSelectedEmployee } from "@/lib/employee-catalogue";
+import { getEmployeeCataloguePolicy } from "@/lib/employee-catalogue-db";
 
 function pageHref(key: string, page: number) {
   const base = `/catalogue/category/${encodeURIComponent(key)}`;
@@ -23,7 +25,13 @@ export default async function CategoryPage({
   const [{ key: rawKey }, { page: rawPage = "1" }] = await Promise.all([params, searchParams]);
   const key = decodeURIComponent(rawKey);
   const page = Math.max(1, Math.trunc(Number(rawPage) || 1));
-  const categoryPage = await getCategoryPageContext(token, key, page);
+  const mode = await getEmployeeCatalogueMode(token);
+  const selectedEmployee = mode ? await getSelectedEmployee(mode) : null;
+  if (mode && !selectedEmployee) redirect("/catalogue?choose=1");
+  const policy = mode && selectedEmployee
+    ? await getEmployeeCataloguePolicy(mode.companyId, selectedEmployee.employeeId)
+    : null;
+  const categoryPage = await getCategoryPageContext(token, key, page, 24, policy?.skus ?? null);
   const { category, products, selectedCompany: selected, customerName: name, hidePrice } = categoryPage;
   if (!category || !products) notFound();
 

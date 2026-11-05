@@ -40,10 +40,18 @@ export async function controlledDeliveryApplies(delivery: DeliveryContext) {
   if (!isSingleEmployeeCompany(delivery)) return false;
   const companyId = positive(delivery.css_company_context.selected_company_id);
   try {
-    return await getControlledEmployeeDeliveryEnabled(companyId);
-  } catch {
-    // This is a buyer-visible flow. Do not disclose database identifiers,
-    // connection details or upstream SQL errors in redirect messages.
+    const controlled = await getControlledEmployeeDeliveryEnabled(companyId);
+    if (controlled && delivery.css_company_employee_configuration.open_employee_purchasing) {
+      // Delegated buyers cannot use another customer's saved Magento address.
+      // Staff Admin must disable one of these mutually incompatible policies.
+      throw new Error("Open employee purchasing is incompatible with Controlled Employee delivery. Contact your company administrator.");
+    }
+    return controlled;
+  } catch (error) {
+    // Show only our own safe policy conflict message, never SQL/connection data.
+    if (error instanceof Error && error.message.startsWith("Open employee purchasing is incompatible")) {
+      throw error;
+    }
     throw new Error("Employee delivery settings are temporarily unavailable. Contact your company administrator.");
   }
 }

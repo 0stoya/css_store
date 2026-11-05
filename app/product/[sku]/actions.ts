@@ -12,6 +12,7 @@ import { getEmployeeOrdering } from "@/lib/magento/employee";
 import { getProduct, type ConfigurableVariant, type ProductConfiguration } from "@/lib/magento/product";
 import { getRepeatOrderLists, saveGroupedRepeatOrderListItem } from "@/lib/magento/repeat-orders";
 import { requireCustomerToken } from "@/lib/session";
+import { assertEmployeeCatalogueProduct } from "@/lib/employee-catalogue";
 
 function positiveQuantity(value: FormDataEntryValue | null) {
   const quantity = Number(value);
@@ -123,6 +124,9 @@ export async function addProductToCartAction(formData: FormData) {
         throw new Error("Choose an active Employee for this order line.");
       }
     }
+
+    // Strictly opt-in; no extra DB request in standard purchasing.
+    await assertEmployeeCatalogueProduct(token, product.sku, employeeId);
 
     if (product.__typename === "CssGroupedConfigurableProduct") {
       const items = groupedConfigurableSelections(product, formData);

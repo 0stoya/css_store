@@ -74,6 +74,7 @@ function actionFixture(mappedId, ownedAddresses, controlled = false) {
     "@/lib/controlled-employee-delivery": {
       controlledDeliveryApplies: async () => controlled,
     },
+    "@/lib/employee-catalogue": { assertEmployeeCatalogueAssignment: async () => {} },
     "@/lib/employee-delivery-address": {
       employeeAddressMappingConfigured: () => true,
       getAssignedEmployeeDeliveryAddress: async () => mappedId,
