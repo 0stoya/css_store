@@ -81,3 +81,17 @@ export function assertEmployeeCartAllowed(
     }
   }
 }
+
+/** No company joins the new shopping journey by accident. */
+export function employeeCatalogueCompanyEnabled(
+  allowedCompanyIds: string | undefined,
+  companyId: number | null,
+): boolean {
+  const raw = allowedCompanyIds?.trim() || "";
+  if (!raw) return false;
+  if (!/^[1-9][0-9]*(?:,[1-9][0-9]*)*$/.test(raw)) {
+    throw new Error("Employee catalogue pilot company configuration is invalid.");
+  }
+  if (!Number.isSafeInteger(companyId) || !companyId || companyId <= 0) return false;
+  return raw.split(",").map(Number).includes(companyId);
+}
