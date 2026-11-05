@@ -31,7 +31,7 @@ test("Simple checkout retains the original quantity limits and server action", (
 
 test("Employee context remains inside the simple add-to-cart form", () => {
   assert.match(simpleForm, /employeeOrdering\.usesEmployee && employeeOrdering\.multiEmployeeBasket/);
-  assert.match(simpleForm, /<EmployeePicker employees=\{employeeOrdering\.employees\} label="Who is this for\?"\/>/);
+  assert.match(simpleForm, /<EmployeePicker employees=\{employeeOrdering\.employees\} label="Who is this for\?" defaultSelectedId=\{selected\?\.employeeId \?\? null\}\/>/);
   assert.match(simpleForm, /employeeOrdering\.usesEmployee && !employeeOrdering\.multiEmployeeBasket/);
   assert.match(simpleForm, /Employee selection happens at the start of checkout/);
   assert.match(simpleForm, /This product can’t currently be added to the basket/);
