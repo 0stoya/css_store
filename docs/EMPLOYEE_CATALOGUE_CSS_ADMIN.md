@@ -1,4 +1,4 @@
-# Employee-first Store catalogue (css_app projection)
+# Employee-first Store catalogue (CSS Admin owned projection)
 
 **Status: code-only, default OFF; do not deploy/activate without source and release gates.**
 This PR is stacked on `css_store` Open Purchasing #96 and requires the accepted
@@ -9,20 +9,20 @@ Magento/Css Commerce open-purchasing schema/permissions (Fluid PR #119).
 
 1. **Employee Ordering OFF:** unchanged email/password login, Magento catalogue,
    search, PDP, basket, shipping, purchase approvals and checkout. Zero new
-   css_app reads; the feature's first gate returns before any Magento request.
+   CSS Admin PostgreSQL reads; the feature's first gate returns before any Magento request.
 2. Employees ON / Open Purchasing OFF: existing manager-scoped order flow,
    unaffected by this code.
 3. Open Purchasing ON / global Store feature OFF: existing open purchasing
-   behaviour; still no css_app dependency.
+   behaviour; still no CSS Admin PostgreSQL dependency.
 4. Open Purchasing ON / global Store feature ON: Employee selection before
    browsing; a signed HttpOnly cookie is scoped to authenticated Magento
    customer + selected company and expires after eight hours. Magento's
    existing company, active Employee, buyer checkout and catalogue ceilings
-   still apply. An expired/missing/unqualified css_app employee policy **blocks
+   still apply. An expired/missing/unqualified CSS Admin PostgreSQL employee policy **blocks
    only this new flow**, never standard purchasing.
 
-The `css_app` source is the new immutable/expiring
-`storefront.read_employee_catalogue_v1(bigint,bigint)` from Control #257.
+The data source is the new immutable/expiring
+`css_admin.read_employee_catalogue_v1(bigint,bigint)` deployed through CSS Admin's own PostgreSQL migration.
 Only its `READY` qualified 0–2000 SKU/ID snapshot is accepted. Empty means
 **zero permitted products**, not all products. Store's dedicated connection
 has execute-only access to that function, not Control tables or any writer
@@ -46,15 +46,15 @@ exclusive with Open Purchasing as documented in #96/#155.
 
 1. Merge/deploy Fluid #119 and its Magento schema/GraphQL; verify live.
 2. Merge/deploy Admin #155 and Store #96, keeping Open Purchasing OFF.
-3. Independently review/approve/install Control #257 migration and its
+3. Independently review/approve/install CSS Admin catalogue projection migration and its
    execute-only reader grant, then capture and validate a complete current
-   Magento applied-entitlement source receipt in the EXISTING css_app:55432.
+   Magento applied-entitlement source receipt in CSS Admin's existing PostgreSQL database.
    A continuously refreshed observed source is required before expiry.
 4. In Store, configure a dedicated reader DSN and an independent, private
    `CSS_STORE_EMPLOYEE_CATALOGUE_SIGNING_KEY` (>=32 chars). Deploy with
    `CSS_STORE_EMPLOYEE_CATALOGUE_ENABLED=0`; do not enable until acceptance.
 5. On one pilot company, confirm normal User login with Employees OFF still
-   shows the identical catalogue, basket and checkout even if css_app is down;
+   shows the identical catalogue, basket and checkout even if CSS Admin PostgreSQL is down;
    confirm Employee ON/Open OFF remains unchanged; confirm valid pilot
    Employee product and missing/expired/foreign-product denials; and complete
    one *non-submitting* credit/native checkout rehearsal. An actual live

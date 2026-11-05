@@ -23,10 +23,10 @@ export async function getEmployeeCataloguePolicy(companyId: number, employeeId: 
     throw new Error("Invalid Employee catalogue context.");
   }
   try {
-    // Dedicated, read-only css_app role: EXECUTE this one function only.
-    // Never access Control catalogue tables or use an admin/ingestion password.
+    // Dedicated, read-only CSS Admin PostgreSQL role: EXECUTE this function only.
+    // Never access CSS Admin tables or reuse Staff/Magento credentials.
     const rows = await sqlClient()`
-      SELECT storefront.read_employee_catalogue_v1(
+      SELECT css_admin.read_employee_catalogue_v1(
         ${companyId}::bigint, ${employeeId}::bigint
       ) AS policy
     `;
