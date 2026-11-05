@@ -191,7 +191,7 @@ export async function getCataloguePageContext(
       };
 
   const data = await magentoGraphQL<CataloguePageQuery>(query, variables, token);
-  if (employee && data.products.items.some((item) => !allowedSkus.includes(item.sku))) {
+  if (allowedSkus !== null && data.products.items.some((item) => !allowedSkus.includes(item.sku))) {
     throw new Error("Magento returned a product outside the Employee catalogue.");
   }
 
