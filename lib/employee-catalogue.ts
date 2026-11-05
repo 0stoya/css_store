@@ -49,7 +49,7 @@ export const getEmployeeCatalogueMode = cache(async (token: string): Promise<Emp
   const cap = data.css_ordering_capabilities;
   // Manager-only mode: scope is still authorised by Magento's existing
   // css_company_employees resolver, not an undeployed open-purchasing field.
-  if (!employeeCatalogueApplies(true, { ...config, open_employee_purchasing: true },
+  if (!employeeCatalogueApplies(true, config,
     cap, ctx.selected_company_id, cap.company_id)) return null;
   if (!Number.isSafeInteger(ctx.customer_id) || !ctx.customer_id
     || !Number.isSafeInteger(cap.company_user_id) || !cap.company_user_id
