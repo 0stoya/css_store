@@ -6,7 +6,8 @@ import { getCustomerCart, assignCartEmployee } from "@/lib/magento/cart";
 import { getEmployeeCataloguePolicy } from "@/lib/employee-catalogue-db";
 import { readEmployeeSelection, signEmployeeSelection, type SelectedEmployee } from "@/lib/employee-catalogue-session";
 import { assertEmployeeCartAllowed, assertEmployeeProductAllowed,
-  employeeCatalogueApplies, type EmployeeCatalogueMode, type EmployeeCataloguePolicy,
+  employeeCatalogueApplies, employeeCatalogueCompanyEnabled,
+  type EmployeeCatalogueMode, type EmployeeCataloguePolicy,
 } from "@/lib/employee-catalogue-policy";
 
 const SELECTION_COOKIE = "css_store_employee_catalogue";
@@ -47,6 +48,12 @@ export const getEmployeeCatalogueMode = cache(async (token: string): Promise<Emp
   const config = data.css_company_employee_configuration;
   const ctx = data.css_company_context;
   const cap = data.css_ordering_capabilities;
+  // Explicit company pilot: an enabled global switch must not silently
+  // change every existing Employee Ordering company.
+  if (!config.uses_employee || !employeeCatalogueCompanyEnabled(
+    process.env.CSS_STORE_EMPLOYEE_CATALOGUE_COMPANY_IDS,
+    ctx.selected_company_id,
+  )) return null;
   // Manager-only mode: scope is still authorised by Magento's existing
   // css_company_employees resolver, not an undeployed open-purchasing field.
   if (!employeeCatalogueApplies(true, config,
