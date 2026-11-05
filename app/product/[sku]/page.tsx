@@ -61,7 +61,7 @@ export default async function ProductPage({
   if (!product) notFound();
 
   const price = product.price_range?.minimum_price;
-  const allowance = product.css_purchase_allowance;
+  const allowance = mode ? null : product.css_purchase_allowance;
   const allowanceBlocked = Boolean(allowance?.has_active_restriction && allowance.remaining_quantity <= 0);
   const starterKit = product.__typename === "CssGroupedConfigurableProduct";
   const nativeGrouped = product.__typename === "GroupedProduct";
@@ -82,7 +82,7 @@ export default async function ProductPage({
         const child = item.product;
         const childPrice = child.price_range?.minimum_price.final_price;
         const allowanceBlocked = Boolean(
-          child.css_purchase_allowance?.has_active_restriction
+          !mode && child.css_purchase_allowance?.has_active_restriction
           && child.css_purchase_allowance.remaining_quantity <= 0,
         );
         const available = child.css_stock_info.available && !allowanceBlocked;
@@ -144,7 +144,7 @@ export default async function ProductPage({
       <span>This product can’t currently be added to the basket.</span>
     </p> : null}
     {employeeOrdering.usesEmployee && !employeeOrdering.multiEmployeeBasket ? <p className="pdp-checkout-note">
-      Employee selection happens at the start of checkout.
+      {mode ? "Employee selected before browsing; the Employee's Purchase Controls are checked in the basket and checkout." : "Employee selection happens at the start of checkout."}
     </p> : null}
   </form> : null;
 
@@ -232,7 +232,7 @@ export default async function ProductPage({
             />
 
             {employeeOrdering.usesEmployee && !employeeOrdering.multiEmployeeBasket ? <p className="pdp-checkout-note configurable-checkout-note">
-              Employee selection happens at the start of checkout.
+              {mode ? "Employee selected before browsing; the Employee's Purchase Controls are checked in the basket and checkout." : "Employee selection happens at the start of checkout."}
             </p> : null}
           </form> : null}
 
@@ -273,7 +273,7 @@ export default async function ProductPage({
           <StarterKitBuilder key={starterKitBuilderKey} items={starterKitItems} canAdd={canAdd}/>
 
           {employeeOrdering.usesEmployee && !employeeOrdering.multiEmployeeBasket ? <p className="pdp-checkout-note starter-kit-checkout-note">
-            Employee selection happens at the start of checkout.
+            {mode ? "Employee selected before browsing; the Employee's Purchase Controls are checked in the basket and checkout." : "Employee selection happens at the start of checkout."}
           </p> : null}
 
           <section className="repeat-save-card starter-kit-repeat-card stack">
@@ -337,7 +337,7 @@ export default async function ProductPage({
                 {groupedItems.map(({ item, originalIndex }) => {
                   const child = item.product;
                   const childPrice = child.price_range?.minimum_price.final_price;
-                  const childAllowanceBlocked = Boolean(child.css_purchase_allowance?.has_active_restriction && child.css_purchase_allowance.remaining_quantity <= 0);
+                  const childAllowanceBlocked = Boolean(!mode && child.css_purchase_allowance?.has_active_restriction && child.css_purchase_allowance.remaining_quantity <= 0);
                   const childAvailable = child.css_stock_info.available && !childAllowanceBlocked;
                   return <article className={`grouped-line pdp-grouped-line ${childAvailable ? "" : "unavailable"}`} key={child.uid}>
                     <input type="hidden" name={`child_${originalIndex}_sku`} value={child.sku}/>
@@ -375,7 +375,7 @@ export default async function ProductPage({
             </section> : null}
 
             {employeeOrdering.usesEmployee && !employeeOrdering.multiEmployeeBasket ? <p className="pdp-checkout-note">
-              Employee selection happens at the start of checkout.
+              {mode ? "Employee selected before browsing; the Employee's Purchase Controls are checked in the basket and checkout." : "Employee selection happens at the start of checkout."}
             </p> : null}
 
             {!grouped ? <div className="pdp-primary-row">
