@@ -12,13 +12,14 @@ import { assertEmployeeCartAllowed, assertEmployeeProductAllowed,
 const SELECTION_COOKIE = "css_store_employee_catalogue";
 
 export function employeeCatalogueFeatureEnabled() {
-  return process.env.CSS_STORE_EMPLOYEE_CATALOGUE_ENABLED === "1";
+  return process.env.CSS_STORE_EMPLOYEE_CATALOGUE_ENABLED === "1"
+    && process.env.CSS_STORE_EMPLOYEE_CATALOGUE_SOURCE === "ROLE_CATALOGUE_V2";
 }
 
 const CONTEXT = /* GraphQL */ `
   query StoreEmployeeCatalogueMode {
     css_company_employee_configuration {
-      company_id uses_employee multi_employee_basket open_employee_purchasing
+      company_id uses_employee multi_employee_basket
     }
     css_company_context { customer_id selected_company_id }
     css_ordering_capabilities {
@@ -35,7 +36,7 @@ export const getEmployeeCatalogueMode = cache(async (token: string): Promise<Emp
   const data = await magentoGraphQL<{
     css_company_employee_configuration: {
       company_id: number; uses_employee: boolean;
-      multi_employee_basket: boolean; open_employee_purchasing: boolean;
+      multi_employee_basket: boolean;
     };
     css_company_context: { customer_id: number | null; selected_company_id: number | null };
     css_ordering_capabilities: {
@@ -46,7 +47,10 @@ export const getEmployeeCatalogueMode = cache(async (token: string): Promise<Emp
   const config = data.css_company_employee_configuration;
   const ctx = data.css_company_context;
   const cap = data.css_ordering_capabilities;
-  if (!employeeCatalogueApplies(true, config, cap, ctx.selected_company_id, cap.company_id)) return null;
+  // Manager-only mode: scope is still authorised by Magento's existing
+  // css_company_employees resolver, not an undeployed open-purchasing field.
+  if (!employeeCatalogueApplies(true, { ...config, open_employee_purchasing: true },
+    cap, ctx.selected_company_id, cap.company_id)) return null;
   if (!Number.isSafeInteger(ctx.customer_id) || !ctx.customer_id
     || !Number.isSafeInteger(cap.company_user_id) || !cap.company_user_id
     || config.company_id !== cap.company_id) {

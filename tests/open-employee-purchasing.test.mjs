@@ -7,15 +7,15 @@ import load from "./helpers/load-typescript.mjs";
 const root = fileURLToPath(new URL("..", import.meta.url));
 const source = (file) => readFileSync(new URL(`../${file}`, import.meta.url), "utf8");
 
-test("Store fetches every authorised Employee page without HR GraphQL", async () => {
+test("Store uses the deployed manager-scoped Employee directory with complete paging", async () => {
   const pages = [];
   const employee = load(root, "lib/magento/employee.ts", {
     "@/lib/magento/client": { magentoGraphQL: async (query, variables) => {
-      assert.match(query, /css_company_buyable_employees/);
-      assert.doesNotMatch(query, /css_company_employees\(/);
+      assert.match(query, /css_company_employees/);
+      assert.doesNotMatch(query, /css_company_buyable_employees/);
       pages.push(variables.page);
-      return { css_company_buyable_employees: {
-        items: [{ employee_id: variables.page, full_name: "Employee " + variables.page, employee_code: null, department: null }],
+      return { css_company_employees: {
+        items: [{ employee_id: variables.page, full_name: "Employee " + variables.page, employee_code: null, department: null, active: true }],
         page_info: { current_page: variables.page, total_pages: 3 },
       } };
     } },
@@ -27,7 +27,7 @@ test("Store fetches every authorised Employee page without HR GraphQL", async ()
 
 test("Changed paging metadata is rejected, never shown as a complete list", async () => {
   const employee = load(root, "lib/magento/employee.ts", {
-    "@/lib/magento/client": { magentoGraphQL: async () => ({ css_company_buyable_employees: {
+    "@/lib/magento/client": { magentoGraphQL: async () => ({ css_company_employees: {
       items: [], page_info: { current_page: 1, total_pages: 51 },
     } }) },
   });
@@ -56,4 +56,11 @@ test("Checkout still uses native assignment, credit and purchase controls", () =
   assert.match(cart, /cssAssignCartItemEmployee/);
   assert.match(payment, /assertControlledCartReady/);
   assert.match(payment, /css_purchase_eligibility/);
+});
+
+test("Employee-first catalogue is doubly gated and legacy schema is preserved", () => {
+  const runtime = source("lib/employee-catalogue.ts");
+  const shipping = source("lib/magento/shipping.ts");
+  assert.match(runtime, /CSS_STORE_EMPLOYEE_CATALOGUE_SOURCE === "ROLE_CATALOGUE_V2"/);
+  assert.doesNotMatch(shipping, /\n\s+open_employee_purchasing\n/);
 });
