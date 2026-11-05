@@ -127,7 +127,8 @@ test("catalogue and category cards split price requests from company-visible res
   assert.match(catalogue, /price_range: prices\?\.get\(product\.sku\) \?\? null/);
   assert.match(category, /price_range: prices\?\.get\(product\.sku\) \?\? null/);
   assert.match(card, /!hidePrice && price/);
-  assert.match(catalogue, /filter: \{ price: \{ to: "999999999" \} \}/);
+  assert.match(catalogue, /price: \{ to: "999999999" \}/);
+  assert.match(catalogue, /\.\.\.\(employee \? \{ sku: \{ in: allowedSkus \} \} : \{\}\)/);
 });
 
 test("no additional price query is made for customers whose prices are hidden", async () => {
