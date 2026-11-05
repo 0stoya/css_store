@@ -114,7 +114,10 @@ export async function assertEmployeeCatalogueProduct(token: string, sku: string,
 export async function assertEmployeeCatalogueAssignment(token: string, employeeId: number, cartId: string, uid?: string) {
   const mode = await getEmployeeCatalogueMode(token);
   if (!mode) return;
-  await requireSelectedEmployee(mode);
+  const selected = await requireSelectedEmployee(mode);
+  if (selected.employeeId !== employeeId) {
+    throw new Error("Change the shopping Employee before reassigning this basket.");
+  }
   const active = await getActiveEmployees(token);
   if (!active.some((employee) => employee.employee_id === employeeId)) {
     throw new Error("The selected Employee is no longer available.");
@@ -136,12 +139,15 @@ export async function assertEmployeeCatalogueAssignment(token: string, employeeI
 export async function assertEmployeeCatalogueCartReady(token: string, expectedCartId: string) {
   const mode = await getEmployeeCatalogueMode(token);
   if (!mode) return;
-  await requireSelectedEmployee(mode);
+  const selected = await requireSelectedEmployee(mode);
   const [cart, employees] = await Promise.all([getCustomerCart(token), getActiveEmployees(token)]);
   if (cart.id !== expectedCartId) throw new Error("The basket has changed during checkout.");
   const employeeIds = [...new Set(cart.itemsV2.items.map((line) =>
     line.css_employee?.employee_id ?? line.css_kit?.employee_id ?? null))];
   if (employeeIds.includes(null)) throw new Error("Choose an Employee for every basket line.");
+  if (!mode.multiEmployeeBasket && employeeIds[0] !== selected.employeeId) {
+    throw new Error("The shopping Employee changed. Reassign your basket before checkout.");
+  }
   if (employeeIds.length > 50) throw new Error("Too many Employees in this basket.");
   const policies = new Map<number, EmployeeCataloguePolicy>();
   await Promise.all(employeeIds.map(async (id) => {
