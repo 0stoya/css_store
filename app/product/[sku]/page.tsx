@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import {
   ChevronDown,
   ChevronRight,
@@ -22,6 +22,8 @@ import { SiteHeader } from "@/components/site-header";
 import { StarterKitBuilder } from "@/components/starter-kit-builder";
 import { getPdpPageContext } from "@/lib/magento/pdp-page";
 import { requireCustomerToken } from "@/lib/session";
+import { getEmployeeCatalogueMode, getSelectedEmployee } from "@/lib/employee-catalogue";
+import { getEmployeeCataloguePolicy } from "@/lib/employee-catalogue-db";
 import { addProductToCartAction, saveProductToRepeatListAction } from "./actions";
 import { addGroupedChildToCartAction } from "./grouped-actions";
 
@@ -41,6 +43,13 @@ export default async function ProductPage({
   const token = await requireCustomerToken();
   const [{ sku: rawSku }, status] = await Promise.all([params, searchParams]);
   const sku = decodeURIComponent(rawSku);
+  const mode = await getEmployeeCatalogueMode(token);
+  const selected = mode ? await getSelectedEmployee(mode) : null;
+  if (mode && !selected) redirect("/catalogue?choose=1");
+  if (mode && selected) {
+    const policy = await getEmployeeCataloguePolicy(mode.companyId, selected.employeeId);
+    if (!policy.skus.includes(sku)) notFound();
+  }
   const pdp = await getPdpPageContext(token, sku);
   const { product, selectedCompany, customerName, employeeOrdering, employeeOrderingBlocked, repeatLists, storefrontPolicy } = pdp;
   if (!product) notFound();
