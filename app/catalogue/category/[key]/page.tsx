@@ -26,10 +26,10 @@ export default async function CategoryPage({
   const key = decodeURIComponent(rawKey);
   const page = Math.max(1, Math.trunc(Number(rawPage) || 1));
   const mode = await getEmployeeCatalogueMode(token);
-  const selected = mode ? await getSelectedEmployee(mode) : null;
-  if (mode && !selected) redirect("/catalogue?choose=1");
-  const policy = mode && selected
-    ? await getEmployeeCataloguePolicy(mode.companyId, selected.employeeId)
+  const selectedEmployee = mode ? await getSelectedEmployee(mode) : null;
+  if (mode && !selectedEmployee) redirect("/catalogue?choose=1");
+  const policy = mode && selectedEmployee
+    ? await getEmployeeCataloguePolicy(mode.companyId, selectedEmployee.employeeId)
     : null;
   const categoryPage = await getCategoryPageContext(token, key, page, 24, policy?.skus ?? null);
   const { category, products, selectedCompany: selected, customerName: name, hidePrice } = categoryPage;
