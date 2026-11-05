@@ -107,6 +107,12 @@ export async function assertEmployeeCatalogueProduct(token: string, sku: string,
   if (employeeId !== undefined && employeeId !== scope.selected.employeeId) {
     throw new Error("The selected Employee changed. Choose the Employee again.");
   }
+  // A signed selection is not permanent Employee membership: verify Magento's
+  // current active buyer scope again immediately before mutating the cart.
+  const active = await getActiveEmployees(token);
+  if (!active.some((entry) => entry.employee_id === scope.selected.employeeId)) {
+    throw new Error("The selected Employee is no longer active or available.");
+  }
   assertEmployeeProductAllowed(scope.policy, sku);
 }
 
