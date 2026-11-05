@@ -2,7 +2,7 @@ import { cache } from "react";
 import { cookies } from "next/headers";
 import { magentoGraphQL } from "@/lib/magento/client";
 import { getActiveEmployees } from "@/lib/magento/employee";
-import { getCustomerCart } from "@/lib/magento/cart";
+import { getCustomerCart, assignCartEmployee } from "@/lib/magento/cart";
 import { getEmployeeCataloguePolicy } from "@/lib/employee-catalogue-db";
 import { readEmployeeSelection, signEmployeeSelection, type SelectedEmployee } from "@/lib/employee-catalogue-session";
 import { assertEmployeeCartAllowed, assertEmployeeProductAllowed,
@@ -165,4 +165,38 @@ export async function assertEmployeeCatalogueCartReady(token: string, expectedCa
   }));
   assertEmployeeCartAllowed(cart.itemsV2.items, policies,
     new Set(employees.map((employee) => employee.employee_id)), !mode.multiEmployeeBasket);
+}
+
+/**
+ * In the opted-in single-Employee journey, the beneficiary was chosen before
+ * browsing. Apply that selection after each successful cart add so delivery
+ * does not require selecting the same Employee a second time.
+ */
+export async function assignSelectedCatalogueEmployeeToBasket(token: string) {
+  const mode = await getEmployeeCatalogueMode(token);
+  if (!mode || mode.multiEmployeeBasket) return;
+  const selected = await requireSelectedEmployee(mode);
+  const [cart, employees, policy] = await Promise.all([
+    getCustomerCart(token),
+    getActiveEmployees(token),
+    getEmployeeCataloguePolicy(mode.companyId, selected.employeeId),
+  ]);
+  if (!cart.itemsV2.items.length) return;
+  if (cart.itemsV2.items.some((item) => {
+    const existing = item.css_employee?.employee_id ?? item.css_kit?.employee_id;
+    return existing !== null && existing !== undefined && existing !== selected.employeeId;
+  })) {
+    throw new Error("Your basket belongs to another Employee. Remove those items before switching.");
+  }
+  const active = new Set(employees.map((employee) => employee.employee_id));
+  const policies = new Map([[selected.employeeId, policy]]);
+  assertEmployeeCartAllowed(
+    cart.itemsV2.items.map((item) => ({
+      ...item, css_employee: { employee_id: selected.employeeId },
+    })),
+    policies, active, true,
+  );
+  // Magento remains responsible for canonical Employee assignment and any
+  // native quantity/order policy. No off-platform checkout changes.
+  await assignCartEmployee(token, cart.id, selected.employeeId);
 }
