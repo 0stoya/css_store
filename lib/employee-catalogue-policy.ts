@@ -9,6 +9,7 @@ export type EmployeeCatalogueMode = {
 export type EmployeeCataloguePolicy = {
   companyId: number;
   employeeId: number;
+  catalogueScope: "EXPLICIT_SKUS" | "COMPANY_INHERITED";
   skus: string[];
   productIds: number[];
   sourceSha256: string;
@@ -43,6 +44,9 @@ export function employeeCatalogueApplies(featureEnabled: boolean, config: {
 }
 
 export function assertEmployeeProductAllowed(policy: EmployeeCataloguePolicy, sku: string): void {
+  // Only the validated SQL source reader can create COMPANY_INHERITED mode.
+  // Magento's authenticated company/buyer visibility remains the boundary.
+  if (policy.catalogueScope === "COMPANY_INHERITED") return;
   if (!policy.skus.includes(sku)) {
     throw new Error("This product is not in the selected Employee's purchasing catalogue.");
   }
@@ -72,7 +76,8 @@ export function assertEmployeeCartAllowed(
     // Magento's 'logical product' may be a grouped/kit parent even when its
     // visible cart item has a child/variant SKU. Never accept a bare
     // parent name; IDs and SKUs here came from authenticated Magento cart.
-    const permitted = (productId !== null && policy.productIds.includes(productId))
+    const permitted = policy.catalogueScope === "COMPANY_INHERITED"
+      || (productId !== null && policy.productIds.includes(productId))
       || policy.skus.includes(line.product.sku)
       || (line.display_parent_sku !== null && line.display_parent_sku !== undefined
         && policy.skus.includes(line.display_parent_sku));

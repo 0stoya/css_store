@@ -78,3 +78,24 @@ This Store filter is not a universal Magento catalogue ACL; any direct
 Magento client still has its independent authenticated permissions.
 Live activation needs a continuous, independently accepted capture
 process. No new timer, schema write or live order is included here.
+
+
+## Unrestricted role — inherits company catalogue
+
+An existing Magento role with **no saved Catalogue Restrictions** inherits
+all products that the logged-in buyer may already browse under the **current
+Magento company policy**. The Admin UI may show all company products checked
+by default; those are not saved role-specific SKU grants. CSS Admin must
+independently qualify this source as
+`MAGENTO_ROLE_CATALOGUE_COMPANY_INHERITANCE_V2` using its separately approved
+007b constraint extension. Only then does Store accept
+`catalogueScope: COMPANY_INHERITED`; it issues normal authenticated Magento
+product queries with **no extra SKU filter**. Product/cart/final-checkout
+validation still requires the active, manager-authorised Employee and a
+non-expired role-revision-bound source snapshot. Magento retains all company
+and buyer ACL and purchase enforcement. Store hides the manager's allowance
+badge in both Employee catalogue modes.
+
+An absent, contradictory or expired source, or an explicitly restricted role
+with zero allowed products, **never** becomes unrestricted. This code is
+safe to merge with the Store feature flag OFF. No Magento changes.
