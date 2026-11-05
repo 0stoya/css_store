@@ -5,6 +5,7 @@ import { EmployeePicker } from "@/components/employee-picker";
 import { SiteHeader } from "@/components/site-header";
 import type { CartMoney } from "@/lib/magento/cart";
 import { getActiveEmployees } from "@/lib/magento/employee";
+import { getEmployeeCatalogueMode, getSelectedEmployee } from "@/lib/employee-catalogue";
 import {
   getDeliveryContext,
   type CustomerShippingAddress,
@@ -106,7 +107,12 @@ export default async function DeliveryPage({
     && activeEmployeeIds.has(assignedIds[0])
     ? assignedIds[0]
     : null;
-  const employeeReady = !singleEmployeeCheckout || currentEmployeeId !== null;
+  const catalogueMode = await getEmployeeCatalogueMode(token);
+  const selectedCatalogueEmployee = catalogueMode ? await getSelectedEmployee(catalogueMode) : null;
+  if (catalogueMode && !selectedCatalogueEmployee) redirect("/catalogue?choose=1");
+  const employeeReady = (!singleEmployeeCheckout || currentEmployeeId !== null)
+    && (!catalogueMode || !singleEmployeeCheckout
+      || currentEmployeeId === selectedCatalogueEmployee?.employeeId);
   const deliveryReviewPending = singleEmployeeCheckout && currentEmployeeId !== null
     ? await isEmployeeDeliveryReviewPending(cart.id)
     : false;
@@ -154,7 +160,18 @@ export default async function DeliveryPage({
               <h2>Who is this order for?</h2>
               <p>Select one Employee for the whole order.</p>
             </div>
-            {employees.length ? <form action={selectCheckoutEmployeeAction} className="checkout-employee-form">
+            {catalogueMode && selectedCatalogueEmployee ? (
+              <div className="stack">
+                <strong>Shopping for {selectedCatalogueEmployee.name}</strong>
+                <p className="muted small-text">
+                  This Employee was selected before browsing. Catalogue Restrictions and purchasing controls are checked separately.
+                </p>
+                {!employeeReady ? <p className="error" role="alert">
+                  The basket is not assigned to the selected Employee. Review your basket before checkout.
+                </p> : null}
+                <Link href="/catalogue?choose=1" className="button secondary">Change Employee</Link>
+              </div>
+            ) : employees.length ? <form action={selectCheckoutEmployeeAction} className="checkout-employee-form">
               <EmployeePicker
                 employees={employees}
                 name="employee_id"

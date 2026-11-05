@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
+import { getEmployeeCatalogueMode } from "@/lib/employee-catalogue";
 import { CatalogueBadgeProvider } from "@/components/catalogue-badges";
 import { CataloguePagination } from "@/components/catalogue-pagination";
 import { HomeCategorySection } from "@/components/home-category-section";
@@ -21,6 +23,9 @@ export default async function HomePage({
   searchParams: Promise<{ q?: string; page?: string }>;
 }) {
   const token = await requireCustomerToken();
+  // Employee-first companies choose the beneficiary before any product browse.
+  // Ordinary login/home continues unchanged when the feature is OFF.
+  if (await getEmployeeCatalogueMode(token)) redirect("/catalogue");
   const { q = "", page: rawPage = "1" } = await searchParams;
   const page = Math.max(1, Math.trunc(Number(rawPage) || 1));
   const searchTerm = q.trim();

@@ -214,6 +214,10 @@ export async function getCataloguePageContext(
       ...data.products,
       items: data.products.items.map((product) => ({
         ...product,
+        // This GraphQL allowance belongs to the logged-in buyer, not the
+        // selected Employee. Employee Purchase Controls are checked by
+        // Magento against actual cart attribution separately.
+        css_purchase_allowance: allowedSkus === null ? product.css_purchase_allowance : null,
         // Unknown or failed item prices are never represented as £0.00.
         price_range: prices?.get(product.sku) ?? null,
       })),

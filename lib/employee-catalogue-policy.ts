@@ -25,14 +25,14 @@ export type EmployeeCatalogueCartLine = {
 
 export function employeeCatalogueApplies(featureEnabled: boolean, config: {
   uses_employee: boolean;
-  open_employee_purchasing: boolean;
 }, capabilities: {
   authenticated: boolean;
   company_context: boolean;
   company_active: boolean;
   can_checkout: boolean;
 }, selectedCompany: number | null, companyId: number | null): boolean {
-  if (!featureEnabled || !config.uses_employee || !config.open_employee_purchasing) return false;
+  // Existing Magento manager-scoped Employee ordering. Never widen company scope.
+  if (!featureEnabled || !config.uses_employee) return false;
   // Unknown or inconsistent authority must never become an unrestricted mode.
   if (!capabilities.authenticated || !capabilities.company_context
     || !capabilities.company_active || !capabilities.can_checkout
@@ -80,4 +80,18 @@ export function assertEmployeeCartAllowed(
       throw new Error("Your basket contains a product outside an Employee's purchasing catalogue.");
     }
   }
+}
+
+/** No company joins the new shopping journey by accident. */
+export function employeeCatalogueCompanyEnabled(
+  allowedCompanyIds: string | undefined,
+  companyId: number | null,
+): boolean {
+  const raw = allowedCompanyIds?.trim() || "";
+  if (!raw) return false;
+  if (!/^[1-9][0-9]*(?:,[1-9][0-9]*)*$/.test(raw)) {
+    throw new Error("Employee catalogue pilot company configuration is invalid.");
+  }
+  if (!Number.isSafeInteger(companyId) || !companyId || companyId <= 0) return false;
+  return raw.split(",").map(Number).includes(companyId);
 }

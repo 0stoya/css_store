@@ -12,7 +12,7 @@ import { getEmployeeOrdering } from "@/lib/magento/employee";
 import { getProduct, type ConfigurableVariant, type ProductConfiguration } from "@/lib/magento/product";
 import { getRepeatOrderLists, saveGroupedRepeatOrderListItem } from "@/lib/magento/repeat-orders";
 import { requireCustomerToken } from "@/lib/session";
-import { assertEmployeeCatalogueProduct } from "@/lib/employee-catalogue";
+import { assertEmployeeCatalogueProduct, assignSelectedCatalogueEmployeeToBasket, getEmployeeCatalogueMode } from "@/lib/employee-catalogue";
 
 function positiveQuantity(value: FormDataEntryValue | null) {
   const quantity = Number(value);
@@ -56,16 +56,16 @@ function cartItemSku(item: {
   return item.configured_variant?.sku || item.product.sku;
 }
 
-function assertGroupedChildAvailable(child: NonNullable<ProductConfiguration["items"]>[number]["product"]) {
+function assertGroupedChildAvailable(child: NonNullable<ProductConfiguration["items"]>[number]["product"], employeeCatalogueMode = false) {
   if (!child.css_stock_info.available) {
     throw new Error(child.css_stock_info.delivery_message || `${child.name} is unavailable.`);
   }
-  if (child.css_purchase_allowance?.has_active_restriction && child.css_purchase_allowance.remaining_quantity <= 0) {
+  if (!employeeCatalogueMode && child.css_purchase_allowance?.has_active_restriction && child.css_purchase_allowance.remaining_quantity <= 0) {
     throw new Error(`${child.name} has no remaining purchase allowance.`);
   }
 }
 
-function groupedConfigurableSelections(product: ProductConfiguration, formData: FormData) {
+function groupedConfigurableSelections(product: ProductConfiguration, formData: FormData, employeeCatalogueMode = false) {
   const items: Array<{ configurableSku: string; variantSku: string; quantity: number }> = [];
   const childCount = product.items?.length || 0;
 
@@ -78,7 +78,7 @@ function groupedConfigurableSelections(product: ProductConfiguration, formData: 
     if (!Number.isFinite(rawQuantity) || rawQuantity < 0) throw new Error(`Enter a valid quantity for ${child.name}.`);
     if (rawQuantity === 0) continue;
 
-    assertGroupedChildAvailable(child);
+    assertGroupedChildAvailable(child, employeeCatalogueMode);
     if (child.__typename !== "ConfigurableProduct") {
       throw new Error(`${child.name} is not a configurable child of this Fluid grouped product.`);
     }
@@ -115,6 +115,7 @@ export async function addProductToCartAction(formData: FormData) {
       getCustomerCartWriteContext(token),
     ]);
     if (!product) throw new Error("Product could not be found.");
+    const employeeCatalogueMode = Boolean(await getEmployeeCatalogueMode(token));
     if (!product.css_stock_info.available) throw new Error(product.css_stock_info.delivery_message || "Product is unavailable.");
 
     let employeeId: number | undefined;
@@ -129,7 +130,7 @@ export async function addProductToCartAction(formData: FormData) {
     await assertEmployeeCatalogueProduct(token, product.sku, employeeId);
 
     if (product.__typename === "CssGroupedConfigurableProduct") {
-      const items = groupedConfigurableSelections(product, formData);
+      const items = groupedConfigurableSelections(product, formData, employeeCatalogueMode);
       await addGroupedConfigurableProduct(token, {
         cartId: before.id,
         parentSku: product.sku,
@@ -149,7 +150,7 @@ export async function addProductToCartAction(formData: FormData) {
         if (!Number.isFinite(rawQuantity) || rawQuantity < 0) throw new Error(`Enter a valid quantity for ${child.name}.`);
         if (rawQuantity === 0) continue;
 
-        assertGroupedChildAvailable(child);
+        assertGroupedChildAvailable(child, employeeCatalogueMode);
         if (child.__typename !== "SimpleProduct") {
           throw new Error(`${child.name} is not a native simple child and cannot be added through Magento's grouped-product path.`);
         }
@@ -212,6 +213,7 @@ export async function addProductToCartAction(formData: FormData) {
     } else {
       throw new Error("This Magento product type does not yet have an accepted add-to-cart path.");
     }
+    await assignSelectedCatalogueEmployeeToBasket(token);
   } catch (error) {
     failure = message(error);
   }

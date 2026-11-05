@@ -22,15 +22,16 @@ test("Employees OFF always bypasses the new catalogue feature", () => {
   assert.equal(policy.employeeCatalogueApplies(true,
     { uses_employee: false, open_employee_purchasing: true },
     canCheckout, 20, 20), false);
+  // Existing manager-scoped Employee ordering may use the new catalogue
+  // when (and only when) the dedicated V2 source flag is enabled.
   assert.equal(policy.employeeCatalogueApplies(true,
-    { uses_employee: true, open_employee_purchasing: false },
-    canCheckout, 20, 20), false);
+    { uses_employee: true }, canCheckout, 20, 20), true);
   assert.equal(policy.employeeCatalogueApplies(false,
     { uses_employee: true, open_employee_purchasing: true },
     canCheckout, 20, 20), false);
 });
 
-test("Open catalogue requires the buyer's actual authenticated company and checkout rights", () => {
+test("Manager-scoped catalogue requires the buyer's actual authenticated company and checkout rights", () => {
   const active = { authenticated: true, company_context: true, company_active: true, can_checkout: true };
   assert.equal(policy.employeeCatalogueApplies(true,
     { uses_employee: true, open_employee_purchasing: true }, active, 20, 20), true);
@@ -119,6 +120,30 @@ test("Final native and credit checkout both revalidate qualified membership befo
 
 test("Employee catalogue reader uses CSS Admin's own PostgreSQL projection, never an unrelated database", () => {
   const reader = source("lib/employee-catalogue-db.ts");
-  assert.ok(reader.includes("SELECT css_admin.read_employee_catalogue_v1("));
-  assert.equal(reader.includes("SELECT storefront.read_employee_catalogue_v1("), false);
+  assert.ok(reader.includes("SELECT css_admin.read_employee_role_catalogue_v2("));
+  assert.equal(reader.includes("SELECT css_admin.read_employee_catalogue_v1("), false);
+  assert.ok(reader.includes("MAGENTO_ROLE_CATALOGUE_VISIBILITY_V2"));
+});
+
+test("Employee-first single-Employee cart carries selection into checkout", () => {
+  const runtime=source("lib/employee-catalogue.ts");
+  const delivery=source("app/checkout/delivery/page.tsx");
+  const products=source("app/product/[sku]/actions.ts");
+  const grouped=source("app/product/[sku]/grouped-actions.ts");
+  assert.match(runtime,/assignSelectedCatalogueEmployeeToBasket/);
+  assert.match(runtime,/assignCartEmployee\(token, cart.id, selected.employeeId\)/);
+  assert.match(products,/await assignSelectedCatalogueEmployeeToBasket\(token\)/);
+  assert.match(grouped,/await assignSelectedCatalogueEmployeeToBasket\(token\)/);
+  assert.match(delivery,/selectedCatalogueEmployee/);
+  assert.match(delivery,/currentEmployeeId === selectedCatalogueEmployee\?\.employeeId/);
+});
+
+test("Employee-first pilot is company-specific: all other Employee companies retain standard purchasing",()=>{
+  assert.equal(policy.employeeCatalogueCompanyEnabled(undefined,20),false);
+  assert.equal(policy.employeeCatalogueCompanyEnabled("",20),false);
+  assert.equal(policy.employeeCatalogueCompanyEnabled("19,21",20),false);
+  assert.equal(policy.employeeCatalogueCompanyEnabled("19,20,21",20),true);
+  assert.equal(policy.employeeCatalogueCompanyEnabled("20",21),false);
+  assert.throws(()=>policy.employeeCatalogueCompanyEnabled("all",20),/invalid/);
+  assert.throws(()=>policy.employeeCatalogueCompanyEnabled("20, 21",20),/invalid/);
 });
