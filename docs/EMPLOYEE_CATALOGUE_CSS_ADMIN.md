@@ -1,70 +1,68 @@
-# Employee-first Store catalogue (CSS Admin owned projection)
+# Employee-first purchasing catalogue — CSS Store + CSS Admin
 
-**Status: code-only, default OFF; do not deploy/activate without source and release gates.**
-This PR is stacked on `css_store` Open Purchasing #96 and requires the accepted
-Magento/Css Commerce open-purchasing schema/permissions (Fluid PR #119).
-**No new Fluid changes.**
+**Status:** code available, feature OFF by default. No production
+configuration, database migration or source refresh has been activated.
 
-## Four modes, strict isolation
+## Repositories
 
-1. **Employee Ordering OFF:** unchanged email/password login, Magento catalogue,
-   search, PDP, basket, shipping, purchase approvals and checkout. Zero new
-   CSS Admin PostgreSQL reads; the feature's first gate returns before any Magento request.
-2. Employees ON / Open Purchasing OFF: existing manager-scoped order flow,
-   unaffected by this code.
-3. Open Purchasing ON / global Store feature OFF: existing open purchasing
-   behaviour; still no CSS Admin PostgreSQL dependency.
-4. Open Purchasing ON / global Store feature ON: Employee selection before
-   browsing; a signed HttpOnly cookie is scoped to authenticated Magento
-   customer + selected company and expires after eight hours. Magento's
-   existing company, active Employee, buyer checkout and catalogue ceilings
-   still apply. An expired/missing/unqualified CSS Admin PostgreSQL employee policy **blocks
-   only this new flow**, never standard purchasing.
+- `css_store` — browsing, Employee selection, basket and checkout guards.
+- `css_admin` — current applied-allowance source captures, immutable
+  observations and the separately granted PostgreSQL read function.
+- `Fluid` — existing Magento Employee identities, catalogue ceilings,
+  buyer permissions, applied allowances, payment and approvals. There is
+  **no new Fluid modification** for this feature.
 
-The data source is the new immutable/expiring
-`css_admin.read_employee_catalogue_v1(bigint,bigint)` deployed through CSS Admin's own PostgreSQL migration.
-Only its `READY` qualified 0–2000 SKU/ID snapshot is accepted. Empty means
-**zero permitted products**, not all products. Store's dedicated connection
-has execute-only access to that function, not Control tables or any writer
-credential. Magento IDs are never Control catalogue product IDs.
+The Store's dedicated read-only connection uses
+`CSS_STORE_EMPLOYEE_CATALOGUE_DATABASE_URL`, pointing to **CSS Admin's
+existing PostgreSQL database**. It executes only
+`css_admin.read_employee_catalogue_v1(bigint,bigint)`. Never use the CSS
+Admin writer credential or an unrelated application's database.
 
-Magento GraphQL `products` receives exact allowed SKUs via
-`filter.sku.in` **before pagination** (including searches and categories).
-PDP and add-to-cart enforce the selected SKU; cart reassignment and both
-native and Fluid credit-order submission paths revalidate the actual Magento
-cart against the employee's current qualified product IDs/SKUs and the current
-active Employee membership. Grouped products use the canonical logical
-parent ID when present; otherwise the exact Magento SKU must qualify.
-No JavaScript browser trust or arbitrary company/employee ID grants.
+## Four-mode compatibility
 
-Old bulk repeat-order/list additions are explicitly unavailable in this
-mode until they can be verified before the cart write. Ordinary repeat
-orders remain unchanged. Controlled Employee delivery remains mutually
-exclusive with Open Purchasing as documented in #96/#155.
+1. Employee Ordering OFF: normal email/password login, catalogue, PDP,
+   basket, purchase controls, PO and checkout are unchanged. No new
+   database lookup occurs.
+2. Employee Ordering ON + Open Purchasing OFF: existing manager-restricted
+   Employee purchasing is unchanged.
+3. Open Purchasing ON + global Store catalogue switch OFF: existing Open
+   Purchasing behaviour unchanged, with no new database dependency.
+4. Both Open Purchasing and global Store catalogue switch ON: buyer
+   selects an active Employee before browsing; Store applies a qualified
+   Employee SKU filter **inside Magento GraphQL, before pagination**, and
+   revalidates product selection, cart attribution and native/credit-order
+   submission. Magento's buyer permissions, pricing, allowances and
+   approvals remain authoritative.
 
-## Activation order / release holds
+A `READY` source is limited to 2,000 explicit Magento IDs and SKUs.
+A qualified empty source means zero products, never unrestricted browsing.
+Missing/expired/invalid source fails closed only in the new opt-in mode.
+The signed HttpOnly selection cookie is bound to Magento's authenticated
+buyer and selected company.
 
-1. Merge/deploy Fluid #119 and its Magento schema/GraphQL; verify live.
-2. Merge/deploy Admin #155 and Store #96, keeping Open Purchasing OFF.
-3. Independently review/approve/install CSS Admin catalogue projection migration and its
-   execute-only reader grant, then capture and validate a complete current
-   Magento applied-entitlement source receipt in CSS Admin's existing PostgreSQL database.
-   A continuously refreshed observed source is required before expiry.
-4. In Store, configure a dedicated reader DSN and an independent, private
-   `CSS_STORE_EMPLOYEE_CATALOGUE_SIGNING_KEY` (>=32 chars). Deploy with
-   `CSS_STORE_EMPLOYEE_CATALOGUE_ENABLED=0`; do not enable until acceptance.
-5. On one pilot company, confirm normal User login with Employees OFF still
-   shows the identical catalogue, basket and checkout even if CSS Admin PostgreSQL is down;
-   confirm Employee ON/Open OFF remains unchanged; confirm valid pilot
-   Employee product and missing/expired/foreign-product denials; and complete
-   one *non-submitting* credit/native checkout rehearsal. An actual live
-   purchase requires explicit separate approval.
+A Store guard cannot become a universal Magento ACL: other Magento clients
+can still exercise their own authenticated permissions. Existing Employee
+hard entitlement checks continue to protect actual Magento submission.
+Bulk repeat-order additions are deliberately unavailable in Employee
+Catalogue mode until a pre-write entitlement guard can cover them.
 
-This Store-only enforcement is not an additional Magento API ACL: a customer
-who has broader Magento catalogue rights could query Magento outside CSS Store.
-This feature must not be represented as a universal backend embargo. It is
-the enforced CSS Store journey, with Magento's native buyer+Employee hard
-entitlements continuing to protect checkout. If true backend catalogue denial
-independent of Store is required, Magento must enforce it.
+## Safe deployment sequence
 
-No auto-deploy, production settings, SQL writes, role grants or real orders.
+1. Verify existing Fluid Open Purchasing functionality in Magento and
+   complete CSS Admin company-setting changes before enabling it for customers.
+2. Review and explicitly install CSS Admin's Employee Catalogue PostgreSQL
+   migration; provision a separate read-only Store role and grant only
+   EXECUTE on the read function.
+3. Enable Staff capture **only** for a named pilot Employee; independently
+   verify its Magento applied allowance, SKU mapping and database readback.
+   Manual Staff refresh is not a substitute for continuous freshness.
+4. Configure the Store reader DSN and an independently generated
+   `CSS_STORE_EMPLOYEE_CATALOGUE_SIGNING_KEY` (minimum 32 characters).
+   Deploy with `CSS_STORE_EMPLOYEE_CATALOGUE_ENABLED=0`.
+5. Verify standard purchasing with Employees OFF, manager-only purchasing,
+   the pilot Employee catalogue, stale-source refusal and native/credit
+   non-submitting checkouts. Keep the feature OFF until a recurring refresh
+   mechanism has been accepted for each enabled pilot company.
+
+No default enablement, production grant, data import, timer or actual order
+is authorised by this source change.
