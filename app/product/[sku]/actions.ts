@@ -65,7 +65,7 @@ function assertGroupedChildAvailable(child: NonNullable<ProductConfiguration["it
   }
 }
 
-function groupedConfigurableSelections(product: ProductConfiguration, formData: FormData) {
+function groupedConfigurableSelections(product: ProductConfiguration, formData: FormData, employeeCatalogueMode = false) {
   const items: Array<{ configurableSku: string; variantSku: string; quantity: number }> = [];
   const childCount = product.items?.length || 0;
 
@@ -130,7 +130,7 @@ export async function addProductToCartAction(formData: FormData) {
     await assertEmployeeCatalogueProduct(token, product.sku, employeeId);
 
     if (product.__typename === "CssGroupedConfigurableProduct") {
-      const items = groupedConfigurableSelections(product, formData);
+      const items = groupedConfigurableSelections(product, formData, employeeCatalogueMode);
       await addGroupedConfigurableProduct(token, {
         cartId: before.id,
         parentSku: product.sku,
