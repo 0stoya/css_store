@@ -51,7 +51,13 @@ export default async function ProductPage({
     if (!policy.skus.includes(sku)) notFound();
   }
   const pdp = await getPdpPageContext(token, sku);
-  const { product, selectedCompany, customerName, employeeOrdering, employeeOrderingBlocked, repeatLists, storefrontPolicy } = pdp;
+  const { product, selectedCompany, customerName, employeeOrderingBlocked, repeatLists, storefrontPolicy } = pdp;
+  // Only present the signed shopping beneficiary in Employee Catalogue mode.
+  // All ordinary company modes preserve the complete existing Employee picker.
+  const employeeOrdering = mode && selected
+    ? { ...pdp.employeeOrdering, employees: pdp.employeeOrdering.employees.filter(
+        (employee) => employee.employee_id === selected.employeeId) }
+    : pdp.employeeOrdering;
   if (!product) notFound();
 
   const price = product.price_range?.minimum_price;
@@ -118,7 +124,7 @@ export default async function ProductPage({
   const simpleBuyForm = simpleProduct ? <form action={addProductToCartAction} className="pdp-simple-buy-form">
     <input type="hidden" name="product_sku" value={product.sku}/>
     {employeeOrdering.usesEmployee && employeeOrdering.multiEmployeeBasket ? <div className="pdp-simple-buy-employee">
-      <EmployeePicker employees={employeeOrdering.employees} label="Who is this for?"/>
+      <EmployeePicker employees={employeeOrdering.employees} label="Who is this for?" defaultSelectedId={selected?.employeeId ?? null}/>
     </div> : null}
     <div className="pdp-simple-buy-controls">
       <QuantityStepper
@@ -222,6 +228,7 @@ export default async function ProductPage({
               canAdd={canAdd}
               addLabel={addLabel}
               employeeOrdering={employeeOrdering}
+              defaultEmployeeId={selected?.employeeId ?? null}
             />
 
             {employeeOrdering.usesEmployee && !employeeOrdering.multiEmployeeBasket ? <p className="pdp-checkout-note configurable-checkout-note">
@@ -260,7 +267,7 @@ export default async function ProductPage({
               <strong>Who is this kit for?</strong>
               <span>The Employee is attached to every item added from this kit.</span>
             </div>
-            <EmployeePicker employees={employeeOrdering.employees}/>
+            <EmployeePicker employees={employeeOrdering.employees} defaultSelectedId={selected?.employeeId ?? null}/>
           </section> : null}
 
           <StarterKitBuilder key={starterKitBuilderKey} items={starterKitItems} canAdd={canAdd}/>
@@ -319,7 +326,7 @@ export default async function ProductPage({
               <div className="pdp-option-heading">
                 <strong>Who is this for?</strong>
               </div>
-              <EmployeePicker employees={employeeOrdering.employees}/>
+              <EmployeePicker employees={employeeOrdering.employees} defaultSelectedId={selected?.employeeId ?? null}/>
             </section> : null}
 
             {grouped ? <section className="pdp-option-section grouped-section">
