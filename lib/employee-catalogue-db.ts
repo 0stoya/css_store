@@ -23,10 +23,11 @@ export async function getEmployeeCataloguePolicy(companyId: number, employeeId: 
     throw new Error("Invalid Employee catalogue context.");
   }
   try {
-    // Dedicated, read-only CSS Admin PostgreSQL role: EXECUTE this function only.
+    // Dedicated, read-only CSS Admin PostgreSQL role, V2 Catalogue Role contract only.
+    // The earlier allowance-based projection must NEVER determine browse visibility.
     // Never access CSS Admin tables or reuse Staff/Magento credentials.
     const rows = await sqlClient()`
-      SELECT css_admin.read_employee_catalogue_v1(
+      SELECT css_admin.read_employee_role_catalogue_v2(
         ${companyId}::bigint, ${employeeId}::bigint
       ) AS policy
     `;
@@ -38,7 +39,11 @@ export async function getEmployeeCataloguePolicy(companyId: number, employeeId: 
     const productIds = data.product_ids;
     const expiresAt = data.expires_at;
     const hash = data.source_sha256;
-    if (!Array.isArray(skus) || !Array.isArray(productIds) || skus.length !== productIds.length
+    const sourceContract = data.source_contract;
+    const roleId = data.role_id;
+    if (sourceContract !== "MAGENTO_ROLE_CATALOGUE_VISIBILITY_V2"
+      || !Number.isSafeInteger(roleId) || Number(roleId) <= 0
+      || !Array.isArray(skus) || !Array.isArray(productIds) || skus.length !== productIds.length
       || skus.length > 2000 || data.count !== skus.length
       || new Set(skus).size !== skus.length || new Set(productIds).size !== productIds.length
       || !skus.every((sku) => typeof sku === "string" && sku.length > 0 && sku.length <= 128)
