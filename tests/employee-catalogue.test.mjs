@@ -22,15 +22,16 @@ test("Employees OFF always bypasses the new catalogue feature", () => {
   assert.equal(policy.employeeCatalogueApplies(true,
     { uses_employee: false, open_employee_purchasing: true },
     canCheckout, 20, 20), false);
+  // Existing manager-scoped Employee ordering may use the new catalogue
+  // when (and only when) the dedicated V2 source flag is enabled.
   assert.equal(policy.employeeCatalogueApplies(true,
-    { uses_employee: true, open_employee_purchasing: false },
-    canCheckout, 20, 20), false);
+    { uses_employee: true }, canCheckout, 20, 20), true);
   assert.equal(policy.employeeCatalogueApplies(false,
     { uses_employee: true, open_employee_purchasing: true },
     canCheckout, 20, 20), false);
 });
 
-test("Open catalogue requires the buyer's actual authenticated company and checkout rights", () => {
+test("Manager-scoped catalogue requires the buyer's actual authenticated company and checkout rights", () => {
   const active = { authenticated: true, company_context: true, company_active: true, can_checkout: true };
   assert.equal(policy.employeeCatalogueApplies(true,
     { uses_employee: true, open_employee_purchasing: true }, active, 20, 20), true);
