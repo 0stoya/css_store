@@ -10,6 +10,7 @@ import {
   updateRepeatOrderList,
 } from "@/lib/magento/repeat-orders";
 import { requireCustomerToken } from "@/lib/session";
+import { getEmployeeCatalogueMode } from "@/lib/employee-catalogue";
 
 function errorMessage(error: unknown) {
   unstable_rethrow(error);
@@ -112,6 +113,9 @@ export async function addRepeatOrderListToCartAction(formData: FormData) {
   }
 
   try {
+    if (await getEmployeeCatalogueMode(token)) {
+      throw new Error("Repeat-list additions are unavailable in Employee Catalogue mode. Add products from the selected Employee catalogue.");
+    }
     const cart = await getCustomerCartWriteContext(token);
     const result = await addRepeatOrderListToCart(token, { cartId: cart.id, listId: listId!, itemIds });
     const warning = warningSummary(result);
