@@ -12,7 +12,7 @@ import { getEmployeeOrdering } from "@/lib/magento/employee";
 import { getProduct, type ConfigurableVariant, type ProductConfiguration } from "@/lib/magento/product";
 import { getRepeatOrderLists, saveGroupedRepeatOrderListItem } from "@/lib/magento/repeat-orders";
 import { requireCustomerToken } from "@/lib/session";
-import { assertEmployeeCatalogueProduct } from "@/lib/employee-catalogue";
+import { assertEmployeeCatalogueProduct, assignSelectedCatalogueEmployeeToBasket } from "@/lib/employee-catalogue";
 
 function positiveQuantity(value: FormDataEntryValue | null) {
   const quantity = Number(value);
@@ -212,6 +212,7 @@ export async function addProductToCartAction(formData: FormData) {
     } else {
       throw new Error("This Magento product type does not yet have an accepted add-to-cart path.");
     }
+    await assignSelectedCatalogueEmployeeToBasket(token);
   } catch (error) {
     failure = message(error);
   }
