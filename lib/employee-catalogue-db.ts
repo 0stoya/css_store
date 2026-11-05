@@ -12,7 +12,7 @@ function sqlClient() {
     globalThis.__cssStoreEmployeeCatalogueSql = postgres(dsn, {
       max: 2, idle_timeout: 10, connect_timeout: 5,
       max_lifetime: 60, prepare: false,
-      connection: { default_transaction_read_only: "on" },
+      connection: { default_transaction_read_only: true },
     });
   }
   return globalThis.__cssStoreEmployeeCatalogueSql;
