@@ -1,68 +1,78 @@
-# Employee-first purchasing catalogue — CSS Store + CSS Admin
+# CSS Store Employee-first purchasing — existing Magento/Fluid backend
 
-**Status:** code available, feature OFF by default. No production
-configuration, database migration or source refresh has been activated.
+**Status: code-only; Store mode OFF by default.**
+No Fluid or Magento code changes or deployments are permitted for this
+workstream. CSS Admin owns the new optional read model in its existing
+PostgreSQL database; it does not own authentication or checkout.
 
-## Repositories
+## User journeys
 
-- `css_store` — browsing, Employee selection, basket and checkout guards.
-- `css_admin` — current applied-allowance source captures, immutable
-  observations and the separately granted PostgreSQL read function.
-- `Fluid` — existing Magento Employee identities, catalogue ceilings,
-  buyer permissions, applied allowances, payment and approvals. There is
-  **no new Fluid modification** for this feature.
+- Employees OFF: **unchanged** login → normal catalogue → basket → checkout.
+- Employees ON / Employee Catalogue OFF: **unchanged** manager buying and
+  employee assignment at checkout.
+- Employees ON / opted-in Employee Catalogue ON: Manager logs in →
+  selects a Magento-authorised, manager-scoped Employee → sees the
+  Employee's *Catalogue Role* products/categories (intersected with the
+  manager's existing Magento catalogue permission ceiling) → uses the
+  existing Magento basket, Employee attribution and checkout.
 
-The Store's dedicated read-only connection uses
-`CSS_STORE_EMPLOYEE_CATALOGUE_DATABASE_URL`, pointing to **CSS Admin's
-existing PostgreSQL database**. It executes only
-`css_admin.read_employee_catalogue_v1(bigint,bigint)`. Never use the CSS
-Admin writer credential or an unrelated application's database.
+Catalogue Restrictions and Purchase Controls are separate. The first
+determines visible products. The Employee's already-applied Purchase
+Controls remain Magento's authority for quantities, periods, approvals,
+PO requirements and ordering. The buyer is never impersonated as the
+Employee or granted any new Magento permissions.
 
-## Four-mode compatibility
+## Scoped source
 
-1. Employee Ordering OFF: normal email/password login, catalogue, PDP,
-   basket, purchase controls, PO and checkout are unchanged. No new
-   database lookup occurs.
-2. Employee Ordering ON + Employee catalogue switch OFF: existing manager-restricted
-   Employee purchasing is unchanged.
-3. Employees ON + global Store catalogue switch OFF: existing Open
-   Purchasing behaviour unchanged, with no new database dependency.
-4. Employees ON + global Store catalogue switch ON: buyer
-   selects an active Employee before browsing; Store applies a qualified
-   Employee SKU filter **inside Magento GraphQL, before pagination**, and
-   revalidates product selection, cart attribution and native/credit-order
-   submission. Magento's buyer permissions, pricing, allowances and
-   approvals remain authoritative.
+Existing CSS Admin PostgreSQL on port 5432 holds the separately assigned
+employee Catalogue Role and a bounded immutable role-products capture
+from Magento's existing \`css_admin_role_catalog_policy\` GraphQL.
+A different Employee may have a different Catalogue Role even when two
+employees inherit the same purchasing controls.
 
-A `READY` source is limited to 2,000 explicit Magento IDs and SKUs.
-A qualified empty source means zero products, never unrestricted browsing.
-Missing/expired/invalid source fails closed only in the new opt-in mode.
-The signed HttpOnly selection cookie is bound to Magento's authenticated
-buyer and selected company.
+CSS Store requires a \`READY\` \`css_admin.read_employee_role_catalogue_v2\`
+response with source contract
+\`MAGENTO_ROLE_CATALOGUE_VISIBILITY_V2\`, exact product IDs and SKUs,
+and a non-expired snapshot tied to the *current assignment revision*.
+The obsolete allowance-based reader is rejected and its grant revoked
+by the separate new migration.
 
-A Store guard cannot become a universal Magento ACL: other Magento clients
-can still exercise their own authenticated permissions. Existing Employee
-hard entitlement checks continue to protect actual Magento submission.
-Bulk repeat-order additions are deliberately unavailable in Employee
-Catalogue mode until a pre-write entitlement guard can cover them.
+The reader uses an existing dedicated Execute-only Store role and a
+private signing key, never the CSS Admin writer. The opted-in Store mode
+requires both environment values:
+\`CSS_STORE_EMPLOYEE_CATALOGUE_ENABLED=1\` and
+\`CSS_STORE_EMPLOYEE_CATALOGUE_SOURCE=ROLE_CATALOGUE_V2\`.
+Both are OFF or absent by default.
 
-## Safe deployment sequence
+Within this new mode, Store filters SKUs **inside Magento GraphQL**
+before pagination, checks PDP and cart writes, and validates the actual
+Magento cart and per-Employee role membership before both credit and
+native checkout. Successful single-Employee product additions attach the
+preselected Employee to the Magento cart; checkout displays the
+selection rather than requiring it again. Multi-Employee baskets retain
+per-line assignments. Bulk repeat-to-cart remains unavailable only
+in this optional mode until a pre-write validator covers it.
 
-1. Verify existing Fluid Open Purchasing functionality in Magento and
-   complete CSS Admin company-setting changes before enabling it for customers.
-2. Review and explicitly install CSS Admin's Employee Catalogue PostgreSQL
-   migration; provision a separate read-only Store role and grant only
-   EXECUTE on the read function.
-3. Enable Staff capture **only** for a named pilot Employee; independently
-   verify its Magento applied allowance, SKU mapping and database readback.
-   Manual Staff refresh is not a substitute for continuous freshness.
-4. Configure the Store reader DSN and an independently generated
-   `CSS_STORE_EMPLOYEE_CATALOGUE_SIGNING_KEY` (minimum 32 characters).
-   Deploy with `CSS_STORE_EMPLOYEE_CATALOGUE_ENABLED=0`.
-5. Verify standard purchasing with Employees OFF, manager-only purchasing,
-   the pilot Employee catalogue, stale-source refusal and native/credit
-   non-submitting checkouts. Keep the feature OFF until a recurring refresh
-   mechanism has been accepted for each enabled pilot company.
+## Release holds
 
-No default enablement, production grant, data import, timer or actual order
-is authorised by this source change.
+1. Merge and deploy the **Admin/Store live Magento compatibility**
+   corrections, with both new switches OFF. Validate ordinary employee
+   and standard purchasing; no Fluid deployment.
+2. Separately approve and apply CSS Admin's additive
+   \`007_employee_role_catalogue_v2.sql\` migration to **css_admin:5432**.
+   Do not update another app's database.
+3. Set Admin V2 switch for an attended pilot. Explicitly assign the
+   Employee's **Catalogue Role** (not Purchase Role), capture its actual
+   role products and verify exact source IDs/SKUs and DB readback.
+4. Separately approve the dedicated V2 reader grant; verify raw table
+   SELECT is denied and old allowance-based reader EXECUTE is revoked.
+5. Only after continued freshness is proven (each capture lasts up to
+   eight minutes, never past UTC midnight), enable Store V2 for a pilot
+   and exercise standard login, role changes, expired capture, denied
+   product, parent/grouped SKU, cart attribution, purchasing allowances,
+   PO/approval and non-submitting native/credit checkout.
+
+This Store filter is not a universal Magento catalogue ACL; any direct
+Magento client still has its independent authenticated permissions.
+Live activation needs a continuous, independently accepted capture
+process. No new timer, schema write or live order is included here.
