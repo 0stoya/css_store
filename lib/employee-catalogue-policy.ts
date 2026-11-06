@@ -12,8 +12,7 @@ export type EmployeeCataloguePolicy = {
   catalogueScope: "EXPLICIT_SKUS" | "COMPANY_INHERITED";
   skus: string[];
   productIds: number[];
-  sourceSha256: string;
-  expiresAt: string;
+  roleId: number;
 };
 
 export type EmployeeCatalogueCartLine = {
@@ -44,8 +43,8 @@ export function employeeCatalogueApplies(featureEnabled: boolean, config: {
 }
 
 export function assertEmployeeProductAllowed(policy: EmployeeCataloguePolicy, sku: string): void {
-  // Only the validated SQL source reader can create COMPANY_INHERITED mode.
-  // Magento's authenticated company/buyer visibility remains the boundary.
+  // Only the validated live Magento role-policy reader creates inheritance.
+  // The logged-in buyer's company restrictions remain an additional ceiling.
   if (policy.catalogueScope === "COMPANY_INHERITED") return;
   if (!policy.skus.includes(sku)) {
     throw new Error("This product is not in the selected Employee's purchasing catalogue.");
@@ -85,18 +84,4 @@ export function assertEmployeeCartAllowed(
       throw new Error("Your basket contains a product outside an Employee's purchasing catalogue.");
     }
   }
-}
-
-/** No company joins the new shopping journey by accident. */
-export function employeeCatalogueCompanyEnabled(
-  allowedCompanyIds: string | undefined,
-  companyId: number | null,
-): boolean {
-  const raw = allowedCompanyIds?.trim() || "";
-  if (!raw) return false;
-  if (!/^[1-9][0-9]*(?:,[1-9][0-9]*)*$/.test(raw)) {
-    throw new Error("Employee catalogue pilot company configuration is invalid.");
-  }
-  if (!Number.isSafeInteger(companyId) || !companyId || companyId <= 0) return false;
-  return raw.split(",").map(Number).includes(companyId);
 }

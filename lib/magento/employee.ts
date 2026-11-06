@@ -2,6 +2,8 @@ import { magentoGraphQL } from "@/lib/magento/client";
 
 export type StoreEmployee = {
   employee_id: number;
+  company_id: number;
+  purchase_control_role_id: number | null;
   employee_code: string | null;
   full_name: string;
   department: string | null;
@@ -28,7 +30,7 @@ const EMPLOYEE_CONFIGURATION = /* GraphQL */ `
 const ACTIVE_EMPLOYEES = /* GraphQL */ `
   query StoreActiveEmployees($page: Int!) {
     css_company_employees(currentPage: $page, pageSize: 200, active: true) {
-      items { employee_id employee_code full_name department active }
+      items { employee_id company_id purchase_control_role_id employee_code full_name department active }
       page_info { current_page total_pages }
     }
   }

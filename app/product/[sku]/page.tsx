@@ -23,7 +23,7 @@ import { StarterKitBuilder } from "@/components/starter-kit-builder";
 import { getPdpPageContext } from "@/lib/magento/pdp-page";
 import { requireCustomerToken } from "@/lib/session";
 import { getEmployeeCatalogueMode, getSelectedEmployee } from "@/lib/employee-catalogue";
-import { getEmployeeCataloguePolicy } from "@/lib/employee-catalogue-db";
+import { getEmployeeCataloguePolicy } from "@/lib/employee-catalogue-native";
 import { addProductToCartAction, saveProductToRepeatListAction } from "./actions";
 import { addGroupedChildToCartAction } from "./grouped-actions";
 
@@ -47,7 +47,7 @@ export default async function ProductPage({
   const selected = mode ? await getSelectedEmployee(mode) : null;
   if (mode && !selected) redirect("/catalogue?choose=1");
   if (mode && selected) {
-    const policy = await getEmployeeCataloguePolicy(mode.companyId, selected.employeeId);
+    const policy = await getEmployeeCataloguePolicy(token, mode.companyId, selected.employeeId);
     if (!policy.skus.includes(sku)) notFound();
   }
   const pdp = await getPdpPageContext(token, sku);

@@ -152,7 +152,7 @@ export async function getCataloguePageContext(
   const safePage = Math.max(1, Math.trunc(page));
   const safePageSize = Math.max(1, Math.min(48, Math.trunc(pageSize)));
 
-  if (allowedSkus !== null && (allowedSkus.length > 2000
+  if (allowedSkus !== null && (allowedSkus.length > 10000
     || allowedSkus.some((sku) => typeof sku !== "string" || sku.length < 1))) {
     throw new Error("Employee catalogue membership is invalid.");
   }

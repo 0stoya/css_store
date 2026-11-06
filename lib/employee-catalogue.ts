@@ -3,10 +3,10 @@ import { cookies } from "next/headers";
 import { magentoGraphQL } from "@/lib/magento/client";
 import { getActiveEmployees } from "@/lib/magento/employee";
 import { getCustomerCart, assignCartEmployee } from "@/lib/magento/cart";
-import { getEmployeeCataloguePolicy } from "@/lib/employee-catalogue-db";
+import { getEmployeeCataloguePolicy } from "@/lib/employee-catalogue-native";
 import { readEmployeeSelection, signEmployeeSelection, type SelectedEmployee } from "@/lib/employee-catalogue-session";
 import { assertEmployeeCartAllowed, assertEmployeeProductAllowed,
-  employeeCatalogueApplies, employeeCatalogueCompanyEnabled,
+  employeeCatalogueApplies,
   type EmployeeCatalogueMode, type EmployeeCataloguePolicy,
 } from "@/lib/employee-catalogue-policy";
 
@@ -14,7 +14,7 @@ const SELECTION_COOKIE = "css_store_employee_catalogue";
 
 export function employeeCatalogueFeatureEnabled() {
   return process.env.CSS_STORE_EMPLOYEE_CATALOGUE_ENABLED === "1"
-    && process.env.CSS_STORE_EMPLOYEE_CATALOGUE_SOURCE === "ROLE_CATALOGUE_V2";
+    && process.env.CSS_STORE_EMPLOYEE_CATALOGUE_SOURCE === "LIVE_MAGENTO_ROLE";
 }
 
 const CONTEXT = /* GraphQL */ `
@@ -30,8 +30,8 @@ const CONTEXT = /* GraphQL */ `
   }
 `;
 
-// This function makes *no Magento or css_app call* when the global switch is
-// off. Employees OFF / Open Purchasing OFF never touch css_app.
+// This function makes no extra Magento request while disabled.
+// Standard Employee ordering, login and checkout remain unchanged.
 export const getEmployeeCatalogueMode = cache(async (token: string): Promise<EmployeeCatalogueMode | null> => {
   if (!employeeCatalogueFeatureEnabled()) return null;
   const data = await magentoGraphQL<{
@@ -48,12 +48,9 @@ export const getEmployeeCatalogueMode = cache(async (token: string): Promise<Emp
   const config = data.css_company_employee_configuration;
   const ctx = data.css_company_context;
   const cap = data.css_ordering_capabilities;
-  // Explicit company pilot: an enabled global switch must not silently
-  // change every existing Employee Ordering company.
-  if (!config.uses_employee || !employeeCatalogueCompanyEnabled(
-    process.env.CSS_STORE_EMPLOYEE_CATALOGUE_COMPANY_IDS,
-    ctx.selected_company_id,
-  )) return null;
+  // Full production uses Magento's native uses_employee company setting.
+  // Global activation remains separately gated by the feature flag.
+  if (!config.uses_employee) return null;
   // Manager-only mode: scope is still authorised by Magento's existing
   // css_company_employees resolver, not an undeployed open-purchasing field.
   if (!employeeCatalogueApplies(true, config,
@@ -107,7 +104,7 @@ export async function requireSelectedPolicy(token: string): Promise<{
   const mode = await getEmployeeCatalogueMode(token);
   if (!mode) return null;
   const selected = await requireSelectedEmployee(mode);
-  return { mode, selected, policy: await getEmployeeCataloguePolicy(mode.companyId, selected.employeeId) };
+  return { mode, selected, policy: await getEmployeeCataloguePolicy(token, mode.companyId, selected.employeeId) };
 }
 
 // Called *before* product/kit mutations. No Employee purchase context is
@@ -141,7 +138,7 @@ export async function assertEmployeeCatalogueAssignment(token: string, employeeI
   }
   const cart = await getCustomerCart(token);
   if (cart.id !== cartId) throw new Error("The basket changed. Review it again.");
-  const policy = await getEmployeeCataloguePolicy(mode.companyId, employeeId);
+  const policy = await getEmployeeCataloguePolicy(token, mode.companyId, employeeId);
   const relevant = uid
     ? cart.itemsV2.items.filter((item) => item.uid === uid)
     : cart.itemsV2.items;
@@ -168,7 +165,7 @@ export async function assertEmployeeCatalogueCartReady(token: string, expectedCa
   if (employeeIds.length > 50) throw new Error("Too many Employees in this basket.");
   const policies = new Map<number, EmployeeCataloguePolicy>();
   await Promise.all(employeeIds.map(async (id) => {
-    if (id !== null) policies.set(id, await getEmployeeCataloguePolicy(mode.companyId, id));
+    if (id !== null) policies.set(id, await getEmployeeCataloguePolicy(token, mode.companyId, id));
   }));
   assertEmployeeCartAllowed(cart.itemsV2.items, policies,
     new Set(employees.map((employee) => employee.employee_id)), !mode.multiEmployeeBasket);
@@ -186,7 +183,7 @@ export async function assignSelectedCatalogueEmployeeToBasket(token: string) {
   const [cart, employees, policy] = await Promise.all([
     getCustomerCart(token),
     getActiveEmployees(token),
-    getEmployeeCataloguePolicy(mode.companyId, selected.employeeId),
+    getEmployeeCataloguePolicy(token, mode.companyId, selected.employeeId),
   ]);
   if (!cart.itemsV2.items.length) return;
   if (cart.itemsV2.items.some((item) => {
