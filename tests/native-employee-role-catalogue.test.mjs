@@ -184,3 +184,59 @@ test("Role mismatches retain their generic shopper message but a safe detailed o
       && !error.message.includes("ROLE_GRID_TOO_LARGE")
       && !error.message.includes("CUSTOMER_SECRET"));
 });
+
+test("Role-grid walk loads pages in bounded parallel groups without relaxing validation",async()=>{
+  const mod=mockSource({});
+  const selected=[1001,1012];
+  let inFlight=0;
+  let maxInFlight=0;
+  const calls=[];
+  const reader=async n=>{
+    calls.push(n);
+    inFlight++;
+    maxInFlight=Math.max(maxInFlight,inFlight);
+    await new Promise(resolve=>setTimeout(resolve,3));
+    inFlight--;
+    return {
+      company_id:20,role_id:7,
+      products_count:2,allowed_product_ids:selected,preselect_all_products:false,
+      products:{total_count:12,page:n,page_size:1,preselect_all:false,
+        items:[{id:1000+n,sku:"SKU-"+String(n).padStart(2,"0"),
+          allowed:n===1||n===12}]},
+    };
+  };
+  const result=await mod.readNativeRole(20,7,reader);
+  assert.equal(result.catalogueScope,"EXPLICIT_SKUS");
+  assert.deepEqual(Array.from(result.skus),["SKU-01","SKU-12"]);
+  assert.deepEqual(Array.from(result.productIds),selected);
+  assert.equal(calls.filter(n=>n===1).length,2,"independent first-page readback retained");
+  assert.equal(new Set(calls).size,12,"all source pages read");
+  assert.ok(maxInFlight>1,"pages are parallel rather than a sequential crawl");
+  assert.ok(maxInFlight<=4,"never overload Magento with unbounded page fan-out");
+});
+
+test("Concurrent source page drift still fails closed",async()=>{
+  const mod=mockSource({});
+  const selected=[1001,1006];
+  const reader=async n=>({
+    company_id:20,role_id:n===4?8:7,
+    products_count:2,allowed_product_ids:selected,preselect_all_products:false,
+    products:{total_count:6,page:n,page_size:1,preselect_all:false,
+      items:[{id:1000+n,sku:"SKU-"+n,allowed:n===1||n===6}]},
+  });
+  await assert.rejects(mod.readNativeRole(20,7,reader),
+    error=>error.qualificationReason==="ROLE_IDENTITY_MISMATCH");
+});
+
+test("Selection only records an active company Employee; catalogue page still qualifies live role before browsing",()=>{
+  const action=src("app/catalogue/actions.ts");
+  const pageSource=src("app/catalogue/page.tsx");
+  assert.match(action,/getActiveEmployees\(token\)/);
+  assert.match(action,/employee\.company_id === mode\.companyId/);
+  assert.match(action,/employee\.purchase_control_role_id/);
+  assert.match(action,/setSelectedEmployee\(mode, employeeId, employee\.full_name\)/);
+  assert.doesNotMatch(action,/getEmployeeCataloguePolicy\(/);
+  assert.match(pageSource,/getEmployeeCataloguePolicy\(token, mode\.companyId, selectedEmployee\.employeeId\)/);
+  assert.match(pageSource,/roleError/);
+  assert.match(pageSource,/unstable_rethrow\(failure\)/);
+});
