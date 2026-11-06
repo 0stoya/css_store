@@ -9,6 +9,9 @@ import type { EmployeeCataloguePolicy } from "@/lib/employee-catalogue-policy";
 // This module only reads using the authenticated BUYER token. No Staff token,
 // PostgreSQL, scheduled capture or persistent Store-side entitlement cache.
 const PAGE_LIMIT = 200;
+// Restrict GraphQL fan-out; pages are independent immutable read observations.
+// The existing signatures and final readback still catch mid-read role changes.
+const PAGE_READ_CONCURRENCY = 4;
 const PRODUCT_LIMIT = 10000;
 const SOURCE_MAX_MS = 120000;
 const ROLE_QUERY = [
@@ -152,15 +155,24 @@ export async function readNativeRole(
   const allowed: ProductRow[] = [...first.products.items.filter(item => item.allowed)];
   const allIds = new Set(first.products.items.map(item => item.id));
   const allSkus = new Set(first.products.items.map(item => item.sku));
-  for (let page = 2; page <= pageCount; page++) {
-    const next = await read(page);
-    checkNativeRolePage(next, companyId, roleId, page, firstSignature);
-    for (const item of next.products.items) {
-      requireValid(!allIds.has(item.id) && !allSkus.has(item.sku),
-        "ROLE_GRID_MEMBERSHIP_DUPLICATE");
-      allIds.add(item.id);
-      allSkus.add(item.sku);
-      if (item.allowed) allowed.push(item);
+  // Fluid returns 50 company-bound products per request. The old sequential
+  // walk could take tens of seconds for a role allowing only a few products.
+  // Read independent pages in small bounded groups; validate each reply
+  // against page 1, retain duplicate checks and finish with fresh page 1.
+  for (let fromPage = 2; fromPage <= pageCount; fromPage += PAGE_READ_CONCURRENCY) {
+    const count = Math.min(PAGE_READ_CONCURRENCY, pageCount - fromPage + 1);
+    const pages = await Promise.all(Array.from({ length: count },
+      (_, offset) => read(fromPage + offset)));
+    for (let offset = 0; offset < pages.length; offset++) {
+      const next = pages[offset];
+      checkNativeRolePage(next, companyId, roleId, fromPage + offset, firstSignature);
+      for (const item of next.products.items) {
+        requireValid(!allIds.has(item.id) && !allSkus.has(item.sku),
+          "ROLE_GRID_MEMBERSHIP_DUPLICATE");
+        allIds.add(item.id);
+        allSkus.add(item.sku);
+        if (item.allowed) allowed.push(item);
+      }
     }
   }
   const readback = await read(1);
