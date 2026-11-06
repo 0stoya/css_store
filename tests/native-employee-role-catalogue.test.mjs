@@ -117,3 +117,36 @@ test("Native role failures do not disclose tokens or raw Magento error messages"
       && !error.message.includes("example.com")
   );
 });
+
+test("Store distinguishes role grid size and contradictory unrestricted policy without granting more products",async()=>{
+  const mod=mockSource({});
+  const oversized=page(1,[a],{
+    products:{total_count:10001,page:1,page_size:1,preselect_all:false,items:[a]},
+  });
+  assert.throws(()=>mod.checkNativeRolePage(oversized,20,7,1),
+    error=>error.qualificationReason==="ROLE_GRID_TOO_LARGE");
+
+  const contradictory=page(1,[],{
+    has_saved_categories:false,show_product_grid:false,
+    selected_category_ids:[],expanded_category_ids:[],
+    allowed_product_ids:[111],products_count:1,
+    products:{total_count:0,page:1,page_size:50,preselect_all:false,items:[]},
+  });
+  await assert.rejects(mod.readNativeRole(20,7,async()=>contradictory),
+    error=>error.qualificationReason==="ROLE_INHERITANCE_CONFLICT");
+
+  const missingCategory=page(1,[a],{selected_category_ids:[]});
+  await assert.rejects(mod.readNativeRole(20,7,async()=>missingCategory),
+    error=>error.qualificationReason==="ROLE_CATEGORIES_INVALID");
+});
+test("Role mismatches retain their generic shopper message but a safe detailed operator code",async()=>{
+  const mod=mockSource({
+    graph:async()=>({css_company_role_catalog_policy:page(1,[a],{
+      products:{total_count:10001,page:1,page_size:1,preselect_all:false,items:[a]},
+    })}),
+  });
+  await assert.rejects(mod.getEmployeeCataloguePolicy("CUSTOMER_SECRET",20,33),
+    error=>/ROLE_POLICY_UNQUALIFIED/.test(error.message)
+      && !error.message.includes("ROLE_GRID_TOO_LARGE")
+      && !error.message.includes("CUSTOMER_SECRET"));
+});

@@ -34,8 +34,29 @@ type RolePolicyPage = {
 };
 const positive = (id: number): boolean => Number.isSafeInteger(id) && id > 0;
 
-function requireValid(condition: unknown): asserts condition {
-  if (!condition) throw new Error("Magento Employee Role catalogue could not be qualified.");
+type QualificationReason =
+  | "ROLE_IDENTITY_MISMATCH"
+  | "ROLE_METADATA_INVALID"
+  | "ROLE_GRID_SHAPE_INVALID"
+  | "ROLE_GRID_TOO_LARGE"
+  | "ROLE_GRID_PAGE_INVALID"
+  | "ROLE_GRID_PRODUCT_INVALID"
+  | "ROLE_GRID_PRODUCT_DUPLICATE"
+  | "ROLE_POLICY_CHANGED"
+  | "ROLE_INHERITANCE_CONFLICT"
+  | "ROLE_CATEGORIES_INVALID"
+  | "ROLE_GRID_PAGE_LIMIT"
+  | "ROLE_GRID_MEMBERSHIP_DUPLICATE"
+  | "ROLE_FIRST_PAGE_CHANGED"
+  | "ROLE_SELECTED_PRODUCT_MISMATCH"
+  | "ROLE_DEFAULT_PRODUCT_MISMATCH"
+  | "ROLE_SOURCE_TOO_OLD";
+
+function requireValid(condition: unknown, qualificationReason: QualificationReason): asserts condition {
+  if (!condition) throw Object.assign(
+    new Error("Magento Employee Role catalogue could not be qualified."),
+    { qualificationReason },
+  );
 }
 
 function metadata(policy: RolePolicyPage) {
@@ -60,8 +81,8 @@ export function checkNativeRolePage(
   pageNumber: number, originalSignature?: string,
 ): string {
   requireValid(policy?.company_id === companyId && policy.role_id === roleId
-    && positive(companyId) && positive(roleId)
-    && typeof policy.has_saved_categories === "boolean"
+    && positive(companyId) && positive(roleId), "ROLE_IDENTITY_MISMATCH");
+  requireValid(typeof policy.has_saved_categories === "boolean"
     && typeof policy.show_product_grid === "boolean"
     && typeof policy.preselect_all_products === "boolean"
     && Array.isArray(policy.selected_category_ids)
@@ -71,31 +92,35 @@ export function checkNativeRolePage(
     && policy.expanded_category_ids.every(positive)
     && policy.allowed_product_ids.every(positive)
     && new Set(policy.allowed_product_ids).size === policy.allowed_product_ids.length
-    && Number.isSafeInteger(policy.products_count) && policy.products_count >= 0
-    && policy.products && Array.isArray(policy.products.items)
-    && policy.products.page === pageNumber
-    && Number.isSafeInteger(policy.products.total_count) && policy.products.total_count >= 0
-    && policy.products.total_count <= PRODUCT_LIMIT
+    && Number.isSafeInteger(policy.products_count) && policy.products_count >= 0,
+    "ROLE_METADATA_INVALID");
+  requireValid(Boolean(policy.products) && Array.isArray(policy.products.items),
+    "ROLE_GRID_SHAPE_INVALID");
+  requireValid(Number.isSafeInteger(policy.products.total_count)
+    && policy.products.total_count >= 0, "ROLE_GRID_SHAPE_INVALID");
+  requireValid(policy.products.total_count <= PRODUCT_LIMIT, "ROLE_GRID_TOO_LARGE");
+  requireValid(policy.products.page === pageNumber
     && Number.isSafeInteger(policy.products.page_size)
     && policy.products.page_size >= 1 && policy.products.page_size <= 200
     && typeof policy.products.preselect_all === "boolean"
     && policy.products.items.length === Math.min(
       policy.products.page_size,
       Math.max(0, policy.products.total_count - (pageNumber - 1) * policy.products.page_size)
-    ));
+    ), "ROLE_GRID_PAGE_INVALID");
   const seenIds = new Set<number>();
   const seenSkus = new Set<string>();
   for (const item of policy.products.items) {
     requireValid(positive(item?.id) && typeof item.sku === "string"
       && item.sku.length > 0 && item.sku.length <= 128 && item.sku.trim() === item.sku
       && !/[\u0000-\u001f\u007f]/u.test(item.sku)
-      && typeof item.allowed === "boolean"
-      && !seenIds.has(item.id) && !seenSkus.has(item.sku));
+      && typeof item.allowed === "boolean", "ROLE_GRID_PRODUCT_INVALID");
+    requireValid(!seenIds.has(item.id) && !seenSkus.has(item.sku),
+      "ROLE_GRID_PRODUCT_DUPLICATE");
     seenIds.add(item.id);
     seenSkus.add(item.sku);
   }
   const current = signature(metadata(policy));
-  requireValid(!originalSignature || current === originalSignature);
+  requireValid(!originalSignature || current === originalSignature, "ROLE_POLICY_CHANGED");
   return current;
 }
 
@@ -113,15 +138,18 @@ export async function readNativeRole(
       && first.expanded_category_ids.length === 0
       && first.allowed_product_ids.length === 0
       && first.products_count === 0 && !first.show_product_grid
-      && first.products.total_count === 0 && first.products.items.length === 0);
+      && first.products.total_count === 0 && first.products.items.length === 0,
+      "ROLE_INHERITANCE_CONFLICT");
     const again = await read(1);
     checkNativeRolePage(again, companyId, roleId, 1, firstSignature);
-    requireValid(signature(again.products.items) === signature(first.products.items));
+    requireValid(signature(again.products.items) === signature(first.products.items),
+      "ROLE_FIRST_PAGE_CHANGED");
     return { catalogueScope: "COMPANY_INHERITED", skus: [], productIds: [] };
   }
-  requireValid(first.show_product_grid && first.selected_category_ids.length > 0);
+  requireValid(first.show_product_grid && first.selected_category_ids.length > 0,
+    "ROLE_CATEGORIES_INVALID");
   const pageCount = Math.max(1, Math.ceil(first.products.total_count / first.products.page_size));
-  requireValid(pageCount <= PAGE_LIMIT);
+  requireValid(pageCount <= PAGE_LIMIT, "ROLE_GRID_PAGE_LIMIT");
   const allowed: ProductRow[] = [...first.products.items.filter(item => item.allowed)];
   const allIds = new Set(first.products.items.map(item => item.id));
   const allSkus = new Set(first.products.items.map(item => item.sku));
@@ -129,7 +157,8 @@ export async function readNativeRole(
     const next = await read(page);
     checkNativeRolePage(next, companyId, roleId, page, firstSignature);
     for (const item of next.products.items) {
-      requireValid(!allIds.has(item.id) && !allSkus.has(item.sku));
+      requireValid(!allIds.has(item.id) && !allSkus.has(item.sku),
+        "ROLE_GRID_MEMBERSHIP_DUPLICATE");
       allIds.add(item.id);
       allSkus.add(item.sku);
       if (item.allowed) allowed.push(item);
@@ -137,16 +166,18 @@ export async function readNativeRole(
   }
   const readback = await read(1);
   checkNativeRolePage(readback, companyId, roleId, 1, firstSignature);
-  requireValid(signature(readback.products.items) === signature(first.products.items));
+  requireValid(signature(readback.products.items) === signature(first.products.items),
+    "ROLE_FIRST_PAGE_CHANGED");
   if (!first.preselect_all_products) {
     const selected = new Set(first.allowed_product_ids);
     const actual = new Set(allowed.map(item => item.id));
     requireValid(actual.size === selected.size
-      && [...selected].every(id => actual.has(id)));
+      && [...selected].every(id => actual.has(id)), "ROLE_SELECTED_PRODUCT_MISMATCH");
   } else {
-    requireValid(allowed.length === first.products.total_count);
+    requireValid(allowed.length === first.products.total_count,
+      "ROLE_DEFAULT_PRODUCT_MISMATCH");
   }
-  requireValid(Date.now() - started <= SOURCE_MAX_MS);
+  requireValid(Date.now() - started <= SOURCE_MAX_MS, "ROLE_SOURCE_TOO_OLD");
   allowed.sort((a,b) => a.sku.localeCompare(b.sku, "en"));
   return { catalogueScope: "EXPLICIT_SKUS",
     skus: allowed.map(item => item.sku), productIds: allowed.map(item => item.id) };
@@ -155,7 +186,12 @@ export async function readNativeRole(
 // Classify *only* safe operational details. Never log a customer token, raw
 // GraphQL error message, role-product payload or Employee personal data.
 type NativeRoleStage = "EMPLOYEE_DIRECTORY" | "EMPLOYEE_ASSIGNMENT" | "ROLE_POLICY";
-type NativeRoleFailure = Error & { diagnosticCode?: string; category?: string; status?: number };
+type NativeRoleFailure = Error & {
+  diagnosticCode?: string;
+  qualificationReason?: QualificationReason;
+  category?: string;
+  status?: number;
+};
 
 export function classifyNativeRoleFailure(error: unknown, stage: NativeRoleStage): string {
   const value = error && typeof error === "object" ? error as NativeRoleFailure : null;
@@ -210,7 +246,9 @@ export const getEmployeeCataloguePolicy = cache(async (
     const category = source?.category === "graphql-authorization" ? "authorization"
       : source?.category === "graphql-authentication" ? "authentication" : "other";
     const status = Number.isInteger(source?.status) ? source!.status : 0;
-    console.warn(`[employee-role] code=${code} stage=${stage} category=${category} http=${status}`);
+    const detail = code === "ROLE_POLICY_UNQUALIFIED" && source?.qualificationReason
+      ? source.qualificationReason : "NONE";
+    console.warn(`[employee-role] code=${code} detail=${detail} stage=${stage} category=${category} http=${status}`);
     // The user already has access to the selected Employee directory;
     // expose only the absence of a native role, never raw Magento details.
     if (code === "EMPLOYEE_ROLE_UNASSIGNED") {
