@@ -125,6 +125,52 @@ test("Employee catalogue reader uses CSS Admin's own PostgreSQL projection, neve
   assert.ok(reader.includes("MAGENTO_ROLE_CATALOGUE_VISIBILITY_V2"));
 });
 
+test("Unrestricted Catalogue Role inherits only the authenticated Magento company/buyer ceiling",()=>{
+  const inherited = {
+    ...granted, catalogueScope: "COMPANY_INHERITED",
+    skus: [], productIds: [],
+  };
+  assert.doesNotThrow(() => policy.assertEmployeeProductAllowed(inherited, "ANY-MAGENTO-COMPANY-SKU"));
+  const actualCart=[{uid:"line-1",product:{sku:"COMPANY-ITEM"},
+    css_employee:{employee_id:1},css_kit:null}];
+  assert.doesNotThrow(()=>policy.assertEmployeeCartAllowed(
+    actualCart,new Map([[1,inherited]]),new Set([1]),true));
+  assert.throws(()=>policy.assertEmployeeCartAllowed(
+    actualCart,new Map([[1,inherited]]),new Set([2]),true));
+  // Without the explicit inherited contract, an empty qualified list denies all.
+  const empty={...granted,catalogueScope:"EXPLICIT_SKUS",skus:[],productIds:[]};
+  assert.throws(()=>policy.assertEmployeeProductAllowed(empty,"COMPANY-ITEM"));
+  assert.throws(()=>policy.assertEmployeeCartAllowed(
+    actualCart,new Map([[1,empty]]),new Set([1]),true));
+  const reader=source("lib/employee-catalogue-db.ts");
+  assert.match(reader,/MAGENTO_ROLE_CATALOGUE_COMPANY_INHERITANCE_V2/);
+  assert.match(reader,/inheritsCompany && \(skus\.length !== 0 \|\| productIds\.length !== 0\)/);
+});
+
+test("Inherited Employee browsing keeps Magento scope and hides buyer-only purchase allowances",async()=>{
+  const calls=[];
+  const catalogueReader=load(root,"lib/magento/catalogue-page.ts",{
+    "@/lib/magento/client": {magentoGraphQL:async(query,variables)=>{
+      calls.push({query,variables});
+      return {
+        customer:{firstname:"Buyer",lastname:"Manager"},
+        css_company_context:{companies:[{company_id:20,name:"CUR012",selected:true}]},
+        css_storefront_policy:{hide_price:true},
+        products:{total_count:1,page_info:{current_page:1,total_pages:1},
+          items:[{uid:"x",sku:"COMPANY/01",name:"Company product",
+            css_purchase_allowance:{logical_product_id:90,has_active_restriction:true}}]},
+      };
+    }},
+    "@/lib/magento/catalogue-prices": {getResilientCataloguePrices:async()=>new Map()},
+  });
+  const result=await catalogueReader.getCataloguePageContext("token","",1,24,null,true);
+  assert.equal(calls.length,1);
+  assert.equal(calls[0].variables.filter.sku,undefined);
+  assert.equal(result.products.items[0].sku,"COMPANY/01");
+  assert.equal(result.products.items[0].css_purchase_allowance,null);
+  assert.equal(result.selectedCompany.company_id,20);
+});
+
 test("Employee-first single-Employee cart carries selection into checkout", () => {
   const runtime=source("lib/employee-catalogue.ts");
   const delivery=source("app/checkout/delivery/page.tsx");

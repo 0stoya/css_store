@@ -41,10 +41,14 @@ export async function getEmployeeCataloguePolicy(companyId: number, employeeId: 
     const hash = data.source_sha256;
     const sourceContract = data.source_contract;
     const roleId = data.role_id;
-    if (sourceContract !== "MAGENTO_ROLE_CATALOGUE_VISIBILITY_V2"
+    const inheritsCompany = sourceContract === "MAGENTO_ROLE_CATALOGUE_COMPANY_INHERITANCE_V2";
+    if (!(inheritsCompany || sourceContract === "MAGENTO_ROLE_CATALOGUE_VISIBILITY_V2")
       || !Number.isSafeInteger(roleId) || Number(roleId) <= 0
       || !Array.isArray(skus) || !Array.isArray(productIds) || skus.length !== productIds.length
       || skus.length > 2000 || data.count !== skus.length
+      // Inherited mode never interprets a missing list or bad source as "all".
+      // A distinct, installed CSS Admin contract explicitly proves the mode.
+      || (inheritsCompany && (skus.length !== 0 || productIds.length !== 0))
       || new Set(skus).size !== skus.length || new Set(productIds).size !== productIds.length
       || !skus.every((sku) => typeof sku === "string" && sku.length > 0 && sku.length <= 128)
       || !productIds.every((id) => Number.isSafeInteger(id) && id > 0)
@@ -53,7 +57,9 @@ export async function getEmployeeCataloguePolicy(companyId: number, employeeId: 
       || Date.parse(expiresAt) <= Date.now()) {
       throw new Error("The Employee catalogue source is invalid or has expired.");
     }
-    return { companyId, employeeId, skus: skus as string[],
+    return { companyId, employeeId,
+      catalogueScope: inheritsCompany ? "COMPANY_INHERITED" : "EXPLICIT_SKUS",
+      skus: skus as string[],
       productIds: productIds as number[], sourceSha256: hash, expiresAt };
   } catch {
     // Database credentials, SQL state, source account IDs and raw errors are

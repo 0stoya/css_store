@@ -62,7 +62,14 @@ export default async function CataloguePage({
   const policy = mode && selectedEmployee
     ? await getEmployeeCataloguePolicy(mode.companyId, selectedEmployee.employeeId)
     : null;
-  const catalogue = await getCataloguePageContext(token, searchTerm, page, 24, policy?.skus ?? null);
+  // Unrestricted Catalogue Role inherits the manager's live Magento company
+  // catalogue. No fake 279-SKU membership, empty Magento 'in' filter or
+  // increase to the buyer's existing permission ceiling.
+  const allowedSkus = policy?.catalogueScope === "COMPANY_INHERITED"
+    ? null : policy?.skus ?? null;
+  const catalogue = await getCataloguePageContext(
+    token, searchTerm, page, 24, allowedSkus, policy !== null,
+  );
   const { products, selectedCompany: selected, customerName: name, hidePrice } = catalogue;
 
   return <>
