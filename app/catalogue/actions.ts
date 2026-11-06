@@ -4,7 +4,7 @@ import { redirect, unstable_rethrow } from "next/navigation";
 import { requireCustomerToken } from "@/lib/session";
 import { assertNormalCheckoutSession } from "@/lib/punchout/guard";
 import { getActiveEmployees } from "@/lib/magento/employee";
-import { getEmployeeCataloguePolicy } from "@/lib/employee-catalogue-db";
+import { getEmployeeCataloguePolicy } from "@/lib/employee-catalogue-native";
 import { getEmployeeCatalogueMode, setSelectedEmployee, clearSelectedEmployee } from "@/lib/employee-catalogue";
 
 export async function selectEmployeeCatalogueAction(formData: FormData) {
@@ -22,7 +22,7 @@ export async function selectEmployeeCatalogueAction(formData: FormData) {
     const employee = employees.find((e) => e.employee_id === employeeId);
     if (!employee) throw new Error("That Employee is no longer available.");
     // Only store a signed selection after a fresh, qualified policy is proven.
-    await getEmployeeCataloguePolicy(mode.companyId, employeeId);
+    await getEmployeeCataloguePolicy(token, mode.companyId, employeeId);
     await setSelectedEmployee(mode, employeeId, employee.full_name);
   } catch (failure) {
     unstable_rethrow(failure);
