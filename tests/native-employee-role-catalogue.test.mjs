@@ -232,7 +232,7 @@ test("Selection only records an active company Employee; catalogue page still qu
   const action=src("app/catalogue/actions.ts");
   const pageSource=src("app/catalogue/page.tsx");
   assert.match(action,/getActiveEmployees\(token\)/);
-  assert.match(action,/employee\.company_id === mode\.companyId/);
+  assert.match(action,/e\.company_id === mode\.companyId/);
   assert.match(action,/employee\.purchase_control_role_id/);
   assert.match(action,/setSelectedEmployee\(mode, employeeId, employee\.full_name\)/);
   assert.doesNotMatch(action,/getEmployeeCataloguePolicy\(/);
