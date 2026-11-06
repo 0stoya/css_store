@@ -17,12 +17,19 @@ Employee's CURRENT native role and reads the CURRENT
 buyer's Magento GraphQL token. There is NO second Employee-to-Catalogue
 Role assignment in CSS Admin.
 
-- Role without saved catalogue restrictions: the Employee inherits the
-  authenticated buyer's Magento company catalogue; never an empty-string SKU
-  grant and never a fallback on source error.
-- Restricted role: walk every page of the live role product grid and use
-  only the `allowed` items, validating role/company identifiers, category
-  metadata, pagination and final first-page readback. False/empty results
+- The headless Store **ignores Hyva category restrictions**. Those belong to
+  the Magento/Hyva frontend; category selections are neither required for,
+  nor allowed to override, independent role-product visibility.
+- Role with **no saved product restrictions**: verified
+  `preselect_all_products=true`, `products.preselect_all=true`, zero saved
+  role-product IDs/count, and a consistent initial product grid. The Employee
+  inherits the authenticated buyer's Magento company catalogue. No role SKU
+  list is enumerated; this also works for large unrestricted company catalogues.
+- Role with **saved product restrictions**: verify the exact saved IDs/count,
+  walk the bounded company-scoped product grid, and use only `allowed` items,
+  verifying pagination and independent first-page readback. A role with zero
+  Hyva categories and saved product IDs **remains product-restricted**.
+  Contradictory product flags, incomplete membership and failed source reads
   never silently become unrestricted.
 - Use the exact allowed SKUs within the Magento product query BEFORE paging;
   the manager's Magento company/role ceiling continues to apply.
