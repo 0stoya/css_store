@@ -291,3 +291,61 @@ input.catalogue-search-input:focus-visible {
     min-height: 38px;
   }
 }
+
+/* Employee-first entry: a focused selection step, not the full-width hero.
+   Scoped here so normal catalogue headings/cards and checkout stay unchanged. */
+.catalogue-page > .employee-catalogue-entry {
+  width: min(100%, 860px);
+  margin: 14px auto 0;
+  padding: clamp(24px, 3vw, 36px);
+  display: grid;
+  align-content: start;
+  gap: 16px;
+}
+
+.catalogue-page > .employee-catalogue-entry .eyebrow {
+  margin: 0;
+}
+
+.catalogue-page > .employee-catalogue-entry h1 {
+  margin: 0;
+  font-size: clamp(2rem, 3vw, 2.6rem);
+  line-height: 1.12;
+}
+
+.catalogue-page > .employee-catalogue-entry .employee-catalogue-entry-description {
+  max-width: 62ch;
+  margin: 0;
+  font-size: .94rem;
+  line-height: 1.55;
+}
+
+.catalogue-page > .employee-catalogue-entry .employee-catalogue-entry-form {
+  width: 100%;
+  max-width: 540px;
+  margin-top: 4px;
+  display: grid;
+  gap: 16px;
+}
+
+.catalogue-page > .employee-catalogue-entry .employee-picker {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+}
+
+@media (max-width: 560px) {
+  .catalogue-page > .employee-catalogue-entry {
+    margin-top: 0;
+    padding: 22px 20px;
+    gap: 14px;
+  }
+
+  .catalogue-page > .employee-catalogue-entry h1 {
+    font-size: clamp(1.85rem, 7vw, 2.15rem);
+  }
+
+  .catalogue-page > .employee-catalogue-entry .employee-catalogue-entry-form .button {
+    width: 100%;
+  }
+}
