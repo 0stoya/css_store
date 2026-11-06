@@ -45,12 +45,12 @@ export default async function CataloguePage({
       <SiteHeader customerName={`${context.customer.firstname} ${context.customer.lastname}`.trim()}
         companyName={selectedCompany?.name}/>
       <main className="shell catalogue-page">
-        <section className="card stack" aria-label="Select employee for purchasing">
+        <section className="card stack employee-catalogue-entry" aria-label="Select employee for purchasing">
           <p className="eyebrow">Employee purchasing</p>
           <h1>Who are you shopping for?</h1>
-          <p className="muted">Select an active Employee before browsing their permitted catalogue. Your own checkout and approval permissions still apply.</p>
+          <p className="muted employee-catalogue-entry-description">Select an active Employee before browsing their permitted catalogue. Your own checkout and approval permissions still apply.</p>
           {error ? <p className="error" role="alert">{error}</p> : null}
-          {employees.length ? <form action={selectEmployeeCatalogueAction} className="stack">
+          {employees.length ? <form action={selectEmployeeCatalogueAction} className="stack employee-catalogue-entry-form">
             <EmployeePicker employees={employees} defaultSelectedId={selectedEmployee?.employeeId ?? null}/>
             <div><button className="button" type="submit">Shop for this Employee</button></div>
           </form> : <p className="error">No active Employees are available for purchasing.</p>}
