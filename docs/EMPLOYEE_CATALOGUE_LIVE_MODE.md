@@ -7,8 +7,10 @@ Status: **implementation PR, OFF by default; not production-accepted**.
 Manager logs in with their normal Magento customer credentials; existing
 `css_company_employee_configuration.uses_employee` determines whether the
 company uses Employee ordering. The existing
-`css_company_employees(active:true)` query determines which Employees the
-authenticated user is permitted to select. An Employee is NOT impersonated.
+`css_company_employees(active:true)` query determines which Employees are
+visible to the authenticated user. Magento's separate cart-assignment and
+checkout rules still determine who the user may **purchase for**; visibility
+alone is not purchasing authority. An Employee is NOT impersonated.
 
 Each native `CssCompanyEmployee.purchase_control_role_id` is an actual
 Magento company role. When an Employee is selected, Store resolves that
