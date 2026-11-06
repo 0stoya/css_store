@@ -33,6 +33,16 @@ Role assignment in CSS Admin.
   never silently become unrestricted.
 - Use the exact allowed SKUs within the Magento product query BEFORE paging;
   the manager's Magento company/role ceiling continues to apply.
+- The selection POST verifies active Employee/company/assigned role and
+  signs only a beneficiary preference. The following catalogue page performs
+  the **one full live role-product qualification** before showing products.
+  If it fails, the shopper is returned to the Employee chooser with a safe
+  error; the signed cookie alone never permits product browsing or a cart
+  mutation.
+- Restricted role grids are read in **bounded groups of four Magento pages**
+  rather than sequentially, with unchanged company/role metadata checks,
+  per-item membership reconciliation and a fresh first-page readback.
+  No cross-request role-product cache or scheduled refresh is introduced.
 - Re-read the Employee and role on product add, cart reattribution, basket
   validation and credit/native checkout. Magento owns the cart, applied
   Purchase Controls, periods, approval, PO and order submission.
