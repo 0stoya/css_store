@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { unstable_rethrow } from "next/navigation";
 import { CatalogueBadgeProvider } from "@/components/catalogue-badges";
 import { CataloguePagination } from "@/components/catalogue-pagination";
 import { ProductCard } from "@/components/product-card";
@@ -36,7 +37,23 @@ export default async function CataloguePage({
   // No css_app reads, cookies or Employee list queries are required.
   const mode = await getEmployeeCatalogueMode(token);
   const selectedEmployee = mode ? await getSelectedEmployee(mode) : null;
-  if (mode && (!selectedEmployee || choose === "1")) {
+  // Employee selection is just a signed beneficiary preference. Only this
+  // server-side live Magento role qualification permits catalogue browsing.
+  // A failed role read must return to a usable selector, never ordinary browse.
+  let policy: Awaited<ReturnType<typeof getEmployeeCataloguePolicy>> | null = null;
+  let roleError: string | null = null;
+  if (mode && selectedEmployee && choose !== "1") {
+    try {
+      policy = await getEmployeeCataloguePolicy(token, mode.companyId, selectedEmployee.employeeId);
+    } catch (failure) {
+      unstable_rethrow(failure);
+      // The role reader provides a sanitized error with an operator code.
+      // Do not render product results when policy qualification fails.
+      roleError = failure instanceof Error
+        ? failure.message : "Employee catalogue restrictions cannot be verified in Magento.";
+    }
+  }
+  if (mode && (!selectedEmployee || choose === "1" || roleError)) {
     const [context, employees] = await Promise.all([
       getCustomerContext(token), getActiveEmployees(token),
     ]);
@@ -49,7 +66,7 @@ export default async function CataloguePage({
           <p className="eyebrow">Employee purchasing</p>
           <h1>Who are you shopping for?</h1>
           <p className="muted employee-catalogue-entry-description">Select an active Employee before browsing their permitted catalogue. Your own checkout and approval permissions still apply.</p>
-          {error ? <p className="error" role="alert">{error}</p> : null}
+          {roleError || error ? <p className="error" role="alert">{roleError || error}</p> : null}
           {employees.length ? <form action={selectEmployeeCatalogueAction} className="stack employee-catalogue-entry-form">
             <EmployeePicker employees={employees} defaultSelectedId={selectedEmployee?.employeeId ?? null}/>
             <div><button className="button" type="submit">Shop for this Employee</button></div>
@@ -59,9 +76,6 @@ export default async function CataloguePage({
     </>;
   }
 
-  const policy = mode && selectedEmployee
-    ? await getEmployeeCataloguePolicy(token, mode.companyId, selectedEmployee.employeeId)
-    : null;
   // Unrestricted Catalogue Role inherits the manager's live Magento company
   // catalogue. No fake 279-SKU membership, empty Magento 'in' filter or
   // increase to the buyer's existing permission ceiling.
