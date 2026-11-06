@@ -61,6 +61,6 @@ test("Checkout still uses native assignment, credit and purchase controls", () =
 test("Employee-first catalogue is doubly gated and legacy schema is preserved", () => {
   const runtime = source("lib/employee-catalogue.ts");
   const shipping = source("lib/magento/shipping.ts");
-  assert.match(runtime, /CSS_STORE_EMPLOYEE_CATALOGUE_SOURCE === "ROLE_CATALOGUE_V2"/);
+  assert.match(runtime, /CSS_STORE_EMPLOYEE_CATALOGUE_SOURCE === "LIVE_MAGENTO_ROLE"/);
   assert.doesNotMatch(shipping, /\n\s+open_employee_purchasing\n/);
 });
