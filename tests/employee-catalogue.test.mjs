@@ -109,7 +109,7 @@ test("Final native and credit checkout both revalidate qualified membership befo
   const checkout = source("app/checkout/payment/actions.ts");
   const legacy = source("app/catalogue/page.tsx");
   assert.match(runtime, /if \(!employeeCatalogueFeatureEnabled\(\)\) return null/);
-  assert.match(runtime, /getEmployeeCataloguePolicy\(mode.companyId, id\)/);
+  assert.match(runtime, /getEmployeeCataloguePolicy\(token, mode.companyId, id\)/);
   assert.match(checkout, /await assertEmployeeCatalogueCartReady\(token, initialCart.id\)/);
   assert.match(checkout, /await assertEmployeeCatalogueCartReady\(token, cart.id\)/);
   assert.match(legacy, /policy\?\.skus \?\? null/);
@@ -118,11 +118,13 @@ test("Final native and credit checkout both revalidate qualified membership befo
   }
 });
 
-test("Employee catalogue reader uses CSS Admin's own PostgreSQL projection, never an unrelated database", () => {
-  const reader = source("lib/employee-catalogue-db.ts");
-  assert.ok(reader.includes("SELECT css_admin.read_employee_role_catalogue_v2("));
-  assert.equal(reader.includes("SELECT css_admin.read_employee_catalogue_v1("), false);
-  assert.ok(reader.includes("MAGENTO_ROLE_CATALOGUE_VISIBILITY_V2"));
+test("Employee catalogue reads the selected Employee's Magento role directly, with no PostgreSQL reader", () => {
+  const reader = source("lib/employee-catalogue-native.ts");
+  assert.match(reader, /css_company_role_catalog_policy/);
+  assert.match(reader, /getActiveEmployees\(token\)/);
+  assert.match(reader, /employee.purchase_control_role_id/);
+  assert.doesNotMatch(reader, /postgres|css_admin\.read_|refresh timer|SELECT css_admin/i);
+  assert.doesNotMatch(source("lib/employee-catalogue.ts"), /employee-catalogue-db/);
 });
 
 test("Unrestricted Catalogue Role inherits only the authenticated Magento company/buyer ceiling",()=>{
@@ -142,9 +144,10 @@ test("Unrestricted Catalogue Role inherits only the authenticated Magento compan
   assert.throws(()=>policy.assertEmployeeProductAllowed(empty,"COMPANY-ITEM"));
   assert.throws(()=>policy.assertEmployeeCartAllowed(
     actualCart,new Map([[1,empty]]),new Set([1]),true));
-  const reader=source("lib/employee-catalogue-db.ts");
-  assert.match(reader,/MAGENTO_ROLE_CATALOGUE_COMPANY_INHERITANCE_V2/);
-  assert.match(reader,/inheritsCompany && \(skus\.length !== 0 \|\| productIds\.length !== 0\)/);
+  const reader=source("lib/employee-catalogue-native.ts");
+  assert.match(reader,/!first.has_saved_categories/);
+  assert.match(reader,/first.products_count === 0/);
+  assert.match(reader,/companyId, roleId/);
 });
 
 test("Inherited Employee browsing keeps Magento scope and hides buyer-only purchase allowances",async()=>{
@@ -184,12 +187,10 @@ test("Employee-first single-Employee cart carries selection into checkout", () =
   assert.match(delivery,/currentEmployeeId === selectedCatalogueEmployee\?\.employeeId/);
 });
 
-test("Employee-first pilot is company-specific: all other Employee companies retain standard purchasing",()=>{
-  assert.equal(policy.employeeCatalogueCompanyEnabled(undefined,20),false);
-  assert.equal(policy.employeeCatalogueCompanyEnabled("",20),false);
-  assert.equal(policy.employeeCatalogueCompanyEnabled("19,21",20),false);
-  assert.equal(policy.employeeCatalogueCompanyEnabled("19,20,21",20),true);
-  assert.equal(policy.employeeCatalogueCompanyEnabled("20",21),false);
-  assert.throws(()=>policy.employeeCatalogueCompanyEnabled("all",20),/invalid/);
-  assert.throws(()=>policy.employeeCatalogueCompanyEnabled("20, 21",20),/invalid/);
+test("Full production native mode honours Magento uses_employee and keeps its global OFF switch",()=>{
+  const runtime=source("lib/employee-catalogue.ts");
+  assert.match(runtime,/LIVE_MAGENTO_ROLE/);
+  assert.match(runtime,/if \(!config.uses_employee\) return null/);
+  assert.doesNotMatch(runtime,/CSS_STORE_EMPLOYEE_CATALOGUE_COMPANY_IDS/);
+  assert.match(runtime,/CSS_STORE_EMPLOYEE_CATALOGUE_ENABLED/);
 });
