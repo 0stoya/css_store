@@ -145,7 +145,7 @@ test("Unrestricted Catalogue Role inherits only the authenticated Magento compan
   assert.throws(()=>policy.assertEmployeeCartAllowed(
     actualCart,new Map([[1,empty]]),new Set([1]),true));
   const reader=source("lib/employee-catalogue-native.ts");
-  assert.match(reader,/!first.has_saved_categories/);
+  assert.match(reader,/if \(first.preselect_all_products\)/);
   assert.match(reader,/first.products_count === 0/);
   assert.match(reader,/companyId, roleId/);
 });

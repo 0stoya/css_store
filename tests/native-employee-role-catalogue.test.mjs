@@ -30,6 +30,7 @@ function mockSource({ employees, graph }) {
     ] },
     "@/lib/magento/client":{ magentoGraphQL:graph??(async(query,variables)=>{
       assert.match(query,/css_company_role_catalog_policy/);
+      assert.doesNotMatch(query,/has_saved_categories|selected_category_ids|expanded_category_ids|show_product_grid/);
       return { css_company_role_catalog_policy:variables.page===1?page(1,[a]):page(2,[b]) };
     }) },
   });
@@ -45,29 +46,36 @@ test("Native role is resolved from the Employee's Magento company and purchase r
   assert.deepEqual(Array.from(result.productIds),[111]);
   assert.doesNotMatch(src("lib/employee-catalogue-native.ts"),/from "postgres"|css_admin\.read_|expires_at/i);
 });
-test("A role without saved restrictions inherits only Magento buyer company visibility",async()=>{
-  const role=page(1,[],{
-    has_saved_categories:false,show_product_grid:false,
+test("Role with no saved products inherits the Magento buyer/company ceiling even with a nonempty company grid",async()=>{
+  const allowedB={...b,allowed:true};
+  const role=page(1,[a,allowedB],{
+    has_saved_categories:false,show_product_grid:true,
     selected_category_ids:[],expanded_category_ids:[],
-    allowed_product_ids:[],products_count:0,preselect_all_products:false,
-    products:{total_count:0,page:1,page_size:50,preselect_all:false,items:[]},
+    allowed_product_ids:[],products_count:0,preselect_all_products:true,
+    products:{total_count:80000,page:1,page_size:2,preselect_all:true,items:[a,allowedB]},
   });
-  const mod=mockSource({graph:async()=>({css_company_role_catalog_policy:role})});
+  let reads=0;
+  const mod=mockSource({graph:async(query)=>{reads++;
+    assert.doesNotMatch(query,/has_saved_categories|selected_category_ids|expanded_category_ids|show_product_grid/);
+    return {css_company_role_catalog_policy:role};
+  }});
   const result=await mod.getEmployeeCataloguePolicy("TOKEN",20,33);
   assert.equal(result.catalogueScope,"COMPANY_INHERITED");
   assert.deepEqual(Array.from(result.skus),[]);
+  assert.equal(reads,2,"unrestricted company grid is not enumerated or capped at 10,000 rows");
 });
 test("Incomplete, drifted and contradictory role reads never fall back to all products",async()=>{
   const mod=mockSource({});
   await assert.rejects(mod.readNativeRole(20,7,async n=>n===1?page(1,[a]):page(2,[b],{allowed_product_ids:[222]})));
   await assert.rejects(mod.readNativeRole(20,7,async n=>n===1?page(1,[a]):page(2,[])));
-  const inherited=page(1,[],{
-    has_saved_categories:false,show_product_grid:false,
+  const contradictory=page(1,[a],{
+    has_saved_categories:false,show_product_grid:true,
     selected_category_ids:[],expanded_category_ids:[],
+    preselect_all_products:true,
     allowed_product_ids:[111],products_count:1,
-    products:{total_count:0,page:1,page_size:50,preselect_all:false,items:[]},
+    products:{total_count:1,page:1,page_size:1,preselect_all:true,items:[a]},
   });
-  await assert.rejects(mod.readNativeRole(20,7,async()=>inherited));
+  await assert.rejects(mod.readNativeRole(20,7,async()=>contradictory));
 });
 test("Wrong company, missing role and denied GraphQL access never grant an Employee catalogue",async()=>{
   const company=mockSource({employees:[{company_id:21,employee_id:33,purchase_control_role_id:7}]});
@@ -118,26 +126,52 @@ test("Native role failures do not disclose tokens or raw Magento error messages"
   );
 });
 
-test("Store distinguishes role grid size and contradictory unrestricted policy without granting more products",async()=>{
+test("Saved role products are enforced even when Hyva category restrictions are absent",async()=>{
+  const mod=mockSource({});
+  const byPage=n=>page(n,n===1?[a]:[b],{
+    has_saved_categories:false,show_product_grid:true,
+    selected_category_ids:[],expanded_category_ids:[],
+  });
+  const result=await mod.readNativeRole(20,7,async n=>byPage(n));
+  assert.equal(result.catalogueScope,"EXPLICIT_SKUS");
+  assert.deepEqual(Array.from(result.skus),["JACKET/01"]);
+  assert.deepEqual(Array.from(result.productIds),[111]);
+});
+
+test("Hyva-only category selection never narrows a role without saved product restrictions",async()=>{
+  const mod=mockSource({});
+  const role=page(1,[a],{
+    has_saved_categories:true,show_product_grid:true,
+    selected_category_ids:[123],expanded_category_ids:[123,124],
+    allowed_product_ids:[],products_count:0,preselect_all_products:true,
+    products:{total_count:1,page:1,page_size:1,preselect_all:true,items:[a]},
+  });
+  const result=await mod.readNativeRole(20,7,async()=>role);
+  assert.equal(result.catalogueScope,"COMPANY_INHERITED");
+});
+
+test("Restricted grid size and contradictory default-product claims still fail closed",async()=>{
   const mod=mockSource({});
   const oversized=page(1,[a],{
     products:{total_count:10001,page:1,page_size:1,preselect_all:false,items:[a]},
   });
-  assert.throws(()=>mod.checkNativeRolePage(oversized,20,7,1),
+  await assert.rejects(mod.readNativeRole(20,7,async()=>oversized),
     error=>error.qualificationReason==="ROLE_GRID_TOO_LARGE");
 
-  const contradictory=page(1,[],{
-    has_saved_categories:false,show_product_grid:false,
+  const contradictory=page(1,[a],{
+    has_saved_categories:false,show_product_grid:true,
     selected_category_ids:[],expanded_category_ids:[],
-    allowed_product_ids:[111],products_count:1,
-    products:{total_count:0,page:1,page_size:50,preselect_all:false,items:[]},
+    allowed_product_ids:[111],products_count:1,preselect_all_products:true,
+    products:{total_count:1,page:1,page_size:1,preselect_all:true,items:[a]},
   });
   await assert.rejects(mod.readNativeRole(20,7,async()=>contradictory),
-    error=>error.qualificationReason==="ROLE_INHERITANCE_CONFLICT");
+    error=>error.qualificationReason==="ROLE_PRODUCT_POLICY_CONFLICT");
 
-  const missingCategory=page(1,[a],{selected_category_ids:[]});
-  await assert.rejects(mod.readNativeRole(20,7,async()=>missingCategory),
-    error=>error.qualificationReason==="ROLE_CATEGORIES_INVALID");
+  const contradictoryFlag=page(1,[a],{allowed_product_ids:[],products_count:0,
+    preselect_all_products:true,products:{total_count:1,page:1,page_size:1,preselect_all:false,items:[a]},
+  });
+  await assert.rejects(mod.readNativeRole(20,7,async()=>contradictoryFlag),
+    error=>error.qualificationReason==="ROLE_PRODUCT_POLICY_CONFLICT");
 });
 test("Role mismatches retain their generic shopper message but a safe detailed operator code",async()=>{
   const mod=mockSource({
