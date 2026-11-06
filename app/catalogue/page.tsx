@@ -7,7 +7,7 @@ import { EmployeePicker } from "@/components/employee-picker";
 import { getActiveEmployees } from "@/lib/magento/employee";
 import { getCustomerContext } from "@/lib/magento/context";
 import { getEmployeeCatalogueMode, getSelectedEmployee } from "@/lib/employee-catalogue";
-import { getEmployeeCataloguePolicy } from "@/lib/employee-catalogue-db";
+import { getEmployeeCataloguePolicy } from "@/lib/employee-catalogue-native";
 import { selectEmployeeCatalogueAction, changeEmployeeCatalogueAction } from "./actions";
 import { getCataloguePageContext } from "@/lib/magento/catalogue-page";
 import { requireCustomerToken } from "@/lib/session";
@@ -60,7 +60,7 @@ export default async function CataloguePage({
   }
 
   const policy = mode && selectedEmployee
-    ? await getEmployeeCataloguePolicy(mode.companyId, selectedEmployee.employeeId)
+    ? await getEmployeeCataloguePolicy(token, mode.companyId, selectedEmployee.employeeId)
     : null;
   // Unrestricted Catalogue Role inherits the manager's live Magento company
   // catalogue. No fake 279-SKU membership, empty Magento 'in' filter or
