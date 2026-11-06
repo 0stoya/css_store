@@ -14,9 +14,7 @@ const SOURCE_MAX_MS = 120000;
 const ROLE_QUERY = [
   "query StoreEmployeeRoleCatalogue($roleId: Int!, $page: Int!) {",
   " css_company_role_catalog_policy(role_id: $roleId, page: $page) {",
-  "  company_id role_id selected_category_ids expanded_category_ids",
-  "  has_saved_categories show_product_grid products_count",
-  "  preselect_all_products allowed_product_ids",
+  "  company_id role_id products_count preselect_all_products allowed_product_ids",
   "  products { total_count page page_size preselect_all items { id sku allowed } }",
   " }",
   "}",
@@ -25,8 +23,6 @@ const ROLE_QUERY = [
 type ProductRow = { id: number; sku: string; allowed: boolean };
 type RolePolicyPage = {
   company_id: number; role_id: number;
-  selected_category_ids: number[]; expanded_category_ids: number[];
-  has_saved_categories: boolean; show_product_grid: boolean;
   products_count: number; preselect_all_products: boolean;
   allowed_product_ids: number[];
   products: { total_count: number; page: number; page_size: number;
@@ -43,8 +39,7 @@ type QualificationReason =
   | "ROLE_GRID_PRODUCT_INVALID"
   | "ROLE_GRID_PRODUCT_DUPLICATE"
   | "ROLE_POLICY_CHANGED"
-  | "ROLE_INHERITANCE_CONFLICT"
-  | "ROLE_CATEGORIES_INVALID"
+  | "ROLE_PRODUCT_POLICY_CONFLICT"
   | "ROLE_GRID_PAGE_LIMIT"
   | "ROLE_GRID_MEMBERSHIP_DUPLICATE"
   | "ROLE_FIRST_PAGE_CHANGED"
@@ -62,9 +57,8 @@ function requireValid(condition: unknown, qualificationReason: QualificationReas
 function metadata(policy: RolePolicyPage) {
   return {
     company: policy.company_id, role: policy.role_id,
-    categories: [...policy.selected_category_ids].sort((a,b) => a-b),
-    expanded: [...policy.expanded_category_ids].sort((a,b) => a-b),
-    saved: policy.has_saved_categories, grid: policy.show_product_grid,
+    // Hyva category restrictions are a separate frontend-only scope; the
+    // headless Store uses the role's independent product policy.
     count: policy.products_count, preselect: policy.preselect_all_products,
     selected: [...policy.allowed_product_ids].sort((a,b) => a-b),
     total: policy.products.total_count, size: policy.products.page_size,
@@ -82,23 +76,20 @@ export function checkNativeRolePage(
 ): string {
   requireValid(policy?.company_id === companyId && policy.role_id === roleId
     && positive(companyId) && positive(roleId), "ROLE_IDENTITY_MISMATCH");
-  requireValid(typeof policy.has_saved_categories === "boolean"
-    && typeof policy.show_product_grid === "boolean"
-    && typeof policy.preselect_all_products === "boolean"
-    && Array.isArray(policy.selected_category_ids)
-    && Array.isArray(policy.expanded_category_ids)
+  requireValid(typeof policy.preselect_all_products === "boolean"
     && Array.isArray(policy.allowed_product_ids)
-    && policy.selected_category_ids.every(positive)
-    && policy.expanded_category_ids.every(positive)
     && policy.allowed_product_ids.every(positive)
     && new Set(policy.allowed_product_ids).size === policy.allowed_product_ids.length
     && Number.isSafeInteger(policy.products_count) && policy.products_count >= 0,
     "ROLE_METADATA_INVALID");
+  // On Fluid's headless compatibility contract, the persisted role product
+  // count/IDs must reconcile independently of saved Hyva categories.
+  requireValid(policy.products_count === policy.allowed_product_ids.length,
+    "ROLE_PRODUCT_POLICY_CONFLICT");
   requireValid(Boolean(policy.products) && Array.isArray(policy.products.items),
     "ROLE_GRID_SHAPE_INVALID");
   requireValid(Number.isSafeInteger(policy.products.total_count)
     && policy.products.total_count >= 0, "ROLE_GRID_SHAPE_INVALID");
-  requireValid(policy.products.total_count <= PRODUCT_LIMIT, "ROLE_GRID_TOO_LARGE");
   requireValid(policy.products.page === pageNumber
     && Number.isSafeInteger(policy.products.page_size)
     && policy.products.page_size >= 1 && policy.products.page_size <= 200
@@ -131,23 +122,31 @@ export async function readNativeRole(
   const started = Date.now();
   const first = await read(1);
   const firstSignature = checkNativeRolePage(first, companyId, roleId, 1);
-  if (!first.has_saved_categories) {
-    // A role with NO saved restrictions inherits the logged-in buyer's live
-    // Magento company catalogue. Never interpret a failed or empty query as ALL.
-    requireValid(first.selected_category_ids.length === 0
-      && first.expanded_category_ids.length === 0
-      && first.allowed_product_ids.length === 0
-      && first.products_count === 0 && !first.show_product_grid
-      && first.products.total_count === 0 && first.products.items.length === 0,
-      "ROLE_INHERITANCE_CONFLICT");
+  // Magento/Fluid keeps Hyva category selection independent of the native
+  // role's *product* restriction. An empty category selection is NOT proof
+  // that product restrictions are absent. Use only the independently saved
+  // product IDs/count plus the headless company-bound product-grid flags.
+  // A role with no saved product restriction inherits the authenticated
+  // buyer's live Magento company catalogue, regardless of Hyva categories.
+  if (first.preselect_all_products) {
+    requireValid(first.products.preselect_all
+      && first.products_count === 0 && first.allowed_product_ids.length === 0
+      && first.products.items.every(item => item.allowed),
+      "ROLE_PRODUCT_POLICY_CONFLICT");
+    // No SKU list is needed in inherited mode: company and buyer visibility
+    // remain enforced by Magento on every product browse and cart request.
+    // Only the first page is read twice, even for a large company catalogue.
     const again = await read(1);
     checkNativeRolePage(again, companyId, roleId, 1, firstSignature);
     requireValid(signature(again.products.items) === signature(first.products.items),
       "ROLE_FIRST_PAGE_CHANGED");
     return { catalogueScope: "COMPANY_INHERITED", skus: [], productIds: [] };
   }
-  requireValid(first.show_product_grid && first.selected_category_ids.length > 0,
-    "ROLE_CATEGORIES_INVALID");
+  // A saved product allowlist is never replaced by inherited access just
+  // because no Hyva categories were selected. Inconsistencies fail closed.
+  requireValid(!first.products.preselect_all && first.products_count > 0,
+    "ROLE_PRODUCT_POLICY_CONFLICT");
+  requireValid(first.products.total_count <= PRODUCT_LIMIT, "ROLE_GRID_TOO_LARGE");
   const pageCount = Math.max(1, Math.ceil(first.products.total_count / first.products.page_size));
   requireValid(pageCount <= PAGE_LIMIT, "ROLE_GRID_PAGE_LIMIT");
   const allowed: ProductRow[] = [...first.products.items.filter(item => item.allowed)];
