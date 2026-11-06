@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import { cache } from "react";
+import { unstable_rethrow } from "next/navigation";
 import { magentoGraphQL } from "@/lib/magento/client";
 import { getActiveEmployees } from "@/lib/magento/employee";
 import type { EmployeeCataloguePolicy } from "@/lib/employee-catalogue-policy";
@@ -151,6 +152,30 @@ export async function readNativeRole(
     skus: allowed.map(item => item.sku), productIds: allowed.map(item => item.id) };
 }
 
+// Classify *only* safe operational details. Never log a customer token, raw
+// GraphQL error message, role-product payload or Employee personal data.
+type NativeRoleStage = "EMPLOYEE_DIRECTORY" | "EMPLOYEE_ASSIGNMENT" | "ROLE_POLICY";
+type NativeRoleFailure = Error & { diagnosticCode?: string; category?: string; status?: number };
+
+export function classifyNativeRoleFailure(error: unknown, stage: NativeRoleStage): string {
+  const value = error && typeof error === "object" ? error as NativeRoleFailure : null;
+  if (value?.diagnosticCode === "EMPLOYEE_NOT_IN_SCOPE") return "EMPLOYEE_NOT_IN_SCOPE";
+  if (value?.diagnosticCode === "EMPLOYEE_ROLE_UNASSIGNED") return "EMPLOYEE_ROLE_UNASSIGNED";
+  const category = value?.category?.toLowerCase();
+  if (stage === "ROLE_POLICY" && (category === "graphql-authorization" || value?.status === 403)) {
+    return "ROLE_POLICY_ACCESS_DENIED";
+  }
+  if (category === "graphql-authentication" || value?.status === 401) return "MAGENTO_SESSION_UNAVAILABLE";
+  if (stage === "ROLE_POLICY" && value?.message === "Magento Employee Role catalogue could not be qualified.") {
+    return "ROLE_POLICY_UNQUALIFIED";
+  }
+  return stage === "EMPLOYEE_DIRECTORY" ? "EMPLOYEE_DIRECTORY_UNAVAILABLE" : "ROLE_POLICY_UNAVAILABLE";
+}
+
+function sourceError(code: "EMPLOYEE_NOT_IN_SCOPE" | "EMPLOYEE_ROLE_UNASSIGNED"): never {
+  throw Object.assign(new Error("Employee's native Magento Role is unavailable."), { diagnosticCode: code });
+}
+
 // Request-scoped memoization avoids repeated page walks within one browser
 // request. Never persists a role entitlement across requests or role changes.
 export const getEmployeeCataloguePolicy = cache(async (
@@ -159,12 +184,16 @@ export const getEmployeeCataloguePolicy = cache(async (
   if (!positive(companyId) || !positive(employeeId)) {
     throw new Error("Invalid Employee company or identity.");
   }
+  let stage: NativeRoleStage = "EMPLOYEE_DIRECTORY";
   try {
     const employees = await getActiveEmployees(token);
+    stage = "EMPLOYEE_ASSIGNMENT";
     const employee = employees.find(row => row.employee_id === employeeId
       && row.company_id === companyId);
-    requireValid(employee && positive(employee.purchase_control_role_id ?? 0));
+    if (!employee) sourceError("EMPLOYEE_NOT_IN_SCOPE");
+    if (!positive(employee.purchase_control_role_id ?? 0)) sourceError("EMPLOYEE_ROLE_UNASSIGNED");
     const roleId = employee.purchase_control_role_id!;
+    stage = "ROLE_POLICY";
     const qualified = await readNativeRole(companyId, roleId, async page => {
       const data = await magentoGraphQL<{
         css_company_role_catalog_policy: RolePolicyPage;
@@ -172,9 +201,21 @@ export const getEmployeeCataloguePolicy = cache(async (
       return data.css_company_role_catalog_policy;
     });
     return { companyId, employeeId, roleId, ...qualified };
-  } catch {
-    // Never fall back to buyer-wide shopping when an Employee role is
-    // missing, lacks permission, changes during the read or returns bad data.
-    throw new Error("Employee catalogue restrictions cannot be verified in Magento.");
+  } catch (error) {
+    // Preserve Next.js redirects (expired Magento sessions) instead of
+    // replacing those with a misleading catalogue restriction error.
+    unstable_rethrow(error);
+    const code = classifyNativeRoleFailure(error, stage);
+    const source = error && typeof error === "object" ? error as NativeRoleFailure : null;
+    const category = source?.category === "graphql-authorization" ? "authorization"
+      : source?.category === "graphql-authentication" ? "authentication" : "other";
+    const status = Number.isInteger(source?.status) ? source!.status : 0;
+    console.warn(`[employee-role] code=${code} stage=${stage} category=${category} http=${status}`);
+    // The user already has access to the selected Employee directory;
+    // expose only the absence of a native role, never raw Magento details.
+    if (code === "EMPLOYEE_ROLE_UNASSIGNED") {
+      throw new Error("This Employee has no Magento Purchase Role assigned. Ask your company administrator to assign one.");
+    }
+    throw new Error(`Employee catalogue restrictions cannot be verified in Magento (reference: ${code}).`);
   }
 });

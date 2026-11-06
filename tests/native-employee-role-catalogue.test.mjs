@@ -24,6 +24,7 @@ function mockSource({ employees, graph }) {
   return load(root,"lib/employee-catalogue-native.ts",{
     "node:crypto":{ createHash },
     react:{ cache: f => f },
+    "next/navigation":{ unstable_rethrow:()=>{} },
     "@/lib/magento/employee":{ getActiveEmployees:async()=>employees??[
       {company_id:20,employee_id:33,purchase_control_role_id:7,active:true},
     ] },
@@ -72,7 +73,7 @@ test("Wrong company, missing role and denied GraphQL access never grant an Emplo
   const company=mockSource({employees:[{company_id:21,employee_id:33,purchase_control_role_id:7}]});
   await assert.rejects(company.getEmployeeCataloguePolicy("TOKEN",20,33),/cannot be verified/);
   const missing=mockSource({employees:[{company_id:20,employee_id:33,purchase_control_role_id:null}]});
-  await assert.rejects(missing.getEmployeeCataloguePolicy("TOKEN",20,33),/cannot be verified/);
+  await assert.rejects(missing.getEmployeeCataloguePolicy("TOKEN",20,33),/no Magento Purchase Role assigned/);
   const denied=mockSource({graph:async()=>{throw new Error("Forbidden by Magento role ACL")}});
   await assert.rejects(denied.getEmployeeCataloguePolicy("TOKEN",20,33),/cannot be verified/);
 });
@@ -83,4 +84,36 @@ test("No company-PG catalogue connection, expiry timer or pilot ID switch remain
  assert.match(runtime,/getEmployeeCataloguePolicy\(token, mode.companyId, id\)/);
  assert.doesNotMatch(runtime,/employee-catalogue-db|CATALOGUE_COMPANY_IDS/);
  assert.doesNotMatch(config,/CSS_STORE_EMPLOYEE_CATALOGUE_DATABASE_URL|CSS_STORE_EMPLOYEE_CATALOGUE_COMPANY_IDS/);
+});
+
+test("Native role diagnostics distinguish an unassigned role, permission denial and source mismatch",()=>{
+  const mod=mockSource({});
+  assert.equal(mod.classifyNativeRoleFailure(
+    {diagnosticCode:"EMPLOYEE_ROLE_UNASSIGNED"},"EMPLOYEE_ASSIGNMENT"
+  ),"EMPLOYEE_ROLE_UNASSIGNED");
+  assert.equal(mod.classifyNativeRoleFailure(
+    {category:"graphql-authorization",status:200},"ROLE_POLICY"
+  ),"ROLE_POLICY_ACCESS_DENIED");
+  assert.equal(mod.classifyNativeRoleFailure(
+    new Error("Magento Employee Role catalogue could not be qualified."),"ROLE_POLICY"
+  ),"ROLE_POLICY_UNQUALIFIED");
+  assert.equal(mod.classifyNativeRoleFailure(
+    new Error("Unknown source failure"),"EMPLOYEE_DIRECTORY"
+  ),"EMPLOYEE_DIRECTORY_UNAVAILABLE");
+  assert.equal(mod.classifyNativeRoleFailure(
+    {status:503,category:"graphql-no-such-entity"},"ROLE_POLICY"
+  ),"ROLE_POLICY_UNAVAILABLE");
+});
+
+test("Native role failures do not disclose tokens or raw Magento error messages",async()=>{
+  const secret="sensitive-token-123";
+  const mod=mockSource({graph:async()=>{throw Object.assign(new Error("sensitive email@example.com"),{
+    category:"graphql-authorization",status:200,
+  });}});
+  await assert.rejects(
+    mod.getEmployeeCataloguePolicy(secret,20,33),
+    error=>error.message.includes("ROLE_POLICY_ACCESS_DENIED")
+      && !error.message.includes(secret)
+      && !error.message.includes("example.com")
+  );
 });
