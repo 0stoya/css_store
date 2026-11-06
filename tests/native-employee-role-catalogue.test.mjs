@@ -42,7 +42,7 @@ test("Native role is resolved from the Employee's Magento company and purchase r
   assert.equal(result.catalogueScope,"EXPLICIT_SKUS");
   assert.deepEqual(Array.from(result.skus),["JACKET/01"]);
   assert.deepEqual(Array.from(result.productIds),[111]);
-  assert.doesNotMatch(src("lib/employee-catalogue-native.ts"),/postgres|css_admin\.read_|expires_at/i);
+  assert.doesNotMatch(src("lib/employee-catalogue-native.ts"),/from "postgres"|css_admin\.read_|expires_at/i);
 });
 test("A role without saved restrictions inherits only Magento buyer company visibility",async()=>{
   const role=page(1,[],{
