@@ -7,7 +7,7 @@ import { SiteHeader } from "@/components/site-header";
 import { getCategoryPageContext } from "@/lib/magento/category-page";
 import { requireCustomerToken } from "@/lib/session";
 import { getEmployeeCatalogueMode, getSelectedEmployee } from "@/lib/employee-catalogue";
-import { getEmployeeCataloguePolicy } from "@/lib/employee-catalogue-db";
+import { getEmployeeCataloguePolicy } from "@/lib/employee-catalogue-native";
 
 function pageHref(key: string, page: number) {
   const base = `/catalogue/category/${encodeURIComponent(key)}`;
@@ -29,7 +29,7 @@ export default async function CategoryPage({
   const selectedEmployee = mode ? await getSelectedEmployee(mode) : null;
   if (mode && !selectedEmployee) redirect("/catalogue?choose=1");
   const policy = mode && selectedEmployee
-    ? await getEmployeeCataloguePolicy(mode.companyId, selectedEmployee.employeeId)
+    ? await getEmployeeCataloguePolicy(token, mode.companyId, selectedEmployee.employeeId)
     : null;
   const categoryPage = await getCategoryPageContext(token, key, page, 24, policy?.skus ?? null);
   const { category, products, selectedCompany: selected, customerName: name, hidePrice } = categoryPage;
