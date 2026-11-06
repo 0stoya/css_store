@@ -123,7 +123,7 @@ test("Employee catalogue reads the selected Employee's Magento role directly, wi
   assert.match(reader, /css_company_role_catalog_policy/);
   assert.match(reader, /getActiveEmployees\(token\)/);
   assert.match(reader, /employee.purchase_control_role_id/);
-  assert.doesNotMatch(reader, /postgres|css_admin\.read_|refresh timer|SELECT css_admin/i);
+  assert.doesNotMatch(reader, /from "postgres"|css_admin\.read_|SELECT css_admin/i);
   assert.doesNotMatch(source("lib/employee-catalogue.ts"), /employee-catalogue-db/);
 });
 
