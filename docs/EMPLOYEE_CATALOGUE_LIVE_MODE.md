@@ -1,6 +1,6 @@
 # Native Magento Employee Role catalogue — CSS Store
 
-Status: **implementation PR, OFF by default; not production-accepted**.
+Status: **fast Magento reader Store integration — demo acceptance pending; production remains gated**.
 
 ## Canonical journey
 
@@ -12,9 +12,7 @@ authenticated user is permitted to select. An Employee is NOT impersonated.
 
 Each native `CssCompanyEmployee.purchase_control_role_id` is an actual
 Magento company role. When an Employee is selected, Store resolves that
-Employee's CURRENT native role and reads the CURRENT
-`css_company_role_catalog_policy(role_id,page)` with the same logged-in
-buyer's Magento GraphQL token. There is NO second Employee-to-Catalogue
+Employee's CURRENT native role using the read-only Magento `css_effective_catalogue_products(employee_id)` query with the same logged-in buyer's customer token. Magento verifies the buyer's selected company, Employee purchase eligibility and Purchase Role. There is no browser-supplied role/company ID. There is NO second Employee-to-Catalogue
 Role assignment in CSS Admin.
 
 - The headless Store **ignores Hyva category restrictions**. Those belong to
@@ -25,24 +23,16 @@ Role assignment in CSS Admin.
   role-product IDs/count, and a consistent initial product grid. The Employee
   inherits the authenticated buyer's Magento company catalogue. No role SKU
   list is enumerated; this also works for large unrestricted company catalogues.
-- Role with **saved product restrictions**: verify the exact saved IDs/count,
-  walk the bounded company-scoped product grid, and use only `allowed` items,
-  verifying pagination and independent first-page readback. A role with zero
-  Hyva categories and saved product IDs **remains product-restricted**.
-  Contradictory product flags, incomplete membership and failed source reads
-  never silently become unrestricted.
+- Role with **saved product restrictions**: verify the Magento-authorised effective IDs/SKUs directly. Native grouped-product inheritance may reduce the effective product set compared with selected child IDs; e.g. demo Role #83 has 22 selected IDs and 17 effective IDs. The Store rejects malformed, mismatched, duplicate or oversized responses and never silently broadens to unrestricted.
 - Use the exact allowed SKUs within the Magento product query BEFORE paging;
   the manager's Magento company/role ceiling continues to apply.
 - The selection POST verifies active Employee/company/assigned role and
   signs only a beneficiary preference. The following catalogue page performs
-  the **one full live role-product qualification** before showing products.
+  **one scoped live Magento role-product read** before showing products.
   If it fails, the shopper is returned to the Employee chooser with a safe
   error; the signed cookie alone never permits product browsing or a cart
   mutation.
-- Restricted role grids are read in **bounded groups of four Magento pages**
-  rather than sequentially, with unchanged company/role metadata checks,
-  per-item membership reconciliation and a fresh first-page readback.
-  No cross-request role-product cache or scheduled refresh is introduced.
+- Restricted roles are returned as verified Magento effective IDs/SKUs in one GraphQL query; the old 50-per-page company grid walk and manager catalogue-edit ACL requirement are removed. No cross-request role-product cache or scheduled refresh is introduced.
 - Re-read the Employee and role on product add, cart reattribution, basket
   validation and credit/native checkout. Magento owns the cart, applied
   Purchase Controls, periods, approval, PO and order submission.
@@ -54,18 +44,7 @@ in Magento. These are different policy domains even though the Employee
 
 ## Permission must-rule
 
-The deployed Fluid `css_company_role_catalog_policy` resolver requires
-`Fluid_UserRoleRestrictions::manage_catalog_visibility`. Current Fluid also
-uses this permission for *save* operations. Therefore this is a powerful
-**manage** permission, NOT a read-only grant.
-
-Business policy: every company buyer authorised to use Employee catalogue
-shopping must have this resource. Verify Magento company roles confer it
-before turning the Store mode on. The Store does NOT silently grant ACL
-resources or bypass a denied Magento GraphQL call. Automatically granting
-this permission to new Employee buyers is a SEPARATE Magento ACL change
-and needs an explicit review of the associated editing rights. Merely
-setting the Store feature flag does not grant it.
+The Store does **not** call the editable `css_company_role_catalog_policy` reader in Employee shopping anymore. Magento's `css_effective_catalogue_products(employee_id)` validates the logged-in buyer's company, active Employee, purchasing scope and assigned Purchase Role **without granting** `Fluid_UserRoleRestrictions::manage_catalog_visibility` to the manager. Product/cart/checkout gates remain live; this read does not make an admin impersonation or staff token into a Magento customer token.
 
 ## Full-production activation boundary
 
@@ -77,13 +56,7 @@ ordinary Magento browsing, standard Employee selection and checkout remain
 unchanged. When ON, all companies with Magento `uses_employee=true`
 use the native journey, not a hard-coded company pilot list.
 
-The existing Magento role grid returns **50 products per page**. This first
-native implementation bounds reads to 200 pages / 10,000 source products,
-with no truncation or fallback. Very large restricted roles must be measured
-before global activation; if any exceeds this bound or Magento cannot
-handle the resulting SKU filter reliably, activation is HOLD pending a
-Magento-native role-filtered products resolver. Unrestricted roles use
-normal Magento queries without a SKU list.
+The new endpoint avoids a company-wide product grid regardless of the selected role's catalogue size. The Magento endpoint bounds its effective SKU list to 10,000; anything larger or inconsistent is rejected rather than truncated. Inherited company scopes return no enumerated SKU list.
 
 ## Retiring the old PostgreSQL catalogue path
 
@@ -101,10 +74,8 @@ Admin change, preserving history for audit. Admin directory PR #159 and its
 
 ## Minimum acceptance before enabling
 
-- Verify the live permission resource for a real Employee-capable manager
-  and company administrator; denied permission must not silently fall back.
-- Verify one restricted and one unrestricted real role, plus biggest assigned
-  restricted role in the company; compare Magento SKU membership.
+- Verify an actual customer token for an Employee-capable manager (including Admin support app switch) can call `css_effective_catalogue_products(employee_id)` without catalogue-edit ACL; denied/unauthorised Employee must not silently fall back.
+- Verify one restricted and one inherited role; demo Company #10 / manager #34 / Employee #10 / Role #83 expected 17 effective SKUs from 22 saved selections, including grouped parents 1462 and 1601.
 - Reassign an Employee's Purchase Role and edit role restrictions; the next
   Store request must show new policy without waiting for a timer.
 - Deactivate and cross-company-check the selected Employee.

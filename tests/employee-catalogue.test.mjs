@@ -120,9 +120,10 @@ test("Final native and credit checkout both revalidate qualified membership befo
 
 test("Employee catalogue reads the selected Employee's Magento role directly, with no PostgreSQL reader", () => {
   const reader = source("lib/employee-catalogue-native.ts");
-  assert.match(reader, /css_company_role_catalog_policy/);
-  assert.match(reader, /getActiveEmployees\(token\)/);
-  assert.match(reader, /employee.purchase_control_role_id/);
+  assert.match(reader, /css_effective_catalogue_products/);
+  assert.doesNotMatch(reader, /getActiveEmployees\(token\)/);
+  assert.match(reader, /role_ids/);
+  assert.doesNotMatch(reader, /employee\.purchase_control_role_id/);
   assert.doesNotMatch(reader, /from "postgres"|css_admin\.read_|SELECT css_admin/i);
   assert.doesNotMatch(source("lib/employee-catalogue.ts"), /employee-catalogue-db/);
 });
@@ -145,9 +146,9 @@ test("Unrestricted Catalogue Role inherits only the authenticated Magento compan
   assert.throws(()=>policy.assertEmployeeCartAllowed(
     actualCart,new Map([[1,empty]]),new Set([1]),true));
   const reader=source("lib/employee-catalogue-native.ts");
-  assert.match(reader,/if \(first.preselect_all_products\)/);
-  assert.match(reader,/first.products_count === 0/);
-  assert.match(reader,/companyId, roleId/);
+  assert.match(reader,/if \(value.scope === "COMPANY_INHERITED"\)/);
+  assert.match(reader,/value.products.length === 0/);
+  assert.match(reader,/companyId, employeeId/);
 });
 
 test("Inherited Employee browsing keeps Magento scope and hides buyer-only purchase allowances",async()=>{
