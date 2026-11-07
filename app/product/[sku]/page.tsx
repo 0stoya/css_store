@@ -48,7 +48,7 @@ export default async function ProductPage({
   if (mode && !selected) redirect("/catalogue?choose=1");
   if (mode && selected) {
     const policy = await getEmployeeCataloguePolicy(token, mode.companyId, selected.employeeId);
-    if (!policy.skus.includes(sku)) notFound();
+    if (policy.catalogueScope === "EXPLICIT_SKUS" && !policy.skus.includes(sku)) notFound();
   }
   const pdp = await getPdpPageContext(token, sku);
   const { product, selectedCompany, customerName, employeeOrderingBlocked, repeatLists, storefrontPolicy } = pdp;
