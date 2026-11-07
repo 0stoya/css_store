@@ -148,7 +148,7 @@ test("Unrestricted Catalogue Role inherits only the authenticated Magento compan
   const reader=source("lib/employee-catalogue-native.ts");
   assert.match(reader,/if \(value.scope === "COMPANY_INHERITED"\)/);
   assert.match(reader,/value.products.length === 0/);
-  assert.match(reader,/companyId, roleId/);
+  assert.match(reader,/companyId, employeeId/);
 });
 
 test("Inherited Employee browsing keeps Magento scope and hides buyer-only purchase allowances",async()=>{
