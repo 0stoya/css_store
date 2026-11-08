@@ -89,16 +89,16 @@ export default async function CataloguePage({
   return <>
     <SiteHeader customerName={name} companyName={selected?.name}/>
     <main className="shell catalogue-page">
-      {mode && selectedEmployee ? <section className="card" aria-label="Selected Employee">
-        <div className="row">
-          <div><strong>Shopping for {selectedEmployee.name}</strong>
-            <p className="muted small-text">Showing this Employee&apos;s permitted catalogue. Magento buyer permissions still apply.</p>
-          </div>
+      {mode && selectedEmployee ? (
+        <section className="employee-shopping-strip" aria-label="Selected employee">
+          <span className="employee-shopping-strip-label">
+            Shopping for <strong>{selectedEmployee.name}</strong>
+          </span>
           <form action={changeEmployeeCatalogueAction}>
-            <button type="submit" className="button secondary">Change Employee</button>
+            <button type="submit" className="button secondary">Change employee</button>
           </form>
-        </div>
-      </section> : null}
+        </section>
+      ) : null}
       <header className="catalogue-page-heading">
         <div>
           <p className="eyebrow">Catalogue</p>
