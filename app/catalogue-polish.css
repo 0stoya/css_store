@@ -349,3 +349,62 @@ input.catalogue-search-input:focus-visible {
     width: 100%;
   }
 }
+
+
+/* Selected Employee: a quiet, single-line context strip above the products.
+   Keep the full-sized chooser unchanged; never alter employee authorisation. */
+.catalogue-page > .employee-shopping-strip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: 0;
+  margin-bottom: 18px;
+  padding: 7px 10px 7px 15px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+
+.employee-shopping-strip-label {
+  min-width: 0;
+  color: var(--muted);
+  font-size: .9rem;
+  line-height: 1.4;
+}
+
+.employee-shopping-strip-label strong {
+  color: var(--ink);
+  font-weight: 750;
+}
+
+.employee-shopping-strip form {
+  flex-shrink: 0;
+  margin: 0;
+}
+
+.employee-shopping-strip .button {
+  min-height: 34px;
+  padding: 0 12px;
+  border-radius: 8px;
+  font-size: .8rem;
+  white-space: nowrap;
+}
+
+@media (max-width: 560px) {
+  .catalogue-page > .employee-shopping-strip {
+    gap: 8px;
+    padding: 7px 8px 7px 10px;
+  }
+
+  .employee-shopping-strip-label {
+    font-size: .82rem;
+    overflow-wrap: anywhere;
+  }
+
+  .employee-shopping-strip .button {
+    min-height: 34px;
+    padding: 0 9px;
+    font-size: .76rem;
+  }
+}
