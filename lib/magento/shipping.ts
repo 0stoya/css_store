@@ -1,4 +1,5 @@
 import { magentoGraphQL } from "@/lib/magento/client";
+import { openEmployeePurchasingApiEnabled } from "@/lib/magento/employee";
 import type { CartEmployeeAssignment, CartKitMetadata, CartMoney } from "@/lib/magento/cart";
 
 export type CustomerShippingAddress = {
@@ -204,6 +205,14 @@ const DELIVERY_CONTEXT = /* GraphQL */ `
   }
 `;
 
+// Request the new canonical company flag ONLY when Magento's compatible
+// schema has been verified on this deployment. Controlled Employee delivery
+// must fail closed if Open Purchasing is also enabled.
+const DELIVERY_CONTEXT_OPEN = DELIVERY_CONTEXT.replace(
+  "      multi_employee_basket\n    }",
+  "      multi_employee_basket\n      open_employee_purchasing\n    }",
+);
+
 const SET_SAVED_ADDRESS = /* GraphQL */ `
   mutation StoreSetSavedShippingAddress($cartId: String!, $customerAddressId: Int!) {
     setShippingAddressesOnCart(
@@ -260,7 +269,10 @@ const SET_SHIPPING_METHOD = /* GraphQL */ `
 `;
 
 export function getDeliveryContext(token: string) {
-  return magentoGraphQL<DeliveryContext>(DELIVERY_CONTEXT, {}, token);
+  return magentoGraphQL<DeliveryContext>(
+    openEmployeePurchasingApiEnabled() ? DELIVERY_CONTEXT_OPEN : DELIVERY_CONTEXT,
+    {}, token,
+  );
 }
 
 export async function setSavedShippingAddress(token: string, cartId: string, customerAddressId: number) {

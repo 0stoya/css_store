@@ -3,7 +3,8 @@
 import { redirect, unstable_rethrow } from "next/navigation";
 import { requireCustomerToken } from "@/lib/session";
 import { assertNormalCheckoutSession } from "@/lib/punchout/guard";
-import { getActiveEmployees } from "@/lib/magento/employee";
+import { getActiveEmployees, openEmployeePurchasingApiEnabled } from "@/lib/magento/employee";
+import { getEmployeeCataloguePolicy } from "@/lib/employee-catalogue-native";
 import { getEmployeeCatalogueMode, setSelectedEmployee, clearSelectedEmployee } from "@/lib/employee-catalogue";
 
 export async function selectEmployeeCatalogueAction(formData: FormData) {
@@ -18,10 +19,17 @@ export async function selectEmployeeCatalogueAction(formData: FormData) {
       throw new Error("Choose an active Employee.");
     }
     const employees = await getActiveEmployees(token);
+    const openApi = openEmployeePurchasingApiEnabled();
     const employee = employees.find((e) =>
-      e.employee_id === employeeId && e.company_id === mode.companyId);
+      e.employee_id === employeeId && (openApi || e.company_id === mode.companyId));
     if (!employee) throw new Error("That Employee is no longer available.");
-    if (!Number.isSafeInteger(employee.purchase_control_role_id)
+    if (openApi) {
+      // BuyableEmployees deliberately omits company/role management fields.
+      // Recheck active Employee, company ownership, checkout scope and the
+      // persisted Purchase Role through Magento's authorised effective reader
+      // before writing the signed selection preference.
+      await getEmployeeCataloguePolicy(token, mode.companyId, employeeId);
+    } else if (!Number.isSafeInteger(employee.purchase_control_role_id)
       || !employee.purchase_control_role_id || employee.purchase_control_role_id <= 0) {
       throw new Error("This Employee has no Magento Purchase Role assigned. Ask your company administrator to assign one.");
     }
