@@ -19,6 +19,7 @@ export default function loadTypeScript(root, relativePath, imports = {}) {
   const testModule = { exports: {} };
   vm.runInNewContext(result.outputText, {
     module: testModule, exports: testModule.exports, Buffer, Error, FormData, URL, URLSearchParams,
+    process: { env: process.env }, // server-only feature gates; no process methods in test VM
     require: (name) => {
       if (Object.hasOwn(imports, name)) return imports[name];
       throw new Error(`Unmocked dependency: ${name}`);
