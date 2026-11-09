@@ -1,6 +1,6 @@
 # CSS Store: multi-partner cXML PunchOut Level 1
 
-Status: **DRAFT — production disabled**. Recovers and generalises css_store PR #70. Fluid PR #108 remains a *single-customer* draft and cannot be used unchanged for this multi-partner production flow.
+Status: **IMPLEMENTED, DISABLED — first buyer sandbox not certified**. The multi-partner Store foundation was merged in Store #94; the general multi-partner Magento seam and order guards were merged in Fluid #115/#118. The earlier single-customer Fluid #108 and Store #70 drafts are superseded, not production prerequisites.
 
 ## Scope
 
@@ -58,10 +58,62 @@ A cart-level CSS company discount currently blocks basket return rather than exp
 
 The current app has a single PM2 fork. A private local SQLite session database is used for durable replay/lease/one-use state. Scale-out across hosts requires a shared transactional store first.
 
+## StartPage outage and buyer return recovery
+
+For production `fluid_exchange`, GET StartPage performs an **anonymous,
+read-only** Magento GraphQL `__typename` readiness query **before** the
+one-use entry token is consumed. If Magento GraphQL is unavailable or its
+schema cannot compile, return HTTP 503 and preserve the unconsumed CREATED
+session and its existing technical-customer lease; the same URL can be retried
+until it expires. No assertion, customer token, cart write or reindex is
+issued by this preflight. Readiness is a point-in-time check, not a guarantee
+that the later exchange will succeed.
+
+After one-use entry consumption an exchange error may be **ambiguous**:
+Magento might already have minted a customer token. Never automatically
+release or reassign that technical principal, and never reuse the consumed
+StartPage token. Reconcile the attempt and allow normal lease expiry before
+starting a new buyer setup request.
+
+The outbound cXML `PunchOutOrderMessage` is a **basket**, not a Magento
+order. The session is marked RETURNED before the browser POST to the buyer.
+If the callback fails or the buyer reports an error, establish whether the
+buyer created a requisition before retrying or raising a new one. Do not
+automatically replay an outgoing basket with a fresh payload ID.
+
+## Minimum first-buyer Demo acceptance (no production enablement)
+
+1. **Environment / backend:** confirm Store runs a compatible Node/SQLite
+   runtime on a **single writable PM2 instance**, Demo Magento 2.4.9/OpenSearch
+   GraphQL parses, and Fluid #115/#118 reserved-ID safeguards are deployed.
+   Live Magento 2.4.7/Elasticsearch7 must independently compile/deny reserved
+   customers before any Live activation. No human customer ID may be reserved.
+2. **Pilot profile:** obtain one real buyer *sandbox* PunchOutSetupRequest,
+   From/To/Sender identifiers, SharedSecret, a dedicated active Magento
+   technical customer/company/store tuple, allowlisted HTTPS BrowserFormPost
+   URL, verified unit/row tax basis, UOM, required UNSPSC, auxiliary IDs and
+   permitted extrinsics. Save secrets only in protected server config.
+3. **Round trip:** with test-only buyer and dedicated technical principal,
+   buyer launches cXML → StartPage → authorised company catalogue and prices
+   → basket → browser cXML return. Compare SKU, quantity, price, currency,
+   tax, UOM and buyer-accepted requisition. Verify **no Magento sales or
+   credit order** was created.
+4. **Denials / outage:** test wrong credentials/callback, replayed setup and
+   StartPage, exhausted principal pool, expired session, Magento GraphQL
+   down-before-consumption and ambiguous exchange-after-consumption. Confirm
+   reserved technical IDs cannot submit native orders, GraphQL credit orders
+   or REST credit orders, even with Store cookie lost and PunchOut OFF.
+
+Keep both `PUNCHOUT_ENABLED=0` (Store) and
+`css_commerce/punchout/enabled=0` (Magento) until one buyer sandbox passes
+and the operator separately approves enabling the release gates. The existing
+list of reserved technical customer IDs must remain protected even if
+PunchOut is subsequently switched OFF.
+
 ## Go-live blockers (must be closed before enablement)
 
-- Generalise the single-customer Fluid #108 assertion verifier to accept ONLY explicitly allowlisted (partner_id, customer_id, company_id, store_code) pairs, with expiry, signature, issuer/audience and replay validation.
-- Block native Magento placeOrder and Fluid cssSubmitCreditOrder for all dedicated technical PunchOut principals **at the backend**. Frontend/server-action guards cannot secure raw Magento GraphQL requests.
+- **Verify** the merged Fluid #115 general multi-partner assertion verifier is actually deployed and returns tokens only for explicitly allowlisted (partner, customer, company, store) tuples; a GitHub merge is not deployment proof.
+- **Prove at runtime** that the merged Fluid #115/#118 guards block native Magento placeOrder and both REST/GraphQL credit-order creation for reserved technical principals. Frontend/server-action guards cannot secure raw Magento requests.
 - Obtain real non-production PunchOutSetupRequest, BrowserFormPost and returned basket requirements from each distinct buyer platform; verify buyer identity, actual UOM/classification, tax basis, discounts, callback field and requisition acceptance.
 - Test multiple buyers with different company prices, simultaneous buyers using different principals, pool exhaustion, replay, session expiry, wrong credential/callback, grouped and configurable items, return parity, plus absence of Magento order writes.
 - Verify operational DB permissions and Node 22.5+ sqlite support on the deployment host. If multiple hosts, move the session store before activation.
