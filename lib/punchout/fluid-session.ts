@@ -29,6 +29,21 @@ export function createPunchOutCustomerAssertion(
   signer.end();
   return signingInput + "." + signer.sign(config.assertion.privateKeyPem).toString("base64url");
 }
+/**
+ * Anonymous, read-only Magento GraphQL health gate. It catches unavailable
+ * endpoints and malformed schema without signing an assertion, reserving a
+ * new customer, creating a token or mutating the basket. It does not promise
+ * a subsequent one-use exchange will succeed.
+ */
+export async function assertPunchOutMagentoGraphQlReady(): Promise<void> {
+  const response = await magentoGraphQL<{__typename: string}>(
+    "query PunchOutStartPageReadiness { __typename }",
+  );
+  if (typeof response.__typename !== "string" || !response.__typename) {
+    throw new Error("Magento GraphQL readiness response is invalid.");
+  }
+}
+
 export async function exchangePunchOutCustomerSession(
   config: Extract<PunchOutConfig, {enabled:true}>, session: PunchOutSession,
 ) {
