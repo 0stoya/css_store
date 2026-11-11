@@ -41,10 +41,13 @@ export async function controlledDeliveryApplies(delivery: DeliveryContext) {
   const companyId = positive(delivery.css_company_context.selected_company_id);
   try {
     const controlled = await getControlledEmployeeDeliveryEnabled(companyId);
-    if (controlled && delivery.css_company_employee_configuration.open_employee_purchasing === true) {
-      // Delegated buyers cannot use another customer's saved Magento address.
-      // Staff Admin must disable one of these mutually incompatible policies.
-      throw new Error("Open employee purchasing is incompatible with Controlled Employee delivery. Contact your company administrator.");
+    if (controlled && delivery.css_company_employee_configuration.open_employee_purchasing === true
+      && process.env.CSS_STORE_OPEN_PURCHASING_CONTROLLED_DELIVERY_ENABLED !== "1") {
+      // The normal owner-scoped mapping is still safe in open purchasing:
+      // each buyer must have a separate, Staff-approved mapping to an address
+      // in THEIR OWN Magento customer address book. Until that workflow is
+      // deployed and approved, retain the original fail-closed conflict.
+      throw new Error("Open employee purchasing is incompatible with Controlled Employee delivery until the per-buyer address rollout is enabled.");
     }
     return controlled;
   } catch (error) {
@@ -75,7 +78,8 @@ export async function assignedOwnedAddress(
   const id = positive(employeeId);
   const mappedId = await getAssignedEmployeeDeliveryAddress(companyId, customerId, id);
   if (mappedId === null) return null;
-  // A manager's mapping never authorises an unrelated customer's address.
+  // The buyer's own mapped address is mandatory even in company-wide Open
+  // Purchasing. Never borrow the original Employee manager's address.
   return delivery.customer.addresses.find((item) => item.id === mappedId) ?? null;
 }
 
@@ -90,7 +94,7 @@ export function recipientName(raw: string): string {
   return value;
 }
 
-// Cart-only shipping address. The manager's permanent Magento saved address
+// Cart-only shipping address. The buyer's permanent Magento saved address
 // remains untouched. The original physical street lines are preserved.
 export function cartOnlyRecipientAddress(saved: CustomerShippingAddress, name: string) {
   const recipient = recipientName(name);
