@@ -246,3 +246,16 @@ test("recipient form creates exactly one cart-only address and clears review onl
   assert.equal(f.calls[0][1].save_in_address_book, false);
   assert.equal(f.calls[1], "clear");
 });
+
+test("shared purchasing does not expose other buyers' saved addresses or weaken final checkout guard", () => {
+  const controlled = source("lib/controlled-employee-delivery.ts");
+  const address = source("lib/employee-delivery-address.ts");
+  const payment = source("app/checkout/payment/actions.ts");
+  assert.match(controlled, /CSS_STORE_OPEN_PURCHASING_CONTROLLED_DELIVERY_ENABLED/);
+  assert.match(controlled, /owner_customer_id|buyer.s own mapped address|buyer's own mapped address/i);
+  assert.match(controlled, /delivery\.customer\.addresses\.find\(\(item\) => item\.id === mappedId\)/);
+  assert.match(address, /owner_customer_id = \$\{ownerCustomerId\}/);
+  assert.match(payment, /await assertControlledCartReady\(token, cart\.id\)/);
+  assert.match(payment, /setBillingSavedAddress\(token, cart\.id, policy\.addressId\)/);
+  assert.doesNotMatch(controlled, /setBillingSameAsShipping/);
+});

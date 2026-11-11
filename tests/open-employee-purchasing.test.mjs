@@ -122,3 +122,68 @@ test("selection validates actual Magento role; checkout keeps native authority",
   assert.match(payment, /assertControlledCartReady/);
   assert.match(payment, /css_purchase_eligibility/);
 });
+
+test("combined mode is allowed only by explicit rollout flag; foreign-owner addresses remain unusable", async () => {
+  const flag = "CSS_STORE_OPEN_PURCHASING_CONTROLLED_DELIVERY_ENABLED";
+  const previous = process.env[flag];
+  const calls = [];
+  try {
+    process.env[flag] = "1";
+    const controlled = load(root, "lib/controlled-employee-delivery.ts", {
+      "@/lib/employee-delivery-address": {
+        getControlledEmployeeDeliveryEnabled: async () => true,
+        getAssignedEmployeeDeliveryAddress: async (...args) => {
+          calls.push(args);
+          return 1132;
+        },
+      },
+      "@/lib/magento/shipping": {},
+    });
+    const current = {
+      css_company_employee_configuration: {
+        uses_employee: true, multi_employee_basket: false, open_employee_purchasing: true,
+      },
+      css_company_context: { selected_company_id: 5323, customer_id: 222 },
+      customer: { addresses: [{ id: 1132, street: ["Team depot"], city: "Belfast" }] },
+    };
+    assert.equal(await controlled.controlledDeliveryApplies(current), true);
+    assert.equal((await controlled.assignedOwnedAddress(current, 1)).id, 1132);
+    assert.deepEqual(calls[0], [5323, 222, 1]);
+    assert.equal(await controlled.assignedOwnedAddress(
+      { ...current, customer: { addresses: [{ id: 999 }] } }, 1,
+    ), null, "do not use the other manager's saved address ID");
+    assert.equal(await controlled.assignedOwnedAddress(
+      { ...current, customer: { addresses: [] } }, 1,
+    ), null);
+  } finally {
+    if (previous === undefined) delete process.env[flag];
+    else process.env[flag] = previous;
+  }
+});
+
+test("combined delivery remains blocked if approval switch is absent or disabled", async () => {
+  const flag = "CSS_STORE_OPEN_PURCHASING_CONTROLLED_DELIVERY_ENABLED";
+  const previous = process.env[flag];
+  try {
+    for (const value of ["0", undefined]) {
+      if (value === undefined) delete process.env[flag];
+      else process.env[flag] = value;
+      const controlled = load(root, "lib/controlled-employee-delivery.ts", {
+        "@/lib/employee-delivery-address": {
+          getControlledEmployeeDeliveryEnabled: async () => true,
+          getAssignedEmployeeDeliveryAddress: async () => { throw new Error("not reached"); },
+        },
+        "@/lib/magento/shipping": {},
+      });
+      await assert.rejects(() => controlled.controlledDeliveryApplies({
+        css_company_employee_configuration: {
+          uses_employee: true, multi_employee_basket: false, open_employee_purchasing: true,
+        },
+        css_company_context: { selected_company_id: 5323 },
+      }), /incompatible with Controlled Employee delivery/);
+    }
+  } finally {
+    if (previous === undefined) delete process.env[flag];
+    else process.env[flag] = previous;
+  }
+});
