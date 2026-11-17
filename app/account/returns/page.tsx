@@ -20,9 +20,7 @@ export default async function ReturnsPage({
 
   return <section className="account-workspace-content stack">
     <header className="account-workspace-heading">
-      <p className="eyebrow">Account</p>
       <h1>Request a return</h1>
-      <p className="muted">Send the details to our returns team. Add the order number if you have it.</p>
     </header>
 
     {params.error ? <p className="error" role="alert">{params.error}</p> : null}
