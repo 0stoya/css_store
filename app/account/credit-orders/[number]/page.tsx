@@ -49,7 +49,6 @@ export default async function CreditOrderPage({
   ]);
   const order = data.css_credit_order;
   const currentUser = data.css_company_context.selected_company_user_id;
-  const status = order.status.toLowerCase();
   const canPlace = order.actions.can_place_order && !order.actions.requires_payment_details;
   const missingPoCandidate = order.actions.can_enter_po_number;
   const hasActions = order.actions.can_approve
