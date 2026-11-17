@@ -49,13 +49,7 @@ export default async function OrdersPage({
 
   return <section className="account-workspace-content stack">
     <header className="account-workspace-heading">
-      <p className="eyebrow">Account</p>
       <h1>Order history</h1>
-      <p className="muted">
-        {companyScope
-          ? `Orders available to you across ${selectedCompany?.name || "the selected company"}.`
-          : `Your orders for ${selectedCompany?.name || "the selected company"}.`}
-      </p>
     </header>
 
     {params.error ? <p className="error" role="alert">{params.error}</p> : null}
