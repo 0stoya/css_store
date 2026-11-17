@@ -1,4 +1,6 @@
 import { Search, Settings, UserRound } from "lucide-react";
+import { Suspense } from "react";
+import { AccountActionAttention } from "@/components/account-action-attention";
 import Image from "next/image";
 import Link from "next/link";
 import { BasketNavLink } from "@/components/basket-nav-link";
@@ -12,11 +14,13 @@ export function SiteHeader({
   companyName,
   basketQuantity,
   menuCategories,
+  hasPendingAccountActions,
 }: {
   customerName?: string;
   companyName?: string | null;
   basketQuantity?: number;
   menuCategories?: MenuCategory[];
+  hasPendingAccountActions?: boolean;
 }) {
   return <>
     <header className="site-header">
@@ -44,6 +48,9 @@ export function SiteHeader({
         {customerName ? <Link className="store-nav-link" href="/account" prefetch={false}>
           <UserRound size={16} strokeWidth={2.1} aria-hidden="true"/>
           <span>Account</span>
+          <Suspense fallback={null}>
+            <AccountActionAttention knownPending={hasPendingAccountActions}/>
+          </Suspense>
         </Link> : <Link href="/login">Sign in</Link>}
       </nav>
       {customerName ? <div className="header-product-search">
