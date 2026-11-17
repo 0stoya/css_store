@@ -3,7 +3,7 @@ import { getCustomerToken, setCustomerToken } from "@/lib/session";
 import { setPunchOutBrowserToken } from "@/lib/punchout/browser-session";
 import { getPunchOutConfig } from "@/lib/punchout/config";
 import { clearLeasedPunchOutCart, verifyPunchOutCustomerToken } from "@/lib/punchout/customer-session";
-import { exchangePunchOutCustomerSession } from "@/lib/punchout/fluid-session";
+import { assertPunchOutMagentoGraphQlReady, exchangePunchOutCustomerSession } from "@/lib/punchout/fluid-session";
 import { PunchOutSessionStore } from "@/lib/punchout/session";
 
 export const dynamic = "force-dynamic";
@@ -36,6 +36,17 @@ export async function GET(_request: Request, {params}: {params: Promise<{token:s
       if (!token) return reply(401, "Sign in as the dedicated test customer.");
       try { await verifyPunchOutCustomerToken(pending, token, {requireEmptyCart: true}); }
       catch { return reply(403, "The configured PunchOut test account/cart is not ready."); }
+    }
+    // Magento may be unavailable or unable to compile GraphQL. Keep this
+    // one-use StartPage URL intact on a known readiness failure, while
+    // preserving the existing technical customer lease until its expiry.
+    // Once the exchange starts, its outcome can be ambiguous: never retry
+    // or release a consumed principal automatically.
+    if (config.authMode === "fluid_exchange") {
+      try { await assertPunchOutMagentoGraphQlReady(); }
+      catch {
+        return reply(503, "The purchasing service is unavailable. This StartPage link remains valid; please retry.");
+      }
     }
     current = db.consumeEntryToken(entry);
   } catch {
