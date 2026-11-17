@@ -118,6 +118,6 @@ test("completed sales order takes precedence over stale quote-conversion URL err
   assert.equal(presentation.isOutdatedCreditConversionError("approved", null, error), false);
   assert.equal(presentation.isOutdatedCreditConversionError("order_placed", 158, "Comment could not be saved."), false);
   const page = readFileSync(new URL("../app/account/credit-orders/[number]/page.tsx", import.meta.url), "utf8");
-  assert.match(page, /messages\\.error && !staleConversionError/);
-  assert.match(page, /staleConversionError \\? <p className="success"/);
+  assert.match(page, /messages\.error && !staleConversionError/);
+  assert.match(page, /staleConversionError \? <p className="success"/);
 });
