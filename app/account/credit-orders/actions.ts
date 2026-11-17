@@ -144,5 +144,7 @@ export async function setCreditOrderPurchaseOrderNumberAction(formData: FormData
     detailRedirect(number, "error", errorMessage(error), from);
   }
 
-  detailRedirect(number, "notice", "PO number recorded. If all placement checks passed, the Magento sales order has been created.", from);
+  // The PO clerk may lose detail-view permission when the number is saved
+  // and the order leaves the awaiting-PO state. Always return to their queue.
+  detailRedirect(number, "notice", "PO number recorded. If all placement checks passed, the Magento sales order has been created.", "po");
 }
