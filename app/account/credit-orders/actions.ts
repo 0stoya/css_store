@@ -141,6 +141,7 @@ export async function setCreditOrderPurchaseOrderNumberAction(formData: FormData
   }
 
   let poMutationAttempted = false;
+  let submittedOrder: Awaited<ReturnType<typeof setCreditOrderPurchaseOrderNumber>> | null = null;
   try {
     const current = (await getCreditOrder(token, number)).css_credit_order;
     if (!current.actions.can_enter_po_number) {
@@ -148,14 +149,50 @@ export async function setCreditOrderPurchaseOrderNumberAction(formData: FormData
     }
 
     poMutationAttempted = true;
-    await setCreditOrderPurchaseOrderNumber(token, number, purchaseOrderNumber);
+    submittedOrder = await setCreditOrderPurchaseOrderNumber(token, number, purchaseOrderNumber);
   } catch (error) {
-    if (poMutationAttempted) revalidatePath("/account", "layout");
-    detailRedirect(number, "error", errorMessage(error), from);
+    // Saving the PO and creating the sales order are distinct backend steps.
+    // A placement exception can arrive AFTER the PO and its activity log are
+    // saved, and an authorised queue consumer may place the order later.
+    // Never present such a mixed outcome as a definitive failed PO submission.
+    unstable_rethrow(error);
+    if (!poMutationAttempted) {
+      detailRedirect(number, "error", errorMessage(error), from);
+    }
+    revalidatePath("/account", "layout");
+
+    let readback: Awaited<ReturnType<typeof getCreditOrder>>["css_credit_order"] | null = null;
+    try {
+      readback = (await getCreditOrder(token, number)).css_credit_order;
+    } catch (readError) {
+      unstable_rethrow(readError);
+      // Detail access can disappear after a PO-only clerk's accepted entry.
+      // An unreadable result must never be claimed successful.
+    }
+
+    if (readback?.status === "order_placed" && (readback.order_id ?? 0) > 0) {
+      const salesOrder = readback.order_number ? ` Sales order ${readback.order_number} created.` : " Sales order created.";
+      detailRedirect(number, "notice", `PO number saved.${salesOrder}`, "po");
+    }
+    if (readback?.logs.some((entry) => entry.activity_type === "set_purchase_order_number")) {
+      detailRedirect(number, "notice", "PO number saved. Sales order not yet confirmed.", "po");
+    }
+
+    detailRedirect(
+      number,
+      "error",
+      "The PO outcome could not be confirmed. Check the credit order or order history before retrying.",
+      from,
+    );
   }
   if (poMutationAttempted) revalidatePath("/account", "layout");
 
-  // The PO clerk may lose detail-view permission when the number is saved
-  // and the order leaves the awaiting-PO state. Always return to their queue.
-  detailRedirect(number, "notice", "PO number recorded. If all placement checks passed, the Magento sales order has been created.", "po");
+  // Confirm the sales order only when Magento returns a linked, placed order.
+  // The PO clerk may lose detail-view permission when the order leaves the queue.
+  const salesOrderPlaced = submittedOrder?.status === "order_placed"
+    && (submittedOrder.order_id ?? 0) > 0;
+  const notice = salesOrderPlaced
+    ? `PO number saved. Sales order${submittedOrder?.order_number ? ` ${submittedOrder.order_number}` : ""} created.`
+    : "PO number saved. Sales order not yet confirmed.";
+  detailRedirect(number, "notice", notice, "po");
 }

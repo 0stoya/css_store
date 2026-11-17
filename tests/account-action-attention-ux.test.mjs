@@ -83,7 +83,7 @@ test("Account pages have smaller headings and no redundant explanatory paragraph
   assert.doesNotMatch(queue, /Track credit orders from approval through to sales order/);
   assert.doesNotMatch(orders, /Orders available to you across/);
   assert.doesNotMatch(detail, /Status, fulfilment and activity for this credit order/);
-  assert.match(detail, /\{messages\.error \? <p className="error"/);
+  assert.match(detail, /\{messages\.error && !staleConversionError \? <p className="error"/);
   assert.match(queue, /\{result\.total_count\}/);
   assert.match(pageCss, /font-size: clamp\(1\.55rem, 2\.4vw, 2rem\)/);
   assert.match(detailCss, /\.detailHeader :global\(\.portal-page-heading\) h1/);
