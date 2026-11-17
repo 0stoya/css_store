@@ -1,5 +1,6 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { redirect, unstable_rethrow } from "next/navigation";
 import {
   addCreditOrderComment,
@@ -55,6 +56,7 @@ export async function creditOrderLifecycleAction(formData: FormData) {
   }
 
   let approvalFollowup: string | null = null;
+  let lifecycleMutationAttempted = false;
   try {
     const current = (await getCreditOrder(token, number)).css_credit_order;
     const allowed = action === "approve"
@@ -70,6 +72,7 @@ export async function creditOrderLifecycleAction(formData: FormData) {
       throw new Error("Comments are not available for your account on this credit order.");
     }
 
+    lifecycleMutationAttempted = true;
     const result = await performCreditOrderAction(
       token,
       action as "approve" | "reject" | "cancel" | "place",
@@ -87,8 +90,12 @@ export async function creditOrderLifecycleAction(formData: FormData) {
       }
     }
   } catch (error) {
+    // Magento can persist a PO/order transition before a later step fails.
+    // Refresh the badge counts even after an attempted-but-failed mutation.
+    if (lifecycleMutationAttempted) revalidatePath("/account", "layout");
     detailRedirect(number, "error", errorMessage(error), from);
   }
+  if (lifecycleMutationAttempted) revalidatePath("/account", "layout");
 
   const label = action === "approve"
     ? approvalFollowup || "Approval recorded."
@@ -133,16 +140,20 @@ export async function setCreditOrderPurchaseOrderNumberAction(formData: FormData
     detailRedirect(number, "error", "PO number must contain 1–16 letters, numbers or dashes.", from);
   }
 
+  let poMutationAttempted = false;
   try {
     const current = (await getCreditOrder(token, number)).css_credit_order;
     if (!current.actions.can_enter_po_number) {
       throw new Error("You cannot enter a PO number for this credit order. Check its approval status and your PO role.");
     }
 
+    poMutationAttempted = true;
     await setCreditOrderPurchaseOrderNumber(token, number, purchaseOrderNumber);
   } catch (error) {
+    if (poMutationAttempted) revalidatePath("/account", "layout");
     detailRedirect(number, "error", errorMessage(error), from);
   }
+  if (poMutationAttempted) revalidatePath("/account", "layout");
 
   // The PO clerk may lose detail-view permission when the number is saved
   // and the order leaves the awaiting-PO state. Always return to their queue.

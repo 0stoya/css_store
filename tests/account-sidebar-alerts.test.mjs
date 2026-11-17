@@ -124,3 +124,13 @@ test("sidebar badge UI is confined to authorised queues and Order history", () =
   assert.match(styles, /\.account-sidebar-alert-count-po/);
   assert.match(styles, /\.account-sidebar-alert-recent/);
 });
+
+
+test("successful and partial-failure credit transitions refresh live account badges", () => {
+  const actions = source("app/account/credit-orders/actions.ts");
+  assert.match(actions, /import \{ revalidatePath \} from "next\/cache"/);
+  assert.match(actions, /lifecycleMutationAttempted = true/);
+  assert.match(actions, /poMutationAttempted = true/);
+  assert.match(actions, /if \(lifecycleMutationAttempted\) revalidatePath\("\/account", "layout"\)/);
+  assert.match(actions, /if \(poMutationAttempted\) revalidatePath\("\/account", "layout"\)/);
+});
