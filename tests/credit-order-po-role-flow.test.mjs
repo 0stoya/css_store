@@ -112,7 +112,7 @@ test("PO clerk queue and precise capability are separate from purchasing approva
   assert.match(api, /CreditOrderScope = "MY" \| "COMPANY" \| "APPROVAL" \| "PO"/);
   assert.match(api, /can_enter_po_number: boolean/);
   assert.match(api, /can_enter_po_number\s+requires_payment_details/);
-  assert.match(layout, /canUseCreditOrderScope\(token, "PO"\)/);
+  assert.match(layout, /getCreditOrderScopeCount\(token, "PO"\)/);
   assert.match(sidebar, /label="Awaiting PO numbers"/);
   assert.match(list, /\{ value: "PO", label: "Awaiting PO numbers" \}/);
   assert.match(list, /isPoQueue \? "Awaiting PO numbers"/);

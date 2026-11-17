@@ -216,18 +216,24 @@ export function getCreditOrder(token: string, number: string) {
   return magentoGraphQL<CreditOrderDetailContext>(CREDIT_ORDER_DETAIL, { number }, token);
 }
 
-export async function canUseCreditOrderScope(token: string, scope: CreditOrderScope) {
+/** Exact number of pending tasks, or null when the user has no scope ACL.
+ * The same lightweight query previously only tested whether the scope exists. */
+export async function getCreditOrderScopeCount(token: string, scope: CreditOrderScope): Promise<number | null> {
   try {
-    await magentoGraphQL<{ css_credit_orders: { total_count: number } }>(
+    const data = await magentoGraphQL<{ css_credit_orders: { total_count: number } }>(
       CREDIT_ORDER_SCOPE_PROBE,
       { scope },
       token,
     );
-    return true;
+    return data.css_credit_orders.total_count;
   } catch (error) {
-    if (error instanceof MagentoGraphQLError && error.category === "graphql-authorization") return false;
+    if (error instanceof MagentoGraphQLError && error.category === "graphql-authorization") return null;
     throw error;
   }
+}
+
+export async function canUseCreditOrderScope(token: string, scope: CreditOrderScope) {
+  return (await getCreditOrderScopeCount(token, scope)) !== null;
 }
 
 export async function performCreditOrderAction(
