@@ -99,3 +99,21 @@ export function creditOrderActivityPresentation(activityType: string | null | un
     detail: message && !looksTechnical ? message : null,
   };
 }
+
+/**
+ * The quote-item preflight can reject a foreground PO clerk request while a
+ * queued conversion later places the same order. A stale conversion error must
+ * not override a confirmed Magento sales order on a refreshed detail page.
+ * Leave unrelated errors (e.g. failed comments) visible.
+ */
+export function isOutdatedCreditConversionError(
+  status: string,
+  orderId: number | null,
+  message?: string,
+): boolean {
+  if (status !== "order_placed" || !orderId || orderId <= 0 || !message) {
+    return false;
+  }
+  return /^Approved quote #\d+ (?:contains an item Magento cannot safely reload|does not match its persisted Magento line items)/i.test(message.trim())
+    || /^Credit-order quote #\d+ has no saved Magento line items/i.test(message.trim());
+}
