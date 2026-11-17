@@ -153,7 +153,7 @@ export default async function CreditOrdersPage({
             <div className={styles.orderTitleRow}>
               <div>
                 <p className={styles.orderNumber}>Credit order {order.number}</p>
-                <h2>{readableCreditOrderStatus(order.status)}</h2>
+                <h2>{isPoQueue ? "PO number required" : readableCreditOrderStatus(order.status)}</h2>
               </div>
               <span className={styles.amount}>{money(order.grand_total)}</span>
             </div>
@@ -162,6 +162,7 @@ export default async function CreditOrdersPage({
               {order.created_at ? <span className={styles.metaItem}><Clock3 size={14} aria-hidden="true"/>{formatCreditOrderDateTime(order.created_at)}</span> : null}
               {order.order_number ? <span className={styles.softBadge}>Sales order {order.order_number}</span> : null}
               {order.auto_approved ? <span className={styles.softBadge}>Auto approved</span> : null}
+              {isPoQueue ? <span className={styles.softBadge}>Purchase approved</span> : null}
             </div>
 
             {actions.length ? <div className={styles.actionBadges}>
@@ -169,7 +170,7 @@ export default async function CreditOrdersPage({
             </div> : null}
           </div>
           <Link className={styles.detailsLink} href={`/account/credit-orders/${encodeURIComponent(order.number)}${isApprovalQueue ? "?from=approvals" : isPoQueue ? "?from=po" : ""}`}>
-            <span>View details</span><ArrowRight size={17} aria-hidden="true"/>
+            <span>{isPoQueue ? "Enter PO number" : "View details"}</span><ArrowRight size={17} aria-hidden="true"/>
           </Link>
         </article>;
       })}

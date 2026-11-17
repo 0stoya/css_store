@@ -713,3 +713,115 @@
     font-size: 1rem;
   }
 }
+
+
+/* The PO clerk is completing administration, not making another purchase
+   decision. Give the single primary action room; keep history secondary. */
+.poTaskLayout {
+  display: grid;
+  gap: 18px;
+  align-items: start;
+}
+
+.poClerkActionCard {
+  padding: 26px;
+  border-left: 4px solid var(--blue);
+}
+
+.poClerkActionCard .sectionHeading h2 {
+  font-size: 1.14rem;
+}
+
+.poTaskOrderContext {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 18px 34px;
+  padding: 16px 0;
+  margin-bottom: 18px;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+
+.poTaskOrderContext > div {
+  display: grid;
+  gap: 4px;
+}
+
+.poTaskOrderContext > div > span {
+  color: var(--muted);
+  font-size: .75rem;
+}
+
+.poTaskOrderContext > div > strong {
+  color: var(--ink-strong);
+  font-size: 1.2rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.poApprovedLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: #187543;
+  font-size: .8rem;
+  font-weight: 800;
+}
+
+.poClerkActionCard .poEntryForm {
+  padding: 0;
+  border: none;
+  background: transparent;
+  gap: 13px;
+}
+
+.poEntryForm label,
+.poEntryForm .poInputHint {
+  max-width: 570px;
+}
+
+.poEntryForm input {
+  max-width: 570px;
+}
+
+.poEntryForm > strong {
+  font-size: 1rem;
+}
+
+.poEntryForm .poInputHint {
+  color: var(--muted);
+  font-size: .74rem;
+  line-height: 1.5;
+}
+
+.poEntryForm > button {
+  justify-self: start;
+  min-width: 210px;
+}
+
+.poSecondaryGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+  gap: 18px;
+}
+
+@media (max-width: 1050px) {
+  .poSecondaryGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 600px) {
+  .poClerkActionCard {
+    padding: 18px;
+  }
+
+  .poTaskOrderContext {
+    gap: 14px;
+  }
+
+  .poEntryForm > button {
+    width: 100%;
+  }
+}
