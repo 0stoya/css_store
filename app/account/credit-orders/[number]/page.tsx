@@ -137,7 +137,6 @@ export default async function CreditOrderPage({
       <span className={styles.sectionIcon}>{poClerkView ? <FileCheck2 size={19} aria-hidden="true"/> : <BadgeCheck size={19} aria-hidden="true"/>}</span>
       <div>
         <h2>{poClerkView ? "Complete the customer PO" : "Available actions"}</h2>
-        <p>{poClerkView ? "Purchasing has approved this amount. Your task is to record its official PO number." : "Only actions currently available to you are shown."}</p>
       </div>
     </header>
     {poClerkView ? <div className={styles.poTaskOrderContext}>
@@ -214,9 +213,6 @@ export default async function CreditOrderPage({
       <div className="portal-page-heading">
         <p className="eyebrow">Credit order {order.number}</p>
         <h1>{poClerkView ? "Awaiting PO number" : readableCreditOrderStatus(order.status)}</h1>
-        <p className="muted">{poClerkView
-          ? "This purchase has been approved. Enter the customer PO reference to complete the administrative step."
-          : "Status, fulfilment and activity for this credit order."}</p>
       </div>
       <Link className="button secondary" href={backHref}><ArrowLeft size={16} aria-hidden="true"/>{backLabel}</Link>
     </header>

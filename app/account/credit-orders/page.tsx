@@ -78,8 +78,7 @@ export default async function CreditOrdersPage({
   if (!activeScope) {
     return <section className="account-workspace-content stack">
       <header className="account-workspace-heading">
-        <p className="eyebrow">Account</p>
-        <h1>Credit orders</h1>
+          <h1>Credit orders</h1>
       </header>
       <section className="card empty">
         <h2>Credit orders aren’t available for this account</h2>
@@ -93,19 +92,10 @@ export default async function CreditOrdersPage({
   const currentPage = result.page_info.current_page || page;
   const isApprovalQueue = activeScope === "APPROVAL";
   const isPoQueue = activeScope === "PO";
-  const activeScopeLabel = SCOPES.find((scope) => scope.value === activeScope)?.label || "Credit orders";
 
   return <section className="account-workspace-content stack">
     <header className="account-workspace-heading">
-      <p className="eyebrow">Account</p>
       <h1>{isApprovalQueue ? "Order approvals" : isPoQueue ? "Awaiting PO numbers" : "Credit orders"}</h1>
-      <p className="muted">
-        {isApprovalQueue
-          ? "Review credit orders that are waiting for your decision."
-          : isPoQueue
-            ? "Purchases approved by managers, awaiting their official PO reference. Entering it may release the sales order."
-            : "Track credit orders from approval through to sales order."}
-      </p>
     </header>
 
     {params.error ? <p className="error" role="alert">{params.error}</p> : null}
@@ -132,7 +122,7 @@ export default async function CreditOrdersPage({
           <strong>{result.total_count} {result.total_count === 1
               ? (isApprovalQueue ? "order awaiting review" : isPoQueue ? "order awaiting PO" : "credit order")
               : (isApprovalQueue ? "orders awaiting review" : isPoQueue ? "orders awaiting PO" : "credit orders")}</strong>
-          <span>{activeScopeLabel} · {selectedCompany?.name || "Current company"}</span>
+          <span>{selectedCompany?.name || "Current company"}</span>
         </div>
       </div>
     </div>
@@ -165,7 +155,7 @@ export default async function CreditOrdersPage({
               {isPoQueue ? <span className={styles.softBadge}>Purchase approved</span> : null}
             </div>
 
-            {actions.length ? <div className={styles.actionBadges}>
+            {!isPoQueue && actions.length ? <div className={styles.actionBadges}>
               {actions.map((action) => <span className={styles.softBadge} key={action}>{action}</span>)}
             </div> : null}
           </div>

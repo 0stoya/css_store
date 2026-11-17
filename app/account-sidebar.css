@@ -237,7 +237,9 @@
 
 .account-workspace-heading h1 {
   margin-bottom: 8px;
-  font-size: clamp(2.25rem, 4vw, 3.35rem);
+  font-size: clamp(1.55rem, 2.4vw, 2rem);
+  line-height: 1.17;
+  letter-spacing: -.025em;
 }
 
 .account-workspace-heading p:last-child {
@@ -471,4 +473,34 @@
 .account-sidebar-link.active .account-sidebar-alert-count,
 .account-sidebar-link.active .account-sidebar-alert-recent {
   box-shadow: 0 0 0 2px #fff;
+}
+
+
+/* Compact Account alert; visible only for pending authorised approval/PO work. */
+.site-header .store-nav-link .account-action-attention {
+  position: relative;
+  display: inline-block;
+  flex: 0 0 auto;
+  width: 7px;
+  height: 7px;
+  margin-left: 1px;
+  border-radius: 50%;
+  background: #d9952d;
+  box-shadow: 0 0 0 1px #fff;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .site-header .store-nav-link .account-action-attention::after {
+    content: "";
+    position: absolute;
+    inset: -4px;
+    border: 1px solid rgb(217 149 45 / 65%);
+    border-radius: 50%;
+    animation: account-action-pulse 2.6s ease-out infinite;
+  }
+
+  @keyframes account-action-pulse {
+    0%, 20% { opacity: .85; transform: scale(.65); }
+    70%, 100% { opacity: 0; transform: scale(1.25); }
+  }
 }

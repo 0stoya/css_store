@@ -24,9 +24,7 @@ export default async function RepeatOrdersPage({
 
   return <section className="account-workspace-content stack">
     <header className="account-workspace-heading">
-      <p className="eyebrow">Account</p>
       <h1>Repeat orders</h1>
-      <p className="muted">Save frequently ordered product configurations and add eligible items back to your basket quickly.</p>
     </header>
 
     {messages.error ? <p className="error" role="alert">{messages.error}</p> : null}

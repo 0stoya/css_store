@@ -20,9 +20,7 @@ export default async function AccountPage({
   return <section className="account-workspace-content stack">
     <header className="account-workspace-heading">
       <div>
-        <p className="eyebrow">Your account</p>
         <h1>Account overview</h1>
-        <p className="muted">Manage your orders, repeat purchasing, approvals and returns from one place.</p>
       </div>
     </header>
 
@@ -38,7 +36,6 @@ export default async function AccountPage({
           {selected?.reference ? <p className="muted small">Account reference {selected.reference}</p> : null}
         </div>
       </div>
-      <p className="muted">Product access, pricing and ordering permissions are based on the company shown here.</p>
     </section>
 
     <section className="account-overview-actions" aria-label="Quick actions">

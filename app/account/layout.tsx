@@ -18,7 +18,8 @@ export default async function AccountLayout({ children }: { children: ReactNode 
   const name = `${ctx.customer.firstname} ${ctx.customer.lastname}`.trim();
 
   return <>
-    <SiteHeader customerName={name} companyName={selected?.name}/>
+    <SiteHeader customerName={name} companyName={selected?.name}
+      hasPendingAccountActions={(approvalCount ?? 0) > 0 || (poCount ?? 0) > 0}/>
     <main className="shell account-workspace">
       <AccountSidebar
         name={name}
