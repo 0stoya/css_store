@@ -45,7 +45,10 @@ function logGraphQLTiming(
 }
 
 function isCustomerSessionFailure(status: number, error?: GraphQLErrorItem) {
-  if (status === 401 || status === 403) return true;
+  // A 403 is also returned by Magento for legitimate company/role ACL
+  // denials (e.g. a buyer probing APPROVAL or PO scope). Those are not
+  // expired customer sessions and must not clear a valid token.
+  if (status === 401) return true;
 
   const category = error?.extensions?.category?.toLowerCase() || "";
   const message = error?.message?.toLowerCase() || "";
