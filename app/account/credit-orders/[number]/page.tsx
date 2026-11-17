@@ -178,7 +178,7 @@ export default async function CreditOrderPage({
         <input type="hidden" name="number" value={order.number}/>
         {approvalContext}
         <strong>Enter official PO number</strong>
-        <p className="muted small">Use the number issued by your company's purchasing system for the approved amount. Saving it may immediately create the Magento sales order.</p>
+        <p className="muted small">Use the number issued by your company&apos;s purchasing system for the approved amount. Saving it may immediately create the Magento sales order.</p>
         <label className="field">
           <span>Customer PO number</span>
           <input
