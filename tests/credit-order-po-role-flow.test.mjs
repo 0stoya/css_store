@@ -92,7 +92,7 @@ test("approver actions remain two separate backend-authorised lifecycle operatio
   assert.match(actions, /performCreditOrderAction\(/);
   assert.match(actions, /await setCreditOrderPurchaseOrderNumber\(token, number, purchaseOrderNumber\)/);
   assert.match(detail, /order\.actions\.can_approve \?/);
-  assert.match(detail, /Purchase approved\. Enter the official PO number/);
+  assert.match(detail, /Use the number issued by your company/);
   assert.match(detail, /const missingPoCandidate = order\.actions\.can_enter_po_number/);
   assert.match(actions, /if \(!current\.actions\.can_enter_po_number\)/);
   assert.match(creditClient, /cssSetCreditOrderPurchaseOrderNumber/);
@@ -116,7 +116,7 @@ test("PO clerk queue and precise capability are separate from purchasing approva
   assert.match(sidebar, /label="Awaiting PO numbers"/);
   assert.match(list, /\{ value: "PO", label: "Awaiting PO numbers" \}/);
   assert.match(list, /isPoQueue \? "Awaiting PO numbers"/);
-  assert.match(detail, /approved total of \{money\(order\.grand_total\)\}/);
+  assert.match(detail, /<span>Approved amount<\/span><strong>\{money\(order\.grand_total\)\}<\/strong>/);
   assert.match(actions, /current\.actions\.can_enter_po_number/);
   assert.doesNotMatch(actions.slice(actions.indexOf("export async function setCreditOrderPurchaseOrderNumberAction")), /current\.actions\.can_reject/);
 });
@@ -128,4 +128,23 @@ test("PO clerk is returned to the PO queue after entry, not an inaccessible orde
   assert.match(actions, /kind === "notice"/);
   assert.match(actions, /scope=PO&/);
   assert.match(detail, /Back to PO queue/);
+});
+
+
+test("PO clerk workspace foregrounds the only approved administrative action", () => {
+  const detail = source("app/account/credit-orders/[number]/page.tsx");
+  const list = source("app/account/credit-orders/page.tsx");
+  const styles = source("app/account/credit-orders/credit-orders.module.css");
+  assert.match(detail, /const poClerkView = missingPoCandidate/);
+  assert.match(detail, /"Awaiting PO number" : readableCreditOrderStatus/);
+  assert.match(detail, /Complete the customer PO/);
+  assert.match(detail, /aria-describedby=\{`po-format-/);
+  assert.match(detail, /1–16 letters, numbers or dashes/);
+  assert.match(detail, /"Save official PO number"/);
+  assert.match(detail, /poClerkView \? <div className=\{styles\.poTaskLayout\}>/);
+  assert.match(detail, /poSecondaryGrid\}>\{activity\}\{comments\}/);
+  assert.match(styles, /\.poTaskLayout\s*\{/);
+  assert.match(styles, /\.poSecondaryGrid\s*\{/);
+  assert.match(list, /isPoQueue \? "Enter PO number" : "View details"/);
+  assert.match(list, /isPoQueue \? "PO number required" : readableCreditOrderStatus/);
 });

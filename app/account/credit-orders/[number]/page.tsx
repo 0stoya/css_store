@@ -3,6 +3,7 @@ import {
   ArrowLeft,
   BadgeCheck,
   CalendarClock,
+  FileCheck2,
   CircleCheckBig,
   CreditCard,
   History,
@@ -51,6 +52,13 @@ export default async function CreditOrderPage({
   const currentUser = data.css_company_context.selected_company_user_id;
   const canPlace = order.actions.can_place_order && !order.actions.requires_payment_details;
   const missingPoCandidate = order.actions.can_enter_po_number;
+  // The clerk's only task is to record the official PO reference, not make
+  // another purchasing decision. Keep the normal decision UI for approvers.
+  const poClerkView = missingPoCandidate
+    && !order.actions.can_approve
+    && !order.actions.can_reject
+    && !order.actions.can_cancel
+    && !canPlace;
   const hasActions = order.actions.can_approve
     || order.actions.can_reject
     || order.actions.can_cancel
@@ -124,14 +132,19 @@ export default async function CreditOrderPage({
     </div> : null}
   </section>;
 
-  const actions = hasActions ? <aside className={`card ${styles.actionCard}`}>
+  const actions = hasActions ? <aside className={`card ${styles.actionCard} ${poClerkView ? styles.poClerkActionCard : ""}`}>
     <header className={styles.sectionHeading}>
-      <span className={styles.sectionIcon}><BadgeCheck size={19} aria-hidden="true"/></span>
+      <span className={styles.sectionIcon}>{poClerkView ? <FileCheck2 size={19} aria-hidden="true"/> : <BadgeCheck size={19} aria-hidden="true"/>}</span>
       <div>
-        <h2>Available actions</h2>
-        <p>Only actions currently available to you are shown.</p>
+        <h2>{poClerkView ? "Complete the customer PO" : "Available actions"}</h2>
+        <p>{poClerkView ? "Purchasing has approved this amount. Your task is to record its official PO number." : "Only actions currently available to you are shown."}</p>
       </div>
     </header>
+    {poClerkView ? <div className={styles.poTaskOrderContext}>
+      <div><span>Approved amount</span><strong>{money(order.grand_total)}</strong></div>
+      <div><span>Credit order</span><strong>{order.number}</strong></div>
+      <span className={styles.poApprovedLabel}><BadgeCheck size={15} aria-hidden="true"/> Purchase approved</span>
+    </div> : null}
     <div className={styles.actionStack}>
       {order.actions.can_approve ? <form action={creditOrderLifecycleAction} className={styles.actionForm}>
         <input type="hidden" name="number" value={order.number}/>
@@ -161,16 +174,28 @@ export default async function CreditOrderPage({
         <button className={`button ${styles.dangerButton}`} type="submit">Cancel</button>
       </form> : null}
 
-      {missingPoCandidate ? <form action={setCreditOrderPurchaseOrderNumberAction} className={styles.actionForm}>
+      {missingPoCandidate ? <form action={setCreditOrderPurchaseOrderNumberAction} className={`${styles.actionForm} ${poClerkView ? styles.poEntryForm : ""}`}>
         <input type="hidden" name="number" value={order.number}/>
         {approvalContext}
         <strong>Enter official PO number</strong>
-        <p className="muted small">Purchase approved. Enter the official PO number against the approved total of {money(order.grand_total)}. Saving the reference can immediately create the Magento sales order.</p>
+        <p className="muted small">Use the number issued by your company&apos;s purchasing system for the approved amount. Saving it may immediately create the Magento sales order.</p>
         <label className="field">
-          <span>PO number</span>
-          <input name="purchase_order_number" required maxLength={16} pattern="[A-Za-z0-9-]+" autoComplete="off"/>
+          <span>Customer PO number</span>
+          <input
+            id={`po-number-${order.credit_order_id}`}
+            type="text"
+            name="purchase_order_number"
+            required
+            maxLength={16}
+            pattern="[A-Za-z0-9-]+"
+            placeholder="e.g. PO-12345"
+            autoComplete="off"
+            spellCheck={false}
+            aria-describedby={`po-format-${order.credit_order_id}`}
+          />
         </label>
-        <button className="button" type="submit">Save PO number</button>
+        <small className={styles.poInputHint} id={`po-format-${order.credit_order_id}`}>1–16 letters, numbers or dashes. Once saved, the number cannot be replaced in this workflow.</small>
+        <button className="button" type="submit">{poClerkView ? "Save official PO number" : "Save PO number"}</button>
       </form> : null}
 
       {canPlace ? <form action={creditOrderLifecycleAction} className={styles.actionForm}>
@@ -188,8 +213,10 @@ export default async function CreditOrderPage({
     <header className={`portal-page-header ${styles.detailHeader}`}>
       <div className="portal-page-heading">
         <p className="eyebrow">Credit order {order.number}</p>
-        <h1>{readableCreditOrderStatus(order.status)}</h1>
-        <p className="muted">Status, fulfilment and activity for this credit order.</p>
+        <h1>{poClerkView ? "Awaiting PO number" : readableCreditOrderStatus(order.status)}</h1>
+        <p className="muted">{poClerkView
+          ? "This purchase has been approved. Enter the customer PO reference to complete the administrative step."
+          : "Status, fulfilment and activity for this credit order."}</p>
       </div>
       <Link className="button secondary" href={backHref}><ArrowLeft size={16} aria-hidden="true"/>{backLabel}</Link>
     </header>
@@ -241,9 +268,12 @@ export default async function CreditOrderPage({
       </div>
     </section>
 
-    {hasActions ? <div className={styles.detailGrid}>
+    {hasActions ? (poClerkView ? <div className={styles.poTaskLayout}>
+      {actions}
+      <div className={styles.poSecondaryGrid}>{activity}{comments}</div>
+    </div> : <div className={styles.detailGrid}>
       <div className="stack">{comments}{activity}</div>
       {actions}
-    </div> : <div className={styles.detailGridNoActions}>{comments}{activity}</div>}
+    </div>) : <div className={styles.detailGridNoActions}>{comments}{activity}</div>}
   </section>;
 }
