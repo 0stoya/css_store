@@ -92,8 +92,40 @@ test("approver actions remain two separate backend-authorised lifecycle operatio
   assert.match(actions, /performCreditOrderAction\(/);
   assert.match(actions, /await setCreditOrderPurchaseOrderNumber\(token, number, purchaseOrderNumber\)/);
   assert.match(detail, /order\.actions\.can_approve \?/);
-  assert.match(detail, /Only users granted Enter PO Numbers may complete this step/);
+  assert.match(detail, /Purchase approved\. Enter the official PO number/);
+  assert.match(detail, /const missingPoCandidate = order\.actions\.can_enter_po_number/);
+  assert.match(actions, /if \(!current\.actions\.can_enter_po_number\)/);
   assert.match(creditClient, /cssSetCreditOrderPurchaseOrderNumber/);
   assert.match(creditClient, /cssApproveCreditOrder/);
   assert.doesNotMatch(actions, /adminToken|css_admin_/);
+});
+
+
+test("PO clerk queue and precise capability are separate from purchasing approvals", () => {
+  const sidebar = source("components/account-sidebar.tsx");
+  const layout = source("app/account/layout.tsx");
+  const list = source("app/account/credit-orders/page.tsx");
+  const detail = source("app/account/credit-orders/[number]/page.tsx");
+  const actions = source("app/account/credit-orders/actions.ts");
+  const api = source("lib/magento/credit-orders.ts");
+
+  assert.match(api, /CreditOrderScope = "MY" \| "COMPANY" \| "APPROVAL" \| "PO"/);
+  assert.match(api, /can_enter_po_number: boolean/);
+  assert.match(api, /can_enter_po_number\s+requires_payment_details/);
+  assert.match(layout, /canUseCreditOrderScope\(token, "PO"\)/);
+  assert.match(sidebar, /label="Awaiting PO numbers"/);
+  assert.match(list, /\{ value: "PO", label: "Awaiting PO numbers" \}/);
+  assert.match(list, /isPoQueue \? "Awaiting PO numbers"/);
+  assert.match(detail, /approved total of \{money\(order\.grand_total\)\}/);
+  assert.match(actions, /current\.actions\.can_enter_po_number/);
+  assert.doesNotMatch(actions.slice(actions.indexOf("export async function setCreditOrderPurchaseOrderNumberAction")), /current\.actions\.can_reject/);
+});
+
+test("PO clerk is returned to the PO queue after entry, not an inaccessible order detail", () => {
+  const actions = source("app/account/credit-orders/actions.ts");
+  const detail = source("app/account/credit-orders/[number]/page.tsx");
+  assert.match(actions, /if \(from === "po"\)/);
+  assert.match(actions, /kind === "notice"/);
+  assert.match(actions, /scope=PO&/);
+  assert.match(detail, /Back to PO queue/);
 });

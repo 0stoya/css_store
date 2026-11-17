@@ -7,9 +7,10 @@ import { requireCustomerToken } from "@/lib/session";
 
 export default async function AccountLayout({ children }: { children: ReactNode }) {
   const token = await requireCustomerToken();
-  const [ctx, canApprove] = await Promise.all([
+  const [ctx, canApprove, canEnterPo] = await Promise.all([
     getCustomerContext(token),
     canUseCreditOrderScope(token, "APPROVAL"),
+    canUseCreditOrderScope(token, "PO"),
   ]);
   const selected = ctx.css_company_context.companies.find((company) => company.selected) || null;
   const name = `${ctx.customer.firstname} ${ctx.customer.lastname}`.trim();
@@ -22,6 +23,7 @@ export default async function AccountLayout({ children }: { children: ReactNode 
         email={ctx.customer.email}
         companies={ctx.css_company_context.companies}
         showApprovals={canApprove}
+        showPoNumbers={canEnterPo}
       />
       {children}
     </main>

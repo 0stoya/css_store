@@ -42,26 +42,28 @@ export default async function CreditOrderPage({
 }) {
   const token = await requireCustomerToken();
   const [{ number }, messages] = await Promise.all([params, searchParams]);
-  const [data, canApprove] = await Promise.all([
+  const [data, canApprove, canEnterPo] = await Promise.all([
     getCreditOrder(token, number),
     canUseCreditOrderScope(token, "APPROVAL"),
+    canUseCreditOrderScope(token, "PO"),
   ]);
   const order = data.css_credit_order;
   const currentUser = data.css_company_context.selected_company_user_id;
   const status = order.status.toLowerCase();
   const canPlace = order.actions.can_place_order && !order.actions.requires_payment_details;
-  const missingPoCandidate = status === "approved"
-    && !order.actions.can_place_order
-    && !order.actions.requires_payment_details;
+  const missingPoCandidate = order.actions.can_enter_po_number;
   const hasActions = order.actions.can_approve
     || order.actions.can_reject
     || order.actions.can_cancel
     || missingPoCandidate
     || canPlace;
   const fromApprovals = messages.from === "approvals" && canApprove;
-  const backHref = fromApprovals ? "/account/credit-orders?scope=APPROVAL" : "/account/credit-orders";
-  const backLabel = fromApprovals ? "Back to approvals" : "Back to credit orders";
-  const approvalContext = fromApprovals ? <input type="hidden" name="from" value="approvals"/> : null;
+  const fromPoQueue = messages.from === "po" && canEnterPo;
+  const backHref = fromApprovals ? "/account/credit-orders?scope=APPROVAL"
+    : fromPoQueue ? "/account/credit-orders?scope=PO" : "/account/credit-orders";
+  const backLabel = fromApprovals ? "Back to approvals" : fromPoQueue ? "Back to PO queue" : "Back to credit orders";
+  const approvalContext = fromApprovals ? <input type="hidden" name="from" value="approvals"/>
+    : fromPoQueue ? <input type="hidden" name="from" value="po"/> : null;
 
   const comments = <section className={`card ${styles.timelineCard}`}>
     <header className={styles.sectionHeading}>
@@ -163,8 +165,8 @@ export default async function CreditOrderPage({
       {missingPoCandidate ? <form action={setCreditOrderPurchaseOrderNumberAction} className={styles.actionForm}>
         <input type="hidden" name="number" value={order.number}/>
         {approvalContext}
-        <strong>Add purchase order number</strong>
-        <p className="muted small">Only users granted Enter PO Numbers may complete this step. Once all approvals are complete, saving the PO can create the Magento sales order immediately.</p>
+        <strong>Enter official PO number</strong>
+        <p className="muted small">Purchase approved. Enter the official PO number against the approved total of {money(order.grand_total)}. Saving the reference can immediately create the Magento sales order.</p>
         <label className="field">
           <span>PO number</span>
           <input name="purchase_order_number" required maxLength={16} pattern="[A-Za-z0-9-]+" autoComplete="off"/>

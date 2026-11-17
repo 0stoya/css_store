@@ -9,7 +9,7 @@ import {
 } from "@/lib/magento/credit-orders";
 import { requireCustomerToken } from "@/lib/session";
 
-type DetailSource = "approvals" | undefined;
+type DetailSource = "approvals" | "po" | undefined;
 
 function detailRedirect(
   number: string,
@@ -19,6 +19,12 @@ function detailRedirect(
 ): never {
   const query = new URLSearchParams({ [kind]: message });
   if (from === "approvals") query.set("from", "approvals");
+  if (from === "po") {
+    if (kind === "notice") {
+      redirect(`/account/credit-orders?scope=PO&${query.toString()}`);
+    }
+    query.set("from", "po");
+  }
   redirect(`/account/credit-orders/${encodeURIComponent(number)}?${query.toString()}`);
 }
 
@@ -32,7 +38,8 @@ function cleanNumber(value: FormDataEntryValue | null) {
 }
 
 function detailSource(formData: FormData): DetailSource {
-  return String(formData.get("from") || "") === "approvals" ? "approvals" : undefined;
+  const source = String(formData.get("from") || "");
+  return source === "approvals" || source === "po" ? source : undefined;
 }
 
 export async function creditOrderLifecycleAction(formData: FormData) {
@@ -122,17 +129,14 @@ export async function setCreditOrderPurchaseOrderNumberAction(formData: FormData
   const from = detailSource(formData);
 
   if (!number) redirect(from === "approvals" ? "/account/credit-orders?scope=APPROVAL&error=Missing%20credit-order%20number." : "/account/credit-orders?error=Missing%20credit-order%20number.");
-  if (!purchaseOrderNumber) detailRedirect(number, "error", "Enter a PO number before submitting.", from);
+  if (!/^[A-Za-z0-9-]{1,16}$/.test(purchaseOrderNumber)) {
+    detailRedirect(number, "error", "PO number must contain 1–16 letters, numbers or dashes.", from);
+  }
 
   try {
     const current = (await getCreditOrder(token, number)).css_credit_order;
-    const status = current.status.toLowerCase();
-    const looksLikeMissingPo = status === "approved"
-      && !current.actions.can_place_order
-      && !current.actions.requires_payment_details;
-
-    if (!looksLikeMissingPo) {
-      throw new Error("This credit order is not currently waiting for PO completion.");
+    if (!current.actions.can_enter_po_number) {
+      throw new Error("You cannot enter a PO number for this credit order. Check its approval status and your PO role.");
     }
 
     await setCreditOrderPurchaseOrderNumber(token, number, purchaseOrderNumber);
@@ -140,5 +144,5 @@ export async function setCreditOrderPurchaseOrderNumberAction(formData: FormData
     detailRedirect(number, "error", errorMessage(error), from);
   }
 
-  detailRedirect(number, "notice", "PO number submitted. Order readiness has been refreshed.", from);
+  detailRedirect(number, "notice", "PO number recorded. If all placement checks passed, the Magento sales order has been created.", from);
 }
