@@ -2,15 +2,17 @@ import type { ReactNode } from "react";
 import { AccountSidebar } from "@/components/account-sidebar";
 import { SiteHeader } from "@/components/site-header";
 import { getCustomerContext } from "@/lib/magento/context";
-import { canUseCreditOrderScope } from "@/lib/magento/credit-orders";
+import { getCreditOrderScopeCount } from "@/lib/magento/credit-orders";
+import { getLatestCompanyOrderDate, hasCompanyOrderPlacedToday } from "@/lib/magento/orders";
 import { requireCustomerToken } from "@/lib/session";
 
 export default async function AccountLayout({ children }: { children: ReactNode }) {
   const token = await requireCustomerToken();
-  const [ctx, canApprove, canEnterPo] = await Promise.all([
+  const [ctx, approvalCount, poCount, latestSalesOrderDate] = await Promise.all([
     getCustomerContext(token),
-    canUseCreditOrderScope(token, "APPROVAL"),
-    canUseCreditOrderScope(token, "PO"),
+    getCreditOrderScopeCount(token, "APPROVAL"),
+    getCreditOrderScopeCount(token, "PO"),
+    getLatestCompanyOrderDate(token),
   ]);
   const selected = ctx.css_company_context.companies.find((company) => company.selected) || null;
   const name = `${ctx.customer.firstname} ${ctx.customer.lastname}`.trim();
@@ -22,8 +24,11 @@ export default async function AccountLayout({ children }: { children: ReactNode 
         name={name}
         email={ctx.customer.email}
         companies={ctx.css_company_context.companies}
-        showApprovals={canApprove}
-        showPoNumbers={canEnterPo}
+        showApprovals={approvalCount !== null}
+        showPoNumbers={poCount !== null}
+        approvalCount={approvalCount ?? 0}
+        poCount={poCount ?? 0}
+        recentSalesOrder={hasCompanyOrderPlacedToday(latestSalesOrderDate)}
       />
       {children}
     </main>

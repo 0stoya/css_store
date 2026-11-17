@@ -1,4 +1,4 @@
-import { magentoGraphQL } from "@/lib/magento/client";
+import { MagentoGraphQLError, magentoGraphQL } from "@/lib/magento/client";
 import type { CartMoney } from "@/lib/magento/cart";
 
 export type OrderOption = {
@@ -124,4 +124,46 @@ const COMPANY_ORDERS = /* GraphQL */ `
 
 export function getCompanyOrders(token: string, currentPage: number, pageSize = 10) {
   return magentoGraphQL<CompanyOrdersPage>(COMPANY_ORDERS, { currentPage, pageSize }, token);
+}
+
+
+/** Latest visible sales order, using the same Magento company/store/role scope
+ * as Order history. It is a "placed today" signal, NOT an unread counter.
+ * One order/date only; do not load the full history in every Account layout. */
+const LATEST_COMPANY_ORDER_DATE = /* GraphQL */ `
+  query StoreLatestCompanyOrderDate {
+    css_company_orders(currentPage: 1, pageSize: 1) {
+      items { order_date }
+    }
+  }
+`;
+
+export async function getLatestCompanyOrderDate(token: string): Promise<string | null> {
+  try {
+    const data = await magentoGraphQL<{
+      css_company_orders: { items: Array<{ order_date: string | null }> };
+    }>(LATEST_COMPANY_ORDER_DATE, {}, token);
+    return data.css_company_orders.items[0]?.order_date || null;
+  } catch (error) {
+    // This is optional navigation decoration: orders ACL or a temporary order
+    // query issue must not prevent customers accessing their account.
+    // Genuine invalid-token redirects from magentoGraphQL still propagate.
+    if (error instanceof MagentoGraphQLError) return null;
+    throw error;
+  }
+}
+
+/** Magento formats order_date as dd/mm/YYYY HH:mm:ss in its store timezone.
+ * Our UK storefront uses Europe/London; test calendar-day recency, not
+ * unread status (which would need a separate acknowledgement record). */
+export function hasCompanyOrderPlacedToday(orderDate: string | null, now: Date = new Date()): boolean {
+  const match = /^(\\d{2})\/(\\d{2})\/(\\d{4})(?:\\s|$)/.exec(orderDate || "");
+  if (!match) return false;
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Europe/London", day: "2-digit", month: "2-digit", year: "numeric",
+  }).formatToParts(now);
+  const today = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  return Number(match[1]) === Number(today.day)
+    && Number(match[2]) === Number(today.month)
+    && Number(match[3]) === Number(today.year);
 }

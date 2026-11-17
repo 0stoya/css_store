@@ -32,6 +32,9 @@ type AccountSidebarProps = {
   companies: SidebarCompany[];
   showApprovals?: boolean;
   showPoNumbers?: boolean;
+  approvalCount?: number;
+  poCount?: number;
+  recentSalesOrder?: boolean;
 };
 
 const operationalLinks: Array<{
@@ -64,14 +67,23 @@ function SidebarLink({
   label,
   Icon,
   active,
+  count,
+  countLabel,
+  recentToday = false,
+  countKind = "approval",
 }: {
   section: AccountSection;
   href: string;
   label: string;
   Icon: typeof LayoutDashboard;
   active: AccountSection;
+  count?: number;
+  countLabel?: string;
+  recentToday?: boolean;
+  countKind?: "approval" | "po";
 }) {
   const isActive = section === active;
+  const pending = typeof count === "number" && Number.isInteger(count) && count > 0 ? count : 0;
   return <Link
     className={`account-sidebar-link ${isActive ? "active" : ""}`}
     href={href}
@@ -79,7 +91,16 @@ function SidebarLink({
     prefetch
   >
     <Icon size={18} aria-hidden="true"/>
-    <span>{label}</span>
+    <span className="account-sidebar-link-label">{label}</span>
+    {pending > 0 ? <span
+      className={`account-sidebar-alert-count account-sidebar-alert-count-${countKind}`}
+      aria-label={`${pending} ${countLabel || "items waiting"}`}
+      title={`${pending} ${countLabel || "items waiting"}`}
+    >{pending > 99 ? "99+" : pending}</span> : null}
+    {recentToday ? <span className="account-sidebar-alert-recent"
+      aria-label="A sales order was placed today"
+      title="At least one visible sales order was placed today (not an unread count)"
+    >New</span> : null}
   </Link>;
 }
 
@@ -89,6 +110,9 @@ export function AccountSidebar({
   companies,
   showApprovals = false,
   showPoNumbers = false,
+  approvalCount = 0,
+  poCount = 0,
+  recentSalesOrder = false,
 }: AccountSidebarProps) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -112,6 +136,7 @@ export function AccountSidebar({
         label="Order history"
         Icon={PackageSearch}
         active={active}
+        recentToday={recentSalesOrder}
       />
 
       {showApprovals ? <SidebarLink
@@ -120,6 +145,9 @@ export function AccountSidebar({
         label="Order approvals"
         Icon={CheckCircle2}
         active={active}
+        count={approvalCount}
+        countLabel="orders awaiting purchase approval"
+        countKind="approval"
       /> : null}
 
       {showPoNumbers ? <SidebarLink
@@ -128,6 +156,9 @@ export function AccountSidebar({
         label="Awaiting PO numbers"
         Icon={FileCheck2}
         active={active}
+        count={poCount}
+        countLabel="approved orders awaiting PO numbers"
+        countKind="po"
       /> : null}
 
       {operationalLinks.slice(1).map(({ section, href, label, Icon }) => <SidebarLink

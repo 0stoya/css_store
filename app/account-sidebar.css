@@ -420,3 +420,55 @@
     animation: none;
   }
 }
+
+
+/* Live counters reflect each selected company's authorised queues.
+   "New" on sales orders means placed today; it is NOT an unread flag. */
+.account-sidebar-link-label {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.account-sidebar-alert-count,
+.account-sidebar-alert-recent {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  height: 23px;
+  border-radius: 999px;
+  white-space: nowrap;
+  font-size: .68rem;
+  line-height: 1;
+  font-weight: 850;
+}
+
+.account-sidebar-alert-count {
+  min-width: 23px;
+  padding: 0 6px;
+  font-variant-numeric: tabular-nums;
+}
+
+.account-sidebar-alert-count-approval {
+  border: 1px solid #efd28f;
+  color: #784c08;
+  background: #fff0c9;
+}
+
+.account-sidebar-alert-count-po {
+  border: 1px solid #b3d2f7;
+  color: #0056a4;
+  background: #e5f1ff;
+}
+
+.account-sidebar-alert-recent {
+  padding: 0 8px;
+  border: 1px solid #b8ddca;
+  color: #177044;
+  background: #e9f7ed;
+}
+
+.account-sidebar-link.active .account-sidebar-alert-count,
+.account-sidebar-link.active .account-sidebar-alert-recent {
+  box-shadow: 0 0 0 2px #fff;
+}
