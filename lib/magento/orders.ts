@@ -157,7 +157,7 @@ export async function getLatestCompanyOrderDate(token: string): Promise<string |
  * Our UK storefront uses Europe/London; test calendar-day recency, not
  * unread status (which would need a separate acknowledgement record). */
 export function hasCompanyOrderPlacedToday(orderDate: string | null, now: Date = new Date()): boolean {
-  const match = /^(\\d{2})\/(\\d{2})\/(\\d{4})(?:\\s|$)/.exec(orderDate || "");
+  const match = /^(\d{2})\/(\d{2})\/(\d{4})(?:\s|$)/.exec(orderDate || "");
   if (!match) return false;
   const parts = new Intl.DateTimeFormat("en-GB", {
     timeZone: "Europe/London", day: "2-digit", month: "2-digit", year: "numeric",
