@@ -1,6 +1,6 @@
 import { MagentoGraphQLError, magentoGraphQL } from "@/lib/magento/client";
 
-export type CreditOrderScope = "MY" | "COMPANY" | "APPROVAL";
+export type CreditOrderScope = "MY" | "COMPANY" | "APPROVAL" | "PO";
 
 export type CreditOrderActions = {
   can_view: boolean;
@@ -9,6 +9,7 @@ export type CreditOrderActions = {
   can_cancel: boolean;
   can_place_order: boolean;
   can_add_comment: boolean;
+  can_enter_po_number: boolean;
   requires_payment_details: boolean;
 };
 
@@ -112,6 +113,7 @@ const CREDIT_ORDER_FIELDS = /* GraphQL */ `
     can_cancel
     can_place_order
     can_add_comment
+    can_enter_po_number
     requires_payment_details
   }
 `;

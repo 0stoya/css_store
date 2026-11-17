@@ -6,6 +6,7 @@ import {
   Building2,
   CheckCircle2,
   ClipboardCheck,
+  FileCheck2,
   LayoutDashboard,
   LogOut,
   PackageSearch,
@@ -15,7 +16,7 @@ import {
 } from "lucide-react";
 import { logoutAction, selectCompanyAction } from "@/app/actions";
 
-export type AccountSection = "overview" | "orders" | "approvals" | "repeat-orders" | "credit-orders" | "returns";
+export type AccountSection = "overview" | "orders" | "approvals" | "po-numbers" | "repeat-orders" | "credit-orders" | "returns";
 
 type SidebarCompany = {
   company_id: number;
@@ -30,10 +31,11 @@ type AccountSidebarProps = {
   email: string;
   companies: SidebarCompany[];
   showApprovals?: boolean;
+  showPoNumbers?: boolean;
 };
 
 const operationalLinks: Array<{
-  section: Exclude<AccountSection, "overview" | "approvals">;
+  section: Exclude<AccountSection, "overview" | "approvals" | "po-numbers">;
   href: string;
   label: string;
   Icon: typeof LayoutDashboard;
@@ -50,6 +52,7 @@ function currentSection(pathname: string, scope: string | null, from: string | n
   if (pathname.startsWith("/account/returns")) return "returns";
   if (pathname.startsWith("/account/credit-orders")) {
     if (scope?.toUpperCase() === "APPROVAL" || from === "approvals") return "approvals";
+    if (scope?.toUpperCase() === "PO" || from === "po") return "po-numbers";
     return "credit-orders";
   }
   return "overview";
@@ -85,6 +88,7 @@ export function AccountSidebar({
   email,
   companies,
   showApprovals = false,
+  showPoNumbers = false,
 }: AccountSidebarProps) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -115,6 +119,14 @@ export function AccountSidebar({
         href="/account/credit-orders?scope=APPROVAL"
         label="Order approvals"
         Icon={CheckCircle2}
+        active={active}
+      /> : null}
+
+      {showPoNumbers ? <SidebarLink
+        section="po-numbers"
+        href="/account/credit-orders?scope=PO"
+        label="Awaiting PO numbers"
+        Icon={FileCheck2}
         active={active}
       /> : null}
 

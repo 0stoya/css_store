@@ -28,5 +28,8 @@
   },
   "engines": {
     "node": ">=22.5.0"
+  },
+  "overrides": {
+    "csstype": "3.2.3"
   }
 }
