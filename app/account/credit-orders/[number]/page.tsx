@@ -18,6 +18,7 @@ import {
   creditOrderActivityPresentation,
   creditOrderActorLabel,
   creditOrderMethodLabel,
+  isOutdatedCreditConversionError,
   formatCreditOrderDateTime,
   readableCreditOrderStatus,
 } from "../presentation";
@@ -49,6 +50,13 @@ export default async function CreditOrderPage({
     canUseCreditOrderScope(token, "PO"),
   ]);
   const order = data.css_credit_order;
+  // URL error banners are historical responses, not authoritative order state.
+  // A later queue conversion may have created a real sales order.
+  const staleConversionError = isOutdatedCreditConversionError(
+    order.status,
+    order.order_id,
+    messages.error,
+  );
   const currentUser = data.css_company_context.selected_company_user_id;
   const canPlace = order.actions.can_place_order && !order.actions.requires_payment_details;
   const missingPoCandidate = order.actions.can_enter_po_number;
@@ -217,7 +225,8 @@ export default async function CreditOrderPage({
       <Link className="button secondary" href={backHref}><ArrowLeft size={16} aria-hidden="true"/>{backLabel}</Link>
     </header>
 
-    {messages.error ? <p className="error" role="alert">{messages.error}</p> : null}
+    {messages.error && !staleConversionError ? <p className="error" role="alert">{messages.error}</p> : null}
+    {staleConversionError ? <p className="success" role="status">Sales order {order.order_number || ""} created.</p> : null}
     {messages.notice ? <p className="success" role="status">{messages.notice}</p> : null}
     {order.actions.requires_payment_details ? <div className={styles.warning} role="status">
       <strong>Payment details are required before this order can be completed.</strong>
