@@ -18,3 +18,17 @@ export async function loginCustomer(email: string, password: string) {
 export async function revokeCustomerToken(token: string) {
   try { await magentoGraphQL(REVOKE, {}, token); } catch { /* local logout still succeeds */ }
 }
+
+const RESET_PASSWORD = /* GraphQL */ `
+  mutation StoreResetCustomerPassword($email: String!, $resetPasswordToken: String!, $newPassword: String!) {
+    resetPassword(email: $email, resetPasswordToken: $resetPasswordToken, newPassword: $newPassword)
+  }
+`;
+
+export async function resetCustomerPassword(email: string, resetPasswordToken: string, newPassword: string) {
+  const data = await magentoGraphQL<{ resetPassword: boolean }>(
+    RESET_PASSWORD,
+    { email, resetPasswordToken, newPassword },
+  );
+  return data.resetPassword === true;
+}
