@@ -2,10 +2,10 @@
 
 import Link from "next/link";
 import { useActionState } from "react";
-import { setPasswordAction, INITIAL_PASSWORD_SETUP_RESULT } from "./actions";
+import { setPasswordAction } from "./actions";
 
 export function ResetPasswordForm({ email, token }: { email: string; token: string }) {
-  const [state, action, pending] = useActionState(setPasswordAction, INITIAL_PASSWORD_SETUP_RESULT);
+  const [state, action, pending] = useActionState(setPasswordAction, { success: false, error: null });
 
   if (state.success) {
     return <div className="stack" role="status">
