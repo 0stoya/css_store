@@ -4,11 +4,6 @@ import { resetCustomerPassword } from "@/lib/magento/auth";
 
 export type PasswordSetupResult = { success: boolean; error: string | null };
 
-export const INITIAL_PASSWORD_SETUP_RESULT: PasswordSetupResult = {
-  success: false,
-  error: null,
-};
-
 export async function setPasswordAction(
   _previous: PasswordSetupResult,
   formData: FormData,
