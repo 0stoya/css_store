@@ -44,6 +44,7 @@ function clientFor(response) {
           storeCode: "default",
         }) };
       }
+      if (name === "@/lib/magento/order-channel") return { orderChannelHeaders: () => ({}) };
       throw new Error("Unmocked dependency: " + name);
     },
     fetch: async () => response,
