@@ -21,10 +21,10 @@ function detailRedirect(
   const query = new URLSearchParams({ [kind]: message });
   if (from === "approvals") query.set("from", "approvals");
   if (from === "po") {
-    if (kind === "notice") {
-      redirect(`/account/credit-orders?scope=PO&${query.toString()}`);
-    }
-    query.set("from", "po");
+    // After a PO is saved, the clerk can lose detail-view permission even if
+    // subsequent Magento order conversion fails. Never send a clerk back to
+    // an inaccessible order detail, regardless of success or uncertainty.
+    redirect(`/account/credit-orders?scope=PO&${query.toString()}`);
   }
   redirect(`/account/credit-orders/${encodeURIComponent(number)}?${query.toString()}`);
 }
@@ -181,7 +181,7 @@ export async function setCreditOrderPurchaseOrderNumberAction(formData: FormData
     detailRedirect(
       number,
       "error",
-      "The PO outcome could not be confirmed. Check the credit order or order history before retrying.",
+      "PO outcome unconfirmed. An administrator must check whether the PO was saved and whether a sales order exists before anyone retries.",
       from,
     );
   }
