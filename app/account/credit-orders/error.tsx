@@ -8,7 +8,7 @@ export default function CreditOrdersError({ reset }: { error: Error & { digest?:
       <p className="muted">The current credit-order view could not be loaded safely.</p>
     </header>
     <section className="card basket-card stack">
-      <p className="error">No credit-order action has been performed. Retry before continuing.</p>
+      <p className="error">This view could not be loaded. An earlier PO or order action may still have been saved. Check its status before submitting anything again.</p>
       <div><button className="button" type="button" onClick={() => reset()}>Retry credit orders</button></div>
     </section>
   </section>;

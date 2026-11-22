@@ -121,12 +121,12 @@ test("PO clerk queue and precise capability are separate from purchasing approva
   assert.doesNotMatch(actions.slice(actions.indexOf("export async function setCreditOrderPurchaseOrderNumberAction")), /current\.actions\.can_reject/);
 });
 
-test("PO clerk is returned to the PO queue after entry, not an inaccessible order detail", () => {
+test("PO clerk is returned to the PO queue after any outcome, not an inaccessible order detail", () => {
   const actions = source("app/account/credit-orders/actions.ts");
   const detail = source("app/account/credit-orders/[number]/page.tsx");
   assert.match(actions, /if \(from === "po"\)/);
-  assert.match(actions, /kind === "notice"/);
   assert.match(actions, /scope=PO&/);
+  assert.doesNotMatch(actions, /if \(kind === "notice"\)/);
   assert.match(detail, /Back to PO queue/);
 });
 
