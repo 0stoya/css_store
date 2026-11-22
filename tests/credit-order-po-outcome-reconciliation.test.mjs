@@ -35,7 +35,11 @@ function fixture({ mutation, readback } = {}) {
       unstable_rethrow: () => {},
     },
     "@/lib/magento/credit-orders": {
-      getCreditOrder: async () => (++reads === 1 ? initial : readback),
+      getCreditOrder: async () => {
+        const result = ++reads === 1 ? initial : readback;
+        if (result instanceof Error) throw result;
+        return result;
+      },
       setCreditOrderPurchaseOrderNumber: async () => {
         if (mutation instanceof Error) throw mutation;
         return mutation;
@@ -96,9 +100,9 @@ test("unconfirmed PO outcome never promises a created order or encourages immedi
     }},
   });
   const url = await redirectTarget(actions.setCreditOrderPurchaseOrderNumberAction(form()));
-  assert.equal(url.pathname, "/account/credit-orders/000000012");
-  assert.equal(url.searchParams.get("from"), "po");
-  assert.match(url.searchParams.get("error"), /outcome could not be confirmed.*before retrying/);
+  assert.equal(url.pathname, "/account/credit-orders");
+  assert.equal(url.searchParams.get("scope"), "PO");
+  assert.match(url.searchParams.get("error"), /PO outcome unconfirmed.*administrator.*before anyone retries/);
   assert.doesNotMatch(url.search, /internal%20Magento/);
 });
 
@@ -120,4 +124,28 @@ test("completed sales order takes precedence over stale quote-conversion URL err
   const page = readFileSync(new URL("../app/account/credit-orders/[number]/page.tsx", import.meta.url), "utf8");
   assert.match(page, /messages\.error && !staleConversionError/);
   assert.match(page, /staleConversionError \? <p className="success"/);
+});
+
+test("after saving PO, unreadable detail cannot redirect clerk to inaccessible order", async () => {
+  const { actions, paths, reads } = fixture({
+    mutation: new Error("Magento conversion failed after PO saved"),
+    // PO-only staff lose access to this record as soon as it stops being
+    // missing-PO. This GraphQL denial is expected, not proof of failed save.
+    readback: new Error('The action "view" is not allowed for this credit order.'),
+  });
+  const url = await redirectTarget(actions.setCreditOrderPurchaseOrderNumberAction(form()));
+  assert.equal(url.pathname, "/account/credit-orders");
+  assert.equal(url.searchParams.get("scope"), "PO");
+  assert.match(url.searchParams.get("error"), /outcome unconfirmed.*administrator.*before anyone retries/);
+  assert.equal(url.searchParams.get("notice"), null);
+  assert.equal(reads(), 2);
+  assert.deepEqual(paths, [["/account", "layout"]]);
+  assert.doesNotMatch(url.toString(), /Magento conversion failed|action.*view/i);
+});
+
+test("PO list/read error never claims no action was performed", () => {
+  const screen = readFileSync(new URL("../app/account/credit-orders/error.tsx", import.meta.url), "utf8");
+  assert.doesNotMatch(screen, /No credit-order action has been performed/);
+  assert.match(screen, /An earlier PO or order action may still have been saved/);
+  assert.match(screen, /before submitting anything again/);
 });
