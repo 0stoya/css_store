@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { getMagentoConfig } from "@/lib/config";
+import { orderChannelHeaders } from "@/lib/magento/order-channel";
 
 type GraphQLErrorItem = { message?: string; extensions?: { category?: string } };
 type GraphQLBody<T> = { data?: T; errors?: GraphQLErrorItem[] };
@@ -82,6 +83,7 @@ export async function magentoGraphQL<T>(query: string, variables: Record<string,
         Store: storeCode,
         "Content-Type": "application/json",
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...orderChannelHeaders(operation, variables),
       },
       body: JSON.stringify({ query, variables }),
       cache: "no-store",
