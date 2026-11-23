@@ -7,9 +7,11 @@ import { BasketNavLink } from "@/components/basket-nav-link";
 import { CatalogueSearch } from "@/components/catalogue-search";
 import { ProductMegaMenu } from "@/components/product-mega-menu";
 import { getAdminPortalUrl, getStoreName } from "@/lib/config";
+import { canManageSelectedCompany } from "@/lib/magento/manage-navigation";
+import { getCustomerToken } from "@/lib/session";
 import type { MenuCategory } from "@/lib/magento/menu-categories";
 
-export function SiteHeader({
+export async function SiteHeader({
   customerName,
   companyName,
   basketQuantity,
@@ -22,6 +24,11 @@ export function SiteHeader({
   menuCategories?: MenuCategory[];
   hasPendingAccountActions?: boolean;
 }) {
+  // The selected-company capability is checked on the server, not inferred
+  // from a role label or who can shop. Portal actions enforce their own ACL.
+  const token = customerName ? await getCustomerToken() : null;
+  const canManage = token ? await canManageSelectedCompany(token) : false;
+
   return <>
     <header className="site-header">
       <a className="skip-link" href="#main-content-start">Skip to main content</a>
@@ -41,7 +48,7 @@ export function SiteHeader({
           <Search size={17} strokeWidth={2.1} aria-hidden="true"/>
         </Link> : null}
         {customerName ? <BasketNavLink initialQuantity={basketQuantity}/> : null}
-        {customerName ? <a className="store-nav-link" href={`${getAdminPortalUrl()}/api/auth/sso/start`}>
+        {customerName && canManage ? <a className="store-nav-link" href={`${getAdminPortalUrl()}/api/auth/sso/start`}>
           <Settings size={16} strokeWidth={2.1} aria-hidden="true"/>
           <span>Manage</span>
         </a> : null}
