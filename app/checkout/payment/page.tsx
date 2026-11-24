@@ -95,7 +95,7 @@ export default async function PaymentPage({
         <div>
           <p className="eyebrow">Checkout</p>
           <h1>Review & submit</h1>
-          <p className="muted">Review delivery, choose payment and submit your order.</p>
+          <p className="muted">Review delivery{methods.length > 1 ? ", choose payment" : ""} and submit your order.</p>
         </div>
         <Link className="button secondary payment-back" href="/checkout/delivery">
           <ArrowLeft size={16} aria-hidden="true"/>
@@ -117,10 +117,15 @@ export default async function PaymentPage({
           <section className="card payment-card">
             <div className="checkout-card-intro">
               <h2>Payment method</h2>
-              <p>Choose from the payment options available for this order.</p>
+              {methods.length > 1 ? <p>Choose from the payment options available for this order.</p> : null}
             </div>
 
-            {methods.length ? <div className="payment-method-list" role="radiogroup" aria-label="Payment method">
+            {methods.length === 1 ? <div className="payment-method-option payment-method-fixed">
+              <span className="payment-method-icon"><WalletCards size={19} aria-hidden="true"/></span>
+              <span className="payment-method-copy"><strong>{methods[0].title}</strong></span>
+              <input type="hidden" name="payment_method" value={methods[0].code} disabled={!ready}/>
+              <span className="payment-radio-mark" aria-label="Selected"><Check size={14}/></span>
+            </div> : methods.length ? <div className="payment-method-list" role="radiogroup" aria-label="Payment method">
               {methods.map((method) => {
                 const selected = cart.selected_payment_method?.code === method.code;
                 return <label className="payment-method-option" key={method.code}>
