@@ -17,6 +17,7 @@ import { assertNormalCheckoutSession } from "@/lib/punchout/guard";
 import { assertEmployeeDeliveryReviewComplete } from "@/lib/employee-delivery-review";
 import { assertControlledCartReady } from "@/lib/controlled-employee-delivery";
 import { assertEmployeeCatalogueCartReady } from "@/lib/employee-catalogue";
+import { checkCompanyDeliveryAtPayment } from "@/lib/company-delivery-policy";
 
 function paymentRedirect(kind: "error" | "notice", value: string, poRequired = false): never {
   const params = new URLSearchParams({ [kind]: value });
@@ -94,6 +95,7 @@ export async function preparePaymentAction() {
     await assertEmployeeCatalogueCartReady(token, cart.id);
     await assertEmployeeDeliveryReviewComplete(cart.id);
     const policy = await assertControlledCartReady(token, cart.id);
+    await checkCompanyDeliveryAtPayment(token, context, "review");
     if (policy.controlled) {
       await setBillingSavedAddress(token, cart.id, policy.addressId);
     } else {
@@ -146,6 +148,7 @@ export async function completeCheckoutAction(formData: FormData) {
     const initialPolicy = await assertControlledCartReady(token, initialCart.id);
     const paymentMethod = initialCart.available_payment_methods.find((method) => method.code === paymentCode);
     if (!paymentMethod) throw new Error("That payment method is no longer available for this basket.");
+    const normalisedBook = await checkCompanyDeliveryAtPayment(token, initial, "normalise");
 
     // In controlled mode, the first shipping street line contains an
     // order-only recipient; billing instead uses the original manager-owned
@@ -168,6 +171,10 @@ export async function completeCheckoutAction(formData: FormData) {
     await assertEmployeeDeliveryReviewComplete(cart.id);
     await assertControlledCartReady(token, cart.id);
     if (cart.id !== initialCart.id) throw new Error("Your basket changed during checkout. Review it and try again.");
+    if (current.css_company_context?.selected_company_id !== initial.css_company_context?.selected_company_id
+      || current.css_company_context?.customer_id !== initial.css_company_context?.customer_id) {
+      throw new Error("Your company changed during checkout. Return to delivery.");
+    }
     if (!cart.available_payment_methods.some((method) => method.code === paymentMethod.code)) {
       throw new Error("That payment method is no longer available for this basket.");
     }
@@ -175,6 +182,7 @@ export async function completeCheckoutAction(formData: FormData) {
       throw new Error("Magento did not retain the selected payment method.");
     }
 
+    await checkCompanyDeliveryAtPayment(token, current, "final", normalisedBook);
     if (current.css_ordering_capabilities.can_submit_credit_order) {
       const result = await submitCreditOrder(token, cart.id);
       redirect(confirmationUrl({

@@ -139,7 +139,7 @@ test("controlled mode hides Magento address list and blocks all unapproved write
   const graphql = source("lib/magento/shipping.ts");
   const billing = source("lib/magento/checkout.ts");
   const store = source("lib/employee-delivery-address.ts");
-  assert.match(page, /controlled \? \([\s\S]*?Assigned Employee delivery[\s\S]*?: \([\s\S]*?delivery\.customer\.addresses\.map/);
+  assert.match(page, /controlled \? \([\s\S]*?Assigned Employee delivery[\s\S]*?: \([\s\S]*?allowedAddresses\.map/);
   assert.match(page, /confirmControlledEmployeeDeliveryAction/);
   assert.match(page, /controlledReady && !deliveryReviewPending/);
   assert.match(actions, /export async function confirmControlledEmployeeDeliveryAction/);
@@ -170,6 +170,10 @@ function checkoutActionFixture() {
     },
   };
   const actions = loadTypeScript(root, "app/checkout/delivery/actions.ts", {
+    "@/lib/company-delivery-policy": {
+      readCompanyDeliveryPolicy: async () => ({ mode: "UNRESTRICTED", addressBookLocked: false }),
+      assertCompanySavedAddress: () => {}, assertCompanyNewAddress: () => {}, assertCompanyCartDestination: async () => {},
+    },
     "@/lib/punchout/guard": { assertNormalCheckoutSession: async () => {} },
     "next/navigation": {
       redirect: (url) => { throw new Navigation(url); },

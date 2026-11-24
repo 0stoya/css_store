@@ -55,6 +55,12 @@ function fixture({ addresses = [address], existing = null, company = 3, employee
     },
     "@/lib/magento/employee": { getEmployeeOrdering: async () => ({ usesEmployee: true, multiEmployeeBasket: false, employees: [{ employee_id: 7 }] }) },
     "@/lib/session": { requireCustomerToken: async () => "token" },
+    "@/lib/company-delivery-policy": {
+      readCompanyDeliveryPolicy: async () => ({ mode: "UNRESTRICTED", addressBookLocked: false }),
+      companyDefaultAddress: (context) => helpers.defaultSavedAddress(context.customer.addresses),
+      companyDestinationReady: () => true,
+      assertCompanyCartDestination: async () => {},
+    },
     "@/lib/punchout/guard": { assertNormalCheckoutSession: async () => { if (punchout) throw new Error("PunchOut"); } },
     "@/lib/employee-delivery-review": { assertEmployeeDeliveryReviewComplete: async () => { if (pending) throw new Error("Confirm Employee delivery"); } },
     "@/lib/controlled-employee-delivery": {

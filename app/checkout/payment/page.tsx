@@ -21,6 +21,7 @@ import { requireCustomerToken } from "@/lib/session";
 import { redirect } from "next/navigation";
 import { assertNormalCheckoutSession } from "@/lib/punchout/guard";
 import { completeCheckoutAction } from "./actions";
+import { checkCompanyDeliveryAtPayment } from "@/lib/company-delivery-policy";
 
 export const metadata = { title: "Review & submit" };
 
@@ -78,12 +79,18 @@ export default async function PaymentPage({
     && assignedIds.length > 0
     && assignedIds.every((id) => id === assignedIds[0])
   );
-  const ready = canCheckout
+  const baseReady = canCheckout
     && employeeReady
     && nativeApprovalAllowed
     && cart.total_quantity > 0
     && Boolean(shippingAddress && shippingMethod)
     && methods.length > 0;
+  let deliveryPolicyError = false;
+  if (baseReady) {
+    try { await checkCompanyDeliveryAtPayment(token, checkout, "review"); }
+    catch { deliveryPolicyError = true; }
+  }
+  const ready = baseReady && !deliveryPolicyError;
   const submitLabel = checkoutSubmitLabel(usesCreditOrder, cart.css_purchase_eligibility?.approval_status);
 
   return <>
@@ -105,6 +112,7 @@ export default async function PaymentPage({
 
       {messages.error ? <p className="error" role="alert">{messages.error}</p> : null}
       {messages.notice ? <p className="success" role="status">{messages.notice}</p> : null}
+      {deliveryPolicyError ? <p className="error" role="alert">Delivery could not be verified against your company settings. <Link href="/checkout/delivery">Return to delivery</Link>.</p> : null}
 
       {!cart.total_quantity ? <section className="empty card"><h2>Your basket is empty</h2><p><Link className="button" href="/catalogue">Browse products</Link></p></section> : null}
       {cart.total_quantity > 0 && !canCheckout ? <p className="error" role="alert">This company is not currently able to place this order.</p> : null}

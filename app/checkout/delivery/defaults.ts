@@ -9,6 +9,7 @@ import { assertNormalCheckoutSession } from "@/lib/punchout/guard";
 import { assertEmployeeDeliveryReviewComplete } from "@/lib/employee-delivery-review";
 import { assertControlledCartReady, controlledDeliveryApplies, selectedCartEmployeeId } from "@/lib/controlled-employee-delivery";
 import { assertEmployeeCatalogueCartReady } from "@/lib/employee-catalogue";
+import { readCompanyDeliveryPolicy, companyDefaultAddress, companyDestinationReady, assertCompanyCartDestination } from "@/lib/company-delivery-policy";
 
 function singleEmployee(context: DeliveryContext) {
   const config = context.css_company_employee_configuration;
@@ -65,11 +66,15 @@ export async function applyCheckoutDefaultsAction(formData: FormData) {
     await assertEmployeeCatalogueCartReady(token, cartId);
     // Employee addresses have their own existing assignment/recipient flow.
     // Never substitute a buyer's personal default for an Employee destination.
-    if (!singleEmployee(context) && context.customerCart.shipping_addresses.length === 0) {
-      const address = defaultSavedAddress(context.customer.addresses);
+    let policy = await readCompanyDeliveryPolicy(context);
+    if (!singleEmployee(context) && (context.customerCart.shipping_addresses.length === 0
+      || (policy.mode !== "UNRESTRICTED" && !companyDestinationReady(context, policy, false, null)))) {
+      const address = companyDefaultAddress(context, policy);
       if (address) {
         await setSavedShippingAddress(token, cartId, address.id);
         context = await read();
+        policy = await readCompanyDeliveryPolicy(context);
+        await assertCompanyCartDestination(context, policy);
         if (!sameAddress(address, context.customerCart.shipping_addresses[0])) {
           throw new Error("Magento did not retain the default delivery address. Please select an address.");
         }
@@ -78,6 +83,7 @@ export async function applyCheckoutDefaultsAction(formData: FormData) {
 
     const method = soleUnselectedShippingMethod(context.customerCart.shipping_addresses[0] || null);
     if (method) {
+      await assertCompanyCartDestination(context, policy);
       if (await controlledDeliveryApplies(context)) {
         await assertControlledCartReady(token, cartId);
       }

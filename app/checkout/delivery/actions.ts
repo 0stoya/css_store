@@ -18,6 +18,7 @@ import {
   selectedCartEmployeeId,
 } from "@/lib/controlled-employee-delivery";
 import { clearEmployeeDeliveryReview } from "@/lib/employee-delivery-review";
+import { readCompanyDeliveryPolicy, assertCompanySavedAddress, assertCompanyNewAddress, assertCompanyCartDestination } from "@/lib/company-delivery-policy";
 
 function text(formData: FormData, key: string, required = true) {
   const value = String(formData.get(key) || "").trim();
@@ -62,6 +63,7 @@ export async function selectSavedShippingAddressAction(formData: FormData) {
       throw new Error("That saved delivery address is not available to this customer.");
     }
 
+    assertCompanySavedAddress(context, await readCompanyDeliveryPolicy(context), addressId);
     await setSavedShippingAddress(token, cart.id, addressId);
     await clearEmployeeDeliveryReview();
   } catch (error) {
@@ -86,6 +88,7 @@ export async function setNewShippingAddressAction(formData: FormData) {
     const region = text(formData, "region", false);
     const company = text(formData, "company", false);
     const saveInAddressBook = String(formData.get("save_in_address_book") || "") === "1";
+    assertCompanyNewAddress(await readCompanyDeliveryPolicy(context), saveInAddressBook);
 
     await setNewShippingAddress(token, cart.id, {
       firstname: text(formData, "firstname"),
@@ -138,6 +141,7 @@ export async function confirmControlledEmployeeDeliveryAction(formData: FormData
     if (!address) {
       throw new Error("No delivery address is assigned to this Employee. Contact your company administrator.");
     }
+    assertCompanySavedAddress(delivery, await readCompanyDeliveryPolicy(delivery), address.id);
     const recipient = text(formData, "recipient_name");
     await setNewShippingAddress(token, cart.id, cartOnlyRecipientAddress(address, recipient));
     // Verify Magento retained the recipient and exact assigned physical
@@ -146,6 +150,13 @@ export async function confirmControlledEmployeeDeliveryAction(formData: FormData
     if (!confirmed.controlled || confirmed.addressId !== address.id) {
       throw new Error("Magento did not retain the assigned delivery destination.");
     }
+    const updated = await getDeliveryContext(token);
+    if (updated.customerCart.id !== cart.id ||
+      updated.css_company_context.selected_company_id !== delivery.css_company_context.selected_company_id ||
+      updated.css_company_context.customer_id !== delivery.css_company_context.customer_id) {
+      throw new Error("Your basket or company changed. Review delivery.");
+    }
+    await assertCompanyCartDestination(updated, await readCompanyDeliveryPolicy(updated));
     await clearEmployeeDeliveryReview();
   } catch (error) {
     failure = message(error);
@@ -175,6 +186,7 @@ export async function selectShippingMethodAction(formData: FormData) {
       throw new Error("That delivery method is no longer available for this basket.");
     }
 
+    await assertCompanyCartDestination(context, await readCompanyDeliveryPolicy(context));
     await setShippingMethod(token, cart.id, carrierCode, methodCode);
   } catch (error) {
     failure = message(error);

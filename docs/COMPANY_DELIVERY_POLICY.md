@@ -1,0 +1,18 @@
+# Company delivery policy — CSS Store
+
+Companion CSS Admin #184 / issue #181. One company policy read from the existing Admin database, using the existing dedicated SELECT-only connection CSS_STORE_EMPLOYEE_ADDRESS_DATABASE_URL. Mandatory: install the exact Admin migration and grants in the matching deployment's database before deploying this Store code. An absent row is unrestricted, but DB/schema/grant failure is a checkout hold, never unrestricted. Do not point Demo at Live policy rows or vice versa. Do not enable Admin policy writes before every Store instance enforces the policy.
+
+## Enforcement
+- Unrestricted: existing saved/new address behaviour.
+- Approved addresses only: live current buyer-owned saved Magento address records, no new address form or posted custom destination.
+- Default address only: exactly one valid Magento default_shipping=true record; missing/ambiguous default holds. No arbitrary fallback. Existing Employee assignment and controlled recipient guards remain authoritative as well; incompatible assignment holds, no alternate fallback.
+- Both restricted modes compare actual quote destination including address lines, country, region, city, postcode, name, company and telephone. No address-copy table or stored digests. The only exception is the verified Employee cart-only Attn line.
+- A restricted membership locks address-book saving even if another company is selected. Existing one-off address is still allowed under unrestricted company policy but may not be saved. Before final payment/submit, a locked buyer's quote is reapplied using a verified native saved address ID or explicit cart-only save_in_address_book:false. If necessary restore the exact available rate; compare address, rate, quantity and totals, hold on any change. No writes during GET/read review. Verify the native billing/quote save behavior on Demo; Magento does not expose the original save flag in the current GraphQL projection.
+- Recheck current company/cart/customer and live policy at payment preparation and immediately before native or credit order submission. No automatic order or PO bypass. Delayed credit conversion after acceptance and native Magento/Hyva/API writes are outside this Store-only boundary. External address edits become the live permitted list. No cross-system transaction is claimed for concurrent native edits between verification and Magento submission.
+
+## Release HOLD
+On exact clean PR checkout run node --test tests/*.test.mjs, yarn typecheck, yarn lint, yarn build. Before activation run a full tracked-source mutation inventory (see below); code-search connector did not provide a complete tree. Any additional customer address mutation or direct order/cart path outside audited normal checkout must be reviewed and covered before release. PunchOut and Kiosk stay unchanged.
+```bash
+git grep -nE 'createCustomerAddress|updateCustomerAddress|deleteCustomerAddress|save_in_address_book|setShippingAddressesOnCart|setBillingAddressOnCart|placeOrder\\(|cssSubmitCreditOrder|setSavedShippingAddress\\(|setNewShippingAddress\\(' -- app lib components || true
+```
+Run existing-company Demo tests with existing buyers (including multiple memberships), unrestricted, approved-only multiple, default-only, no default, direct altered forms, previously selected custom quote, deleted/edited saved destination, stale cart, controlled Employee conflict/recipient, native and credit/PO, zero unintended address-book additions, exact totals. Verify existing Magento 2.4.9 and 2.4.7 GraphQL region/address readback. No Magento schema or Commerce ZIP. Rollback only after authorized policy restoration and verified zero restricted companies; never bypass active policy.

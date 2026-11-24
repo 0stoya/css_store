@@ -17,6 +17,7 @@ import { requireCustomerToken } from "@/lib/session";
 import { assertNormalCheckoutSession } from "@/lib/punchout/guard";
 import { controlledDeliveryApplies } from "@/lib/controlled-employee-delivery";
 import { assertEmployeeCatalogueAssignment } from "@/lib/employee-catalogue";
+import { readCompanyDeliveryPolicy, assertCompanySavedAddress } from "@/lib/company-delivery-policy";
 
 function errorMessage(error: unknown) {
   unstable_rethrow(error);
@@ -52,6 +53,7 @@ export async function selectCheckoutEmployeeAction(formData: FormData) {
 
     // If the policy cannot be read, do not fall back to open address selection.
     const controlled = await controlledDeliveryApplies(delivery);
+    const companyPolicy = await readCompanyDeliveryPolicy(delivery);
     await assertEmployeeCatalogueAssignment(token, employeeId, cart.id);
     await assignCartEmployee(token, cart.id, employeeId);
     // Changing beneficiary never silently approves the previous destination.
@@ -67,6 +69,7 @@ export async function selectCheckoutEmployeeAction(formData: FormData) {
         delivery.customer.addresses.map((address) => address.id),
       );
       if (ownedId !== null) {
+        assertCompanySavedAddress(delivery, companyPolicy, ownedId);
         await setSavedShippingAddress(token, cart.id, ownedId);
         if (controlled) {
           // The location is assigned, but an actual recipient is mandatory.

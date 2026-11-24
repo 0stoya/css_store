@@ -37,6 +37,8 @@ export type CheckoutContext = {
     lastname: string;
   };
   css_company_context: {
+    customer_id: number | null;
+    selected_company_id: number | null;
     companies: Array<{
       company_id: number;
       name: string | null;
@@ -87,6 +89,8 @@ const CHECKOUT_CONTEXT = /* GraphQL */ `
   query StoreReviewPage {
     customer { firstname lastname }
     css_company_context {
+      customer_id
+      selected_company_id
       companies {
         company_id
         name

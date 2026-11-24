@@ -50,6 +50,10 @@ class Navigation extends Error {
 function actionFixture(mappedId, ownedAddresses, controlled = false) {
   const calls = [];
   const actions = load(root, "app/checkout/employee/actions.ts", {
+    "@/lib/company-delivery-policy": {
+      readCompanyDeliveryPolicy: async () => ({ mode: "UNRESTRICTED", addressBookLocked: false }),
+      assertCompanySavedAddress: () => {},
+    },
     "@/lib/punchout/guard": { assertNormalCheckoutSession: async () => {} },
     "next/navigation": {
       redirect: (url) => { throw new Navigation(url); },
