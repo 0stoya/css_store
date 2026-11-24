@@ -35,6 +35,40 @@
   margin-bottom: 0;
 }
 
+/* Only the two checkout screens: keep the stepper and existing card layout,
+   but remove the duplicated hero spacing. Do not shrink the back-button target. */
+.delivery-page.stack,
+.payment-page.stack {
+  gap: 16px;
+  padding-top: 32px;
+}
+
+.delivery-page > nav > .checkout-progress,
+.payment-page > nav > .checkout-progress {
+  margin-bottom: 0;
+}
+
+.checkout-heading.checkout-heading-compact {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 16px;
+  margin: 0;
+}
+
+.checkout-heading.checkout-heading-compact h1 {
+  flex: 1 1 auto;
+  min-width: 0;
+  margin: 0;
+  font-size: clamp(1.35rem, 2.2vw, 1.75rem);
+  line-height: 1.2;
+}
+
+.checkout-heading-compact .button {
+  flex: 0 0 auto;
+}
+
 .checkout-back,
 .delivery-back,
 .payment-back {
@@ -234,6 +268,12 @@
 
   .checkout-heading {
     align-items: stretch;
+  }
+
+  .delivery-page.stack,
+  .payment-page.stack {
+    padding-top: 24px;
+    gap: 12px;
   }
 
   .checkout-confirmation-page {

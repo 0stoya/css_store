@@ -98,17 +98,13 @@ export default async function PaymentPage({
     <main className="shell stack payment-page">
       <CheckoutSteps current="payment"/>
 
-      <div className="basket-heading checkout-heading">
-        <div>
-          <p className="eyebrow">Checkout</p>
-          <h1>Review & submit</h1>
-          <p className="muted">Review delivery{methods.length > 1 ? ", choose payment" : ""} and submit your order.</p>
-        </div>
+      <header className="checkout-heading checkout-heading-compact">
+        <h1>Review &amp; submit</h1>
         <Link className="button secondary payment-back" href="/checkout/delivery">
           <ArrowLeft size={16} aria-hidden="true"/>
           <span>Back to details</span>
         </Link>
-      </div>
+      </header>
 
       {messages.error ? <p className="error" role="alert">{messages.error}</p> : null}
       {messages.notice ? <p className="success" role="status">{messages.notice}</p> : null}
