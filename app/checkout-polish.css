@@ -78,6 +78,56 @@
   gap: 7px;
 }
 
+/* Compact pending states: no giant checkout heading or duplicated explanations. */
+.checkout-loading-page {
+  padding-top: 32px;
+}
+
+.checkout-loading-status {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 52px;
+  padding: 12px 16px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--ink-strong);
+  font-size: .95rem;
+  font-weight: 600;
+}
+
+.checkout-loading-spinner {
+  flex: 0 0 auto;
+  color: var(--blue);
+  animation: checkout-loading-spin .9s linear infinite;
+}
+
+@keyframes checkout-loading-spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .checkout-loading-spinner {
+    animation: none;
+  }
+}
+
+.checkout-defaults-pending {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.checkout-defaults-pending .checkout-loading-status {
+  padding: 0;
+  min-height: 0;
+  border: 0;
+  background: transparent;
+}
+
 .checkout-forward {
   justify-content: space-between;
   gap: 14px;

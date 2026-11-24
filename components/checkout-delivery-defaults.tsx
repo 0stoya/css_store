@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { useFormStatus } from "react-dom";
+import { LoaderCircle } from "lucide-react";
 import { applyCheckoutDefaultsAction } from "@/app/checkout/delivery/defaults";
 
 function ApplyButton() {
@@ -23,9 +24,11 @@ export function CheckoutDeliveryDefaults({ cartId, companyId, customerId }: {
     started.current = true;
     form.current.requestSubmit();
   }, []);
-  return <section className="card delivery-card" aria-label="Preparing delivery">
-    <h2>Preparing delivery</h2>
-    <p className="muted small">Applying your available delivery defaults.</p>
+  return <section className="card delivery-card checkout-defaults-pending" aria-label="Preparing delivery">
+    <div className="checkout-loading-status" role="status">
+      <LoaderCircle className="checkout-loading-spinner" size={20} aria-hidden="true" />
+      <span>Preparing delivery…</span>
+    </div>
     <form ref={form} action={applyCheckoutDefaultsAction}>
       <input type="hidden" name="cart_id" value={cartId}/>
       <input type="hidden" name="company_id" value={companyId}/>
