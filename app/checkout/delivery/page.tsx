@@ -161,19 +161,13 @@ export default async function DeliveryPage({
     <main className="shell stack delivery-page">
       <CheckoutSteps current="delivery"/>
 
-      <div className="basket-heading checkout-heading">
-        <div>
-          <p className="eyebrow">Checkout</p>
-          <h1>Delivery & details</h1>
-          <p className="muted">{singleEmployeeCheckout
-            ? "Choose who this order is for, where it should go and how it should be delivered."
-            : "Choose where your order should be delivered and how you’d like it sent."}</p>
-        </div>
+      <header className="checkout-heading checkout-heading-compact">
+        <h1>Delivery &amp; details</h1>
         <Link className="button secondary delivery-back" href="/basket">
           <ArrowLeft size={16} aria-hidden="true"/>
           <span>Back to basket</span>
         </Link>
-      </div>
+      </header>
 
       {messages.error ? <p className="error" role="alert">{messages.error}</p> : null}
       {messages.notice && messages.notice !== "Delivery method selected." ? <p className="success" role="status">{messages.notice}</p> : null}
