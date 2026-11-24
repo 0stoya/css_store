@@ -2,7 +2,8 @@ import Link from "next/link";
 import { ArrowLeft, ArrowRight, Check, ChevronDown, MapPin, Phone, Plus, Truck } from "lucide-react";
 import { CheckoutSteps } from "@/components/checkout-steps";
 import { CheckoutDeliveryDefaults } from "@/components/checkout-delivery-defaults";
-import { defaultSavedAddress, soleUnselectedShippingMethod } from "@/lib/checkout-defaults";
+import { soleUnselectedShippingMethod } from "@/lib/checkout-defaults";
+import { readCompanyDeliveryPolicy, companyPermittedAddresses, companyDefaultAddress, companyDestinationReady, matchesCompanySavedAddress } from "@/lib/company-delivery-policy";
 import { EmployeePicker } from "@/components/employee-picker";
 import { SiteHeader } from "@/components/site-header";
 import type { CartMoney } from "@/lib/magento/cart";
@@ -90,6 +91,8 @@ export default async function DeliveryPage({
     && delivery.css_ordering_capabilities.company_context
     && delivery.css_ordering_capabilities.company_active
     && delivery.css_ordering_capabilities.can_checkout;
+  const companyPolicy = canCheckout && cart.total_quantity > 0 ? await readCompanyDeliveryPolicy(delivery) : null;
+  const allowedAddresses = companyPolicy ? companyPermittedAddresses(delivery, companyPolicy) : [];
   const defaultCountry = delivery.customer.addresses.find((address) => address.default_shipping)?.country_code
     || delivery.customer.addresses[0]?.country_code
     || "GB";
@@ -118,26 +121,29 @@ export default async function DeliveryPage({
   const deliveryReviewPending = singleEmployeeCheckout && currentEmployeeId !== null
     ? await isEmployeeDeliveryReviewPending(cart.id)
     : false;
-  const controlledAddress = controlled && currentEmployeeId !== null
+  const assignedAddress = controlled && currentEmployeeId !== null
     ? await assignedOwnedAddress(delivery, currentEmployeeId)
     : null;
+  const controlledAddress = assignedAddress && allowedAddresses.some((address) => address.id === assignedAddress.id)
+    ? assignedAddress : null;
+  const companyReady = Boolean(companyPolicy && companyDestinationReady(delivery, companyPolicy, controlled, controlledAddress));
   const controlledRecipient = controlledAddress
     ? confirmedCartRecipient(controlledAddress, shippingAddress)
     : null;
   const controlledReady = !controlled || (controlledRecipient !== null && !deliveryReviewPending);
   // Only one saved-address card can be marked selected, even when the
   // Magento address book contains duplicate identities/physical locations.
-  const selectedSavedId = delivery.customer.addresses.find((address) =>
-    isSelectedSavedAddress(address, shippingAddress),
+  const selectedSavedId = allowedAddresses.find((address) =>
+    companyPolicy?.mode === "UNRESTRICTED" ? isSelectedSavedAddress(address, shippingAddress) : matchesCompanySavedAddress(address, shippingAddress),
   )?.id ?? null;
 
   // Do not automatically change a selected destination or clear an Employee review.
   // Only POST from the actual checkout page, never on a server render or Link prefetch.
   const companyId = delivery.css_company_context.selected_company_id;
   const customerId = delivery.css_company_context.customer_id;
-  const needsAddress = !singleEmployeeCheckout && !shippingAddress
-    && defaultSavedAddress(delivery.customer.addresses) !== null;
-  const needsMethod = soleUnselectedShippingMethod(shippingAddress) !== null;
+  const needsAddress = !singleEmployeeCheckout && companyPolicy !== null
+    && (!shippingAddress || !companyReady) && companyDefaultAddress(delivery, companyPolicy) !== null;
+  const needsMethod = companyReady && soleUnselectedShippingMethod(shippingAddress) !== null;
   if (!messages.error && messages.defaults !== "done" && canCheckout && cart.total_quantity > 0
     && employeeReady && controlledReady && !deliveryReviewPending
     && companyId && customerId && (needsAddress || needsMethod)) {
@@ -216,7 +222,7 @@ export default async function DeliveryPage({
                   <p className="notice">Choose an Employee to view their assigned destination.</p>
                 ) : !controlledAddress ? (
                   <p className="error" role="alert">
-                    This Employee has no available assigned delivery address. Ask your company administrator to select an address in the Employee editor.
+                    {assignedAddress ? "This Employee's assigned delivery address conflicts with the company delivery policy. Contact your administrator." : "This Employee has no available assigned delivery address. Ask your company administrator to select an address in the Employee editor."}
                   </p>
                 ) : (
                   <div className="delivery-controlled-destination">
@@ -262,10 +268,10 @@ export default async function DeliveryPage({
             {deliveryReviewPending ? <p className="notice" role="status">Please confirm a delivery address for this Employee. The previous Employee’s address is not automatically confirmed.</p> : null}
             <div className="checkout-card-intro">
               <h2>Delivery address</h2>
-              <p>Choose one of your saved addresses.</p>
+              <p>{companyPolicy?.mode === "DEFAULT_ONLY" ? "Your company uses your default delivery address." : companyPolicy?.mode === "APPROVED_ONLY" ? "Choose an approved saved address." : "Choose one of your saved addresses."}</p>
             </div>
-            {delivery.customer.addresses.length ? <div className="address-grid delivery-address-grid">
-              {delivery.customer.addresses.map((address) => {
+            {allowedAddresses.length ? <div className="address-grid delivery-address-grid">
+              {allowedAddresses.map((address) => {
                 const selectedAddress = address.id === selectedSavedId;
                 const countryName = delivery.countries.find((country) => country.id === address.country_code)?.full_name_locale || address.country_code;
                 return <article className={`address-card delivery-saved-address ${selectedAddress ? "selected" : ""}`} key={address.id}>
@@ -310,15 +316,15 @@ export default async function DeliveryPage({
                   </form>
                 </article>;
               })}
-            </div> : <p className="notice">You do not have a saved delivery address. Enter an address below to continue.</p>}
+            </div> : <p className="notice">{companyPolicy?.mode === "UNRESTRICTED" ? "You do not have a saved delivery address. Enter an address below to continue." : "No permitted saved delivery address is available. Contact your company administrator."}</p>}
 
-            <details className="delivery-alt-address" open={!delivery.customer.addresses.length}>
+            {companyPolicy?.mode === "UNRESTRICTED" ? <details className="delivery-alt-address" open={!delivery.customer.addresses.length}>
               <summary>
                 <span><Plus size={17} aria-hidden="true"/>Use a different address</span>
                 <ChevronDown className="delivery-alt-chevron" size={18} aria-hidden="true"/>
               </summary>
               <div className="delivery-alt-address-body">
-                <p className="muted small">Use this address for the current order, with the option to save it for future orders.</p>
+                <p className="muted small">{companyPolicy.addressBookLocked ? "Use this address for the current order only." : "Use this address for the current order, with the option to save it for future orders."}</p>
                 <form action={setNewShippingAddressAction} className="delivery-form">
                   <label className="field"><span>First name</span><input name="firstname" autoComplete="given-name" defaultValue={delivery.customer.firstname} required/></label>
                   <label className="field"><span>Last name</span><input name="lastname" autoComplete="family-name" defaultValue={delivery.customer.lastname} required/></label>
@@ -332,22 +338,22 @@ export default async function DeliveryPage({
                     {delivery.countries.map((country) => <option value={country.id} key={country.id}>{country.full_name_locale || country.id}</option>)}
                   </select></label>
                   <label className="field delivery-span-2"><span>Telephone</span><input name="telephone" type="tel" autoComplete="tel" required/></label>
-                  <label className="delivery-save-address delivery-span-2">
+                  {!companyPolicy.addressBookLocked ? <label className="delivery-save-address delivery-span-2">
                     <input name="save_in_address_book" type="checkbox" value="1"/>
                     <span>
                       <strong>Save this address for next time</strong>
                       <small>Magento will add it to your address book when the order is placed.</small>
                     </span>
-                  </label>
+                  </label> : null}
                   <div className="delivery-span-2"><button className="button" type="submit" disabled={!canCheckout}>Use this address</button></div>
                 </form>
               </div>
-            </details>
+            </details> : null}
               </>
             )}
           </section>
 
-          {shippingAddress && controlledReady ? <section className="card delivery-card delivery-method-card">
+          {shippingAddress && companyReady && controlledReady ? <section className="card delivery-card delivery-method-card">
             <div className="checkout-card-intro">
               <h2>Delivery method</h2>
               {methods.length !== 1 ? <p>Choose how you’d like this order delivered.</p> : null}
@@ -390,7 +396,7 @@ export default async function DeliveryPage({
               <span>{selectedMethod.carrier_title || selectedMethod.carrier_code} · {selectedMethod.method_title || selectedMethod.method_code}</span>
             </div> : <p className="muted small delivery-summary-hint">Choose a delivery address and method to continue.</p>}
 
-            {selectedMethodOption && canCheckout && employeeReady && controlledReady && !deliveryReviewPending ? <form action={preparePaymentAction} className="delivery-summary-action">
+            {selectedMethodOption && canCheckout && employeeReady && companyReady && controlledReady && !deliveryReviewPending ? <form action={preparePaymentAction} className="delivery-summary-action">
               <button className="button checkout-forward" type="submit">
                 <span>Review order</span>
                 <ArrowRight size={17} aria-hidden="true"/>

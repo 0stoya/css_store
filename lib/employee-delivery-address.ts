@@ -67,3 +67,29 @@ export async function getControlledEmployeeDeliveryEnabled(companyId: number): P
   `;
   return rows[0]?.controlled_delivery_enabled === true;
 }
+
+export type CompanyDeliveryMode = "UNRESTRICTED" | "APPROVED_ONLY" | "DEFAULT_ONLY";
+
+// Read the policy for EVERY membership using the existing SELECT-only pool.
+// A missing row is unrestricted; missing grants/schema/DB never mean unrestricted.
+export async function getCompanyDeliveryModes(companyIds: number[]): Promise<Map<number, CompanyDeliveryMode>> {
+  if (!companyIds.length || new Set(companyIds).size !== companyIds.length ||
+      companyIds.some((id) => !Number.isSafeInteger(id) || id <= 0 || id > 2147483647)) {
+    throw new Error("Invalid company delivery scope.");
+  }
+  const sql = getEmployeeAddressSql();
+  const rows = await sql`
+    SELECT company_id, mode
+    FROM css_admin.company_delivery_policy
+    WHERE company_id IN ${sql(companyIds)}
+  `;
+  const modes = new Map<number, CompanyDeliveryMode>();
+  for (const row of rows) {
+    if (!companyIds.includes(row.company_id) || modes.has(row.company_id) ||
+        (row.mode !== "UNRESTRICTED" && row.mode !== "APPROVED_ONLY" && row.mode !== "DEFAULT_ONLY")) {
+      throw new Error("Invalid company delivery policy.");
+    }
+    modes.set(row.company_id, row.mode);
+  }
+  return modes;
+}
