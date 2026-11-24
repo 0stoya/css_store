@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { ArrowLeft, ArrowRight, Check, ChevronDown, MapPin, Phone, Plus, Truck } from "lucide-react";
 import { CheckoutSteps } from "@/components/checkout-steps";
+import { CheckoutDeliveryDefaults } from "@/components/checkout-delivery-defaults";
+import { defaultSavedAddress, soleUnselectedShippingMethod } from "@/lib/checkout-defaults";
 import { EmployeePicker } from "@/components/employee-picker";
 import { SiteHeader } from "@/components/site-header";
 import type { CartMoney } from "@/lib/magento/cart";
@@ -66,7 +68,7 @@ function assignedEmployeeId(item: {
 export default async function DeliveryPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string; notice?: string }>;
+  searchParams: Promise<{ error?: string; notice?: string; defaults?: string }>;
 }) {
   const token = await requireCustomerToken();
   try { await assertNormalCheckoutSession(); }
@@ -129,6 +131,25 @@ export default async function DeliveryPage({
     isSelectedSavedAddress(address, shippingAddress),
   )?.id ?? null;
 
+  // Do not automatically change a selected destination or clear an Employee review.
+  // Only POST from the actual checkout page, never on a server render or Link prefetch.
+  const companyId = delivery.css_company_context.selected_company_id;
+  const customerId = delivery.css_company_context.customer_id;
+  const needsAddress = !singleEmployeeCheckout && !shippingAddress
+    && defaultSavedAddress(delivery.customer.addresses) !== null;
+  const needsMethod = soleUnselectedShippingMethod(shippingAddress) !== null;
+  if (!messages.error && messages.defaults !== "done" && canCheckout && cart.total_quantity > 0
+    && employeeReady && controlledReady && !deliveryReviewPending
+    && companyId && customerId && (needsAddress || needsMethod)) {
+    return <>
+      <SiteHeader customerName={customerName} companyName={selectedCompany?.name} basketQuantity={cart.total_quantity}/>
+      <main className="shell stack delivery-page">
+        <CheckoutSteps current="delivery"/>
+        <CheckoutDeliveryDefaults cartId={cart.id} companyId={companyId} customerId={customerId}/>
+      </main>
+    </>;
+  }
+
   return <>
     <SiteHeader customerName={customerName} companyName={selectedCompany?.name} basketQuantity={cart.total_quantity}/>
     <main className="shell stack delivery-page">
@@ -149,7 +170,7 @@ export default async function DeliveryPage({
       </div>
 
       {messages.error ? <p className="error" role="alert">{messages.error}</p> : null}
-      {messages.notice ? <p className="success" role="status">{messages.notice}</p> : null}
+      {messages.notice && messages.notice !== "Delivery method selected." ? <p className="success" role="status">{messages.notice}</p> : null}
       {!cart.total_quantity ? <section className="empty card"><h2>Your basket is empty</h2><p><Link className="button" href="/catalogue">Browse products</Link></p></section> : null}
       {cart.total_quantity > 0 && !canCheckout ? <p className="error" role="alert">This company is not currently able to continue through checkout.</p> : null}
 
@@ -329,7 +350,7 @@ export default async function DeliveryPage({
           {shippingAddress && controlledReady ? <section className="card delivery-card delivery-method-card">
             <div className="checkout-card-intro">
               <h2>Delivery method</h2>
-              <p>Choose how you’d like this order delivered.</p>
+              {methods.length !== 1 ? <p>Choose how you’d like this order delivered.</p> : null}
             </div>
             <div className="shipping-method-list delivery-method-list">
               {methods.map((method) => {
@@ -369,7 +390,7 @@ export default async function DeliveryPage({
               <span>{selectedMethod.carrier_title || selectedMethod.carrier_code} · {selectedMethod.method_title || selectedMethod.method_code}</span>
             </div> : <p className="muted small delivery-summary-hint">Choose a delivery address and method to continue.</p>}
 
-            {selectedMethod && canCheckout && employeeReady && controlledReady && !deliveryReviewPending ? <form action={preparePaymentAction} className="delivery-summary-action">
+            {selectedMethodOption && canCheckout && employeeReady && controlledReady && !deliveryReviewPending ? <form action={preparePaymentAction} className="delivery-summary-action">
               <button className="button checkout-forward" type="submit">
                 <span>Review order</span>
                 <ArrowRight size={17} aria-hidden="true"/>

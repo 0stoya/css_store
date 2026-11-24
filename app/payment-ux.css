@@ -434,3 +434,16 @@
     max-width: none;
   }
 }
+
+/* A single available method is a confirmation, not a radio choice. */
+.payment-method-option.payment-method-fixed {
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  border-color: var(--blue);
+  background: #f5f9ff;
+  cursor: default;
+}
+.payment-method-fixed .payment-radio-mark {
+  display: grid;
+  background: #e8f6ed;
+  color: var(--success);
+}
